@@ -13,6 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {config} from '../config';
+import { scheduleService } from '@/utils/scheduleService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +31,10 @@ export default function RootLayout() {
   useEffect(() => {
     const checkToken = async () => {
       try {
+        // Initialize schedule service on app start
+        await scheduleService.loadSchedules();
+        scheduleService.startMonitoring(60); // Check every 60 seconds
+
         const token = await AsyncStorage.getItem('token');
         console.log('Checking token:', token);
 

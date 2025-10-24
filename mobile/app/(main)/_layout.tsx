@@ -3,6 +3,7 @@ import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   User,
   MapPin,
@@ -13,10 +14,21 @@ import {
   HelpCircle,
   LogOut,
   X,
+  Clock,
 } from 'lucide-react-native';
+import { storage, User as UserType } from '@/utils/auth';
 
 function CustomDrawerContent(props: any) {
   const router = useRouter();
+  const [user, setUser] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const userData = await storage.getUserData();
+      setUser(userData?.user || null);
+    };
+    loadUser();
+  }, []);
 
   const handleLogout = () => {
     router.replace('/auth/login');
@@ -24,6 +36,11 @@ function CustomDrawerContent(props: any) {
 
   const closeDrawer = () => {
     props.navigation.closeDrawer();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
   };
 
   return (
@@ -37,10 +54,10 @@ function CustomDrawerContent(props: any) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.userInfo} onPress={() => router.push('/(main)/profile')}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>JD</Text>
+            <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
           </View>
           <View style={styles.userDetails}>
-            <Text style={styles.userName}>John Doe</Text>
+            <Text style={styles.userName}>{user?.name || 'User'}</Text>
             <Text style={styles.userType}>Customer</Text>
           </View>
         </TouchableOpacity>
@@ -59,7 +76,7 @@ function CustomDrawerContent(props: any) {
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
         />
-        <DrawerItem
+        {/* <DrawerItem
           label="Payment Methods"
           icon={({ color, size }) => (
             <View style={{ width: 28, alignItems: 'center' }}>
@@ -70,7 +87,7 @@ function CustomDrawerContent(props: any) {
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
-        />
+        /> */}
         <DrawerItem
           label="Settings"
           icon={({ color, size }) => (
@@ -79,6 +96,18 @@ function CustomDrawerContent(props: any) {
             </View>
           )}
           onPress={() => router.push('/(main)/settings')}
+          labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
+          activeBackgroundColor="#F0F8FF"
+          activeTintColor="#007AFF"
+        />
+        <DrawerItem
+          label="Auto-Order Schedule"
+          icon={({ color, size }) => (
+            <View style={{ width: 28, alignItems: 'center' }}>
+              <Clock size={size} color={color} />
+            </View>
+          )}
+          onPress={() => router.push('/(main)/schedule')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
@@ -140,6 +169,7 @@ export default function MainLayout() {
         {/* <Drawer.Screen name="tank-monitoring" /> */}
         <Drawer.Screen name="profile" />
         <Drawer.Screen name="settings" />
+        <Drawer.Screen name="schedule" />
         <Drawer.Screen name="notifications" />
         <Drawer.Screen name="help" />
       </Drawer>

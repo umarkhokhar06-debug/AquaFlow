@@ -24,12 +24,9 @@ class NotificationService {
 
     this.notifications.unshift(newNotification);
     this.notifyListeners();
-
-    // Show native alert for important notifications
-    this.showNativeAlert(newNotification);
   }
 
-  // Show native alert
+  // Show native alert (kept for backwards compatibility if needed)
   private showNativeAlert(notification: Notification): void {
     const alertTitle = this.getAlertTitle(notification.type);
     

@@ -31,6 +31,7 @@ import HeaderComponent from '@/app/components/Header';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
+import { getLatestIoTData } from '@/utils/iotAPI';
 import { Product } from '@/types/order';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
@@ -50,7 +51,7 @@ interface SelectedAddress {
 }
 
 export default function DashboardScreen() {
-  const [tankLevel, setTankLevel] = useState(25);
+  const [tankLevel, setTankLevel] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +159,16 @@ export default function DashboardScreen() {
         // Fetch products
         const productsData = await orderAPI.getProducts();
         setProducts(productsData);
+        
+        // Fetch IoT data for tank level
+        try {
+          const iotData = await getLatestIoTData();
+          if (iotData.success && iotData.data) {
+            setTankLevel(iotData.data.tankLevel);
+          }
+        } catch (iotError) {
+          console.error('Error fetching IoT data:', iotError);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Failed to load data. Please try again.');
@@ -267,12 +278,12 @@ export default function DashboardScreen() {
       >
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome back, {user?.name}!</Text>
-          <Text style={styles.welcomeSubtitle}>Your water tank is at {tankLevel}% capacity</Text>
+          <Text style={styles.welcomeTitle}>Welcome back, {user?.name || 'Guest'}!</Text>
+          <Text style={styles.welcomeSubtitle}>Your water tank is at {tankLevel !== null ? tankLevel : 'N/A'}% capacity</Text>
         </View>
 
         {/* Low Water Alert */}
-        {tankLevel <= 30 && (
+        {tankLevel !== null && tankLevel <= 30 && (
           <View style={styles.alertCard}>
             <View style={styles.alertIcon}>
               <AlertTriangle size={20} color="#F59E0B" />
@@ -283,7 +294,16 @@ export default function DashboardScreen() {
                 Your tank is running low. Consider ordering a refill.
               </Text>
             </View>
-            <TouchableOpacity style={styles.orderNowButton}>
+            <TouchableOpacity 
+              style={styles.orderNowButton}
+              onPress={() => {
+                // Trigger auto-order flow
+                if (products.length > 0) {
+                  const smallTanker = products.find(p => p.type === 'small_tanker') || products[0];
+                  handleServiceSelect(smallTanker);
+                }
+              }}
+            >
               <Text style={styles.orderNowButtonText}>Order Now</Text>
             </TouchableOpacity>
           </View>
@@ -342,6 +362,23 @@ export default function DashboardScreen() {
               <Text style={styles.expressPriceText}>+Rs. 300</Text>
               <Text style={styles.expressBadge}>Premium</Text>
             </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Auto-Order Schedule */}
+        <View style={styles.scheduleSection}>
+          <TouchableOpacity 
+            style={styles.scheduleCard}
+            onPress={() => router.push('/(main)/schedule')}
+          >
+            <View style={styles.scheduleIcon}>
+              <Clock size={24} color="#10B981" />
+            </View>
+            <View style={styles.scheduleContent}>
+              <Text style={styles.scheduleTitle}>Auto-Order Schedule</Text>
+              <Text style={styles.scheduleSubtitle}>Automatically order when tank level drops</Text>
+            </View>
+            <ArrowRight size={20} color="#6B7280" />
           </TouchableOpacity>
         </View>
 
@@ -604,6 +641,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#92400E',
+  },
+  scheduleSection: {
+    marginBottom: 24,
+  },
+  scheduleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  scheduleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  scheduleContent: {
+    flex: 1,
+  },
+  scheduleTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#10B981',
+    marginBottom: 4,
+  },
+  scheduleSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#10B981',
   },
   expressPricing: {
     alignItems: 'flex-end',
