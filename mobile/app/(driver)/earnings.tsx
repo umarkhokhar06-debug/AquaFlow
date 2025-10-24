@@ -119,7 +119,7 @@ export default function EarningsScreen() {
           </Text>
           <Text style={styles.earningOrder}>Order ID: {item.orderId || 'N/A'}</Text>
           <Text style={styles.earningOrder}>Delivered: {item.deliveredAt ? formatDate(item.deliveredAt) : 'N/A'}</Text>
-          <Text style={styles.earningOrder}>Payment: {item.paymentMethod || 'N/A'}</Text>
+          {/* <Text style={styles.earningOrder}>Payment: {item.paymentMethod || 'N/A'}</Text> */}
         </View>
         <View style={styles.earningAmount}>
           <Text style={[styles.amount, { color: '#007AFF' }]}> 
@@ -133,9 +133,9 @@ export default function EarningsScreen() {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
         <Text style={{ marginRight: 12, color: '#6B7280' }}>Base: {formatCurrency(item.baseAmount)}</Text>
         <Text style={{ marginRight: 12, color: '#6B7280' }}>Commission: {formatCurrency(item.commission)}</Text>
-        <Text style={{ marginRight: 12, color: '#6B7280' }}>Tip: {formatCurrency(item.tip)}</Text>
-        <Text style={{ marginRight: 12, color: '#6B7280' }}>Bonus: {formatCurrency(item.bonus)}</Text>
-        <Text style={{ marginRight: 12, color: '#6B7280' }}>Deductions: {formatCurrency(item.deductions)}</Text>
+        {/* <Text style={{ marginRight: 12, color: '#6B7280' }}>Tip: {formatCurrency(item.tip)}</Text> */}
+        {/* <Text style={{ marginRight: 12, color: '#6B7280' }}>Bonus: {formatCurrency(item.bonus)}</Text> */}
+        {/* <Text style={{ marginRight: 12, color: '#6B7280' }}>Deductions: {formatCurrency(item.deductions)}</Text> */}
       </View>
       <Text style={styles.earningDate}>Created: {formatDate(item.createdAt)}</Text>
     </View>

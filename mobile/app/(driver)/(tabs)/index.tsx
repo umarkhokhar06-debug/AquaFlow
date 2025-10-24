@@ -284,7 +284,7 @@ export default function DriverDashboardScreen() {
         </View>
 
         {/* Vehicle Status */}
-        <View style={styles.vehicleSection}>
+        {/* <View style={styles.vehicleSection}>
           <View style={styles.vehicleCard}>
             <View style={styles.vehicleIcon}>
               <Truck size={24} color="#007AFF" />
@@ -298,7 +298,7 @@ export default function DriverDashboardScreen() {
               <Text style={styles.vehicleButtonText}>Details</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
         </ScrollView>
       )}
     </View>
