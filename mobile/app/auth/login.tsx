@@ -20,10 +20,8 @@ import {
   User,
   Truck,
 } from 'lucide-react-native';
-import axios from 'axios';
-import { config } from '../../config';
+import { authAPI, storage } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -53,59 +51,54 @@ export default function LoginScreen() {
       return;
     }
 
-
-    // declare user role  in variable 
-    let user = 'user';
-
-
     setIsLoading(true);
     try {
-      const response = await axios.post(`${config.backendUrl}/auth/login`, {
-        email,
+      const response = await authAPI.login({
+        email: email.toLowerCase().trim(),
         password,
       });
-      console.log('Login response:', response.data);
+      
+      console.log('Login response:', response);
 
-      if (response.status) {
-        const { token, id, role,avatar,name, email } = response.data;
-        await AsyncStorage.setItem('userData', JSON.stringify({ token, id, role, avatar, name, email }));
-        user = role;
-        console.log('Login successful:', { token, id, role, avatar, name, email });
+      if (response.success && response.token && response.user) {
+        await storage.saveUserData(response.token, response.user);
+        
+        console.log('Login successful:', { token: response.token, user: response.user });
+        
+        // Reset form fields
+        setEmail('');
+        setPassword('');
+        setShowPassword(false);
+        setIsLoading(false);
+
+        // Navigate based on user type
+        if (response.user.userType === 'driver') {
+          router.replace('/(driver)/(tabs)');
+        } 
+        else if (response.user.userType === 'customer') {
+          router.replace('/(main)/(tabs)');
+        }
+        // todos navigate to admin
+        else {
+          router.replace('/(main)/(tabs)');
+        }
       } else {
         setAlertTitle('Error');
-        setAlertMessage(response.data.message || 'Login failed. Please try again.');
+        setAlertMessage(response.message || 'Login failed. Please try again.');
         setShowAlert(true);
         setIsLoading(false);
         return;
       }
     } catch (error) {
-      let message = 'An error occurred while Sign in account';
-      if (axios.isAxiosError(error)) {
-        message =
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          error.message;
+      let message = 'An error occurred while signing in';
+      if (error instanceof Error) {
+        message = error.message;
       }
       setAlertTitle('Error');
       setAlertMessage(message);
       setShowAlert(true);
       setIsLoading(false);
       return;
-    }
-
-    // Reset form fields
-    setEmail('');
-    setPassword('');
-    setShowPassword(false);
-    // setUserType('user');
-
-    console.log('User type:', user);
-
-    // Navigate based on user type
-    if (user === 'driver') {
-      router.replace('/(driver)/(tabs)');
-    } else {
-      router.replace('/(main)/(tabs)');
     }
   };
 
@@ -114,8 +107,8 @@ export default function LoginScreen() {
   };
 
   function loginAsCustomer(): void {
-    setEmail('user@test.com');
-    setPassword('12345678');
+    setEmail('customer@example.com');
+    setPassword('password123');
     setUserType('user');
     // TODO: Login Using hardcoded credentials for testing
     // router.push('/(main)/(tabs)');
@@ -123,8 +116,8 @@ export default function LoginScreen() {
   }
 
   function loginAsDriver(): void {
-    setEmail('driver@test.com');
-    setPassword('12345678');
+    setEmail('driver@example.com');
+    setPassword('password123');
     setUserType('driver');
     // TODO: Login Using hardcoded credentials for testing
     // router.push('/(driver)/(tabs)');

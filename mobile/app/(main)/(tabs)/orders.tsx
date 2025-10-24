@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,70 +17,130 @@ import { router, useNavigation } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
 import { globalstyles } from '@/app/commans/style';
 import HeaderComponent from '@/app/components/Header';
+import { orderAPI } from '@/utils/orderAPI';
+import { Order, parseDate, getOrderId } from '@/types/order';
+import { useSocket } from '@/hooks/useSocket';
+import { notificationService } from '@/utils/notificationService';
 
 export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState('active');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { isConnected, connect, onOrderUpdate, onOrderStatusUpdate, removeOrderUpdateListener, removeOrderStatusUpdateListener } = useSocket();
 
-  const activeOrders = [
-    {
-      id: '1',
-      type: 'Large Tanker',
-      volume: '6000L',
-      status: 'In Progress',
-      estimatedTime: '2 hrs',
-      driver: 'Ahmad Khan',
-      price: '₨ 2,500',
-      date: '2024-12-25',
-      location: 'House 123, Upper Portion',
-    },
-    {
-      id: '2',
-      type: 'Small Tanker',
-      volume: '3500L',
-      status: 'Dispatched',
-      estimatedTime: '45 mins',
-      driver: 'Ali Hassan',
-      price: '₨ 1,800',
-      date: '2024-12-25',
-      location: 'House 123, Upper Portion',
-    },
-  ];
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const ordersData = await orderAPI.getMyOrders();
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      Alert.alert('Error', 'Failed to load orders. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const completedOrders = [
-    {
-      id: '3',
-      type: 'Large Tanker',
-      volume: '6000L',
-      status: 'Completed',
-      completedTime: '2 hours ago',
-      driver: 'Muhammad Tariq',
-      price: '₨ 2,500',
-      date: '2024-12-23',
-      location: 'House 123, Upper Portion',
-    },
-    {
-      id: '4',
-      type: 'Water Bottles',
-      volume: '20L x 5',
-      status: 'Completed',
-      completedTime: '1 day ago',
-      driver: 'Saqib Ahmed',
-      price: '₨ 750',
-      date: '2024-12-22',
-      location: 'House 123, Upper Portion',
-    },
-  ];
+  // Refresh orders
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    
+    // Connect to socket
+    connect().catch(error => {
+      console.error('Failed to connect to socket:', error);
+    });
+  }, []);
+
+  // Set up real-time listeners
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Handle order updates (for customers)
+    const handleOrderUpdate = (data: any) => {
+      console.log('Order update received:', data);
+      
+      setOrders(prevOrders => {
+        return prevOrders.map(order => {
+          if (getOrderId(order) === data.orderId) {
+            const updatedOrder = { ...order };
+            
+            if (data.updateType === 'status-update' && data.data.status) {
+              updatedOrder.status = data.data.status;
+              notificationService.handleOrderNotification(order.orderNumber, data.data.status);
+            }
+            
+            if (data.updateType === 'driver-assigned' && data.data.driver) {
+              updatedOrder.driver = data.data.driver;
+              notificationService.handleDriverAssignmentNotification(order.orderNumber, data.data.driver.name);
+            }
+            
+            return updatedOrder;
+          }
+          return order;
+        });
+      });
+    };
+
+    // Handle order status updates (for all users)
+    const handleOrderStatusUpdate = (data: any) => {
+      console.log('Order status update received:', data);
+      
+      setOrders(prevOrders => {
+        return prevOrders.map(order => {
+          if (getOrderId(order) === data.orderId) {
+            const updatedOrder = { ...order, status: data.status };
+            notificationService.handleOrderNotification(order.orderNumber, data.status);
+            return updatedOrder;
+          }
+          return order;
+        });
+      });
+    };
+
+    // Register listeners
+    onOrderUpdate(handleOrderUpdate);
+    onOrderStatusUpdate(handleOrderStatusUpdate);
+
+    // Cleanup listeners on unmount
+    return () => {
+      removeOrderUpdateListener(handleOrderUpdate);
+      removeOrderStatusUpdateListener(handleOrderStatusUpdate);
+    };
+  }, [isConnected, onOrderUpdate, onOrderStatusUpdate, removeOrderUpdateListener, removeOrderStatusUpdateListener]);
+
+  // Filter orders based on active tab
+  const activeOrders = orders.filter(order => 
+    ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(order.status)
+  );
+
+  const completedOrders = orders.filter(order => 
+    ['delivered', 'cancelled'].includes(order.status)
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'In Progress':
+      case 'pending':
+        return '#F59E0B';
+      case 'confirmed':
         return '#007AFF';
-      case 'Dispatched':
+      case 'preparing':
+        return '#8B5CF6';
+      case 'out_for_delivery':
         return '#FF6B35';
-      case 'Completed':
+      case 'delivered':
         return '#28A745';
+      case 'cancelled':
+        return '#EF4444';
       default:
         return '#6B7280';
     }
@@ -85,60 +148,139 @@ export default function OrdersScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'In Progress':
-        return <Clock size={16} color="#007AFF" />;
-      case 'Dispatched':
+      case 'pending':
+        return <Clock size={16} color="#F59E0B" />;
+      case 'confirmed':
+        return <CheckCircle size={16} color="#007AFF" />;
+      case 'preparing':
+        return <Clock size={16} color="#8B5CF6" />;
+      case 'out_for_delivery':
         return <Truck size={16} color="#FF6B35" />;
-      case 'Completed':
+      case 'delivered':
         return <CheckCircle size={16} color="#28A745" />;
+      case 'cancelled':
+        return <Clock size={16} color="#EF4444" />;
       default:
         return <Clock size={16} color="#6B7280" />;
     }
   };
 
-  const OrderCard = ({ order }: { order: any }) => (
-    <View style={styles.orderCard}>
-      <View style={styles.orderHeader}>
-        <View style={styles.orderType}>
-          <Droplets size={20} color="#007AFF" />
-          <View style={styles.orderInfo}>
-            <Text style={styles.orderTitle}>{order.type}</Text>
-            <Text style={styles.orderVolume}>{order.volume}</Text>
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'preparing':
+        return 'Preparing';
+      case 'out_for_delivery':
+        return 'Out for Delivery';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  };
+
+  const formatDate = (date: string | { $date: string }) => {
+    const parsedDate = parseDate(date);
+    return parsedDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (date: string | { $date: string }) => {
+    const parsedDate = parseDate(date);
+    return parsedDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const OrderCard = ({ order }: { order: Order }) => {
+    const getProductName = (type: string) => {
+      switch (type) {
+        case 'large_tanker':
+          return 'Large Tanker';
+        case 'small_tanker':
+          return 'Small Tanker';
+        case 'water_bottles':
+          return 'Water Bottles';
+        default:
+          return type;
+      }
+    };
+
+    const getProductSize = (type: string) => {
+      switch (type) {
+        case 'large_tanker':
+          return '6000L';
+        case 'small_tanker':
+          return '3500L';
+        case 'water_bottles':
+          return '20L';
+        default:
+          return '';
+      }
+    };
+
+    const handleOrderPress = () => {
+      // Navigate to order details
+      router.push(`/(main)/order-details/${getOrderId(order)}`);
+    };
+
+    return (
+      <TouchableOpacity style={styles.orderCard} onPress={handleOrderPress}>
+        <View style={styles.orderHeader}>
+          <View style={styles.orderType}>
+            <Droplets size={20} color="#007AFF" />
+            <View style={styles.orderInfo}>
+              <Text style={styles.orderTitle}>{getProductName(order.items[0]?.type || '')}</Text>
+              <Text style={styles.orderVolume}>
+                {getProductSize(order.items[0]?.type || '')} x {order.items[0]?.quantity || 1}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
+            {getStatusIcon(order.status)}
+            <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+              {getStatusText(order.status)}
+            </Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-          {getStatusIcon(order.status)}
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {order.status}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.orderDetails}>
-        <View style={styles.orderRow}>
-          <MapPin size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>{order.location}</Text>
+        <View style={styles.orderDetails}>
+          <View style={styles.orderRow}>
+            <MapPin size={14} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              {order.deliveryAddress?.address || 'Address not available'}
+            </Text>
+          </View>
+          <View style={styles.orderRow}>
+            <Calendar size={14} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              {formatDate(order.orderDate)} at {formatTime(order.orderDate)}
+            </Text>
+          </View>
+          {order.driver && (
+            <View style={styles.orderRow}>
+              <Truck size={14} color="#6B7280" />
+              <Text style={styles.orderDetailText}>Driver: {order.driver.name}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.orderRow}>
-          <Calendar size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>{order.date}</Text>
-        </View>
-        <View style={styles.orderRow}>
-          <Truck size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>Driver: {order.driver}</Text>
-        </View>
-      </View>
 
-      <View style={styles.orderFooter}>
-        <Text style={styles.orderPrice}>{order.price}</Text>
-        {order.status === 'Completed' ? (
-          <Text style={styles.completedTime}>{order.completedTime}</Text>
-        ) : (
-          <Text style={styles.estimatedTime}>ETA: {order.estimatedTime}</Text>
-        )}
-      </View>
-    </View>
-  );
+        <View style={styles.orderFooter}>
+          <Text style={styles.orderPrice}>Rs. {order.totalAmount.toLocaleString()}</Text>
+          <Text style={styles.orderNumber}>#{order.orderNumber}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -157,6 +299,14 @@ export default function OrdersScreen() {
 
       {/* Header */}
         <HeaderComponent openDrawer={openDrawer} openNotifications={openNotifications} />
+        
+        {/* Connection Status */}
+        {!isConnected && (
+          <View style={styles.connectionStatus}>
+            <View style={styles.connectionIndicator} />
+            <Text style={styles.connectionText}>Connecting to real-time updates...</Text>
+          </View>
+        )}
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -183,11 +333,19 @@ export default function OrdersScreen() {
         style={styles.content} 
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        {activeTab === 'active' ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading orders...</Text>
+          </View>
+        ) : activeTab === 'active' ? (
           <>
             {activeOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={getOrderId(order)} order={order} />
             ))}
             {activeOrders.length === 0 && (
               <View style={styles.emptyState}>
@@ -200,7 +358,7 @@ export default function OrdersScreen() {
         ) : (
           <>
             {completedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={getOrderId(order)} order={order} />
             ))}
             {completedOrders.length === 0 && (
               <View style={styles.emptyState}>
@@ -421,5 +579,45 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  orderNumber: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  connectionIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+    marginRight: 8,
+  },
+  connectionText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#92400E',
   },
 });

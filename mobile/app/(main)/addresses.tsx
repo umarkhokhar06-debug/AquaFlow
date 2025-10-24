@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   ArrowLeft, 
@@ -21,34 +22,60 @@ import {
   Star,
   Navigation
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback } from 'react';
+
+interface Address {
+  id: string;
+  type: 'Home' | 'Office' | 'Other';
+  fullName: string;
+  houseNumber: string;
+  portion: 'upper' | 'lower';
+  address: string;
+  landmark: string;
+  phoneNumber: string;
+  isDefault: boolean;
+  latitude?: number;
+  longitude?: number;
+}
 
 export default function AddressesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [addresses, setAddresses] = useState([
-    {
-      id: '1',
-      type: 'Home',
-      title: 'House 123, Upper',
-      address: 'Block A, Gulshan-e-Iqbal, Karachi',
-      landmark: 'Near City School',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      type: 'Office',
-      title: 'House 456, Ground Floor',
-      address: 'Block B, Defence Phase 2, Karachi',
-      landmark: 'Opposite KFC',
-      isDefault: false,
-    },
-  ]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleEditAddress = (addressId: string) => {
-    Alert.alert('Edit Address', 'Edit address functionality would be implemented here.');
+  const loadAddresses = async () => {
+    try {
+      setLoading(true);
+      const savedAddresses = await AsyncStorage.getItem('saved_addresses');
+      if (savedAddresses) {
+        setAddresses(JSON.parse(savedAddresses));
+      }
+    } catch (error) {
+      console.error('Error loading addresses:', error);
+      Alert.alert('Error', 'Failed to load addresses');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteAddress = (addressId: string) => {
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  // Reload addresses when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadAddresses();
+    }, [])
+  );
+
+  const handleEditAddress = (addressId: string) => {
+    router.push(`/(main)/add-edit-address?id=${addressId}`);
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
     Alert.alert(
       'Delete Address',
       'Are you sure you want to delete this address?',
@@ -57,40 +84,54 @@ export default function AddressesScreen() {
         { 
           text: 'Delete', 
           style: 'destructive',
-          onPress: () => {
-            setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+          onPress: async () => {
+            try {
+              const updatedAddresses = addresses.filter(addr => addr.id !== addressId);
+              await AsyncStorage.setItem('saved_addresses', JSON.stringify(updatedAddresses));
+              setAddresses(updatedAddresses);
+            } catch (error) {
+              console.error('Error deleting address:', error);
+              Alert.alert('Error', 'Failed to delete address');
+            }
           }
         }
       ]
     );
   };
 
-  const handleSetDefault = (addressId: string) => {
-    setAddresses(prev => 
-      prev.map(addr => ({
+  const handleSetDefault = async (addressId: string) => {
+    try {
+      const updatedAddresses = addresses.map(addr => ({
         ...addr,
         isDefault: addr.id === addressId
-      }))
-    );
+      }));
+      await AsyncStorage.setItem('saved_addresses', JSON.stringify(updatedAddresses));
+      setAddresses(updatedAddresses);
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      Alert.alert('Error', 'Failed to set default address');
+    }
   };
 
-  const handleViewOnMap = (address: any) => {
-    Alert.alert('View on Map', `Opening map for ${address.title}`);
+  const handleViewOnMap = (address: Address) => {
+    Alert.alert('View on Map', `Opening map for ${address.houseNumber}`);
   };
 
   const handleAddAddress = () => {
-    Alert.alert('Add Address', 'Add new address functionality would be implemented here.');
+    router.push('/(main)/add-edit-address');
   };
 
-  const AddressCard = ({ address }: { address: any }) => (
+  const AddressCard = ({ address }: { address: Address }) => (
     <View style={styles.addressCard}>
       <View style={styles.addressHeader}>
         <View style={styles.addressTypeContainer}>
           <View style={[styles.addressIcon, address.type === 'Home' ? styles.homeIcon : styles.officeIcon]}>
             {address.type === 'Home' ? (
-              <Home size={20} color={address.type === 'Home' ? '#007AFF' : '#10B981'} />
-            ) : (
+              <Home size={20} color="#007AFF" />
+            ) : address.type === 'Office' ? (
               <Building2 size={20} color="#10B981" />
+            ) : (
+              <MapPin size={20} color="#F59E0B" />
             )}
           </View>
           <View style={styles.addressInfo}>
@@ -103,7 +144,8 @@ export default function AddressesScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.addressTitle}>{address.title}</Text>
+            <Text style={styles.addressTitle}>{address.houseNumber}, {address.portion}</Text>
+            <Text style={styles.addressName}>{address.fullName}</Text>
           </View>
         </View>
         <View style={styles.addressActions}>
@@ -124,9 +166,14 @@ export default function AddressesScreen() {
 
       <View style={styles.addressDetails}>
         <Text style={styles.addressText}>{address.address}</Text>
+        {address.landmark && (
+          <View style={styles.landmarkRow}>
+            <MapPin size={14} color="#007AFF" />
+            <Text style={styles.landmarkText}>{address.landmark}</Text>
+          </View>
+        )}
         <View style={styles.landmarkRow}>
-          <MapPin size={14} color="#007AFF" />
-          <Text style={styles.landmarkText}>{address.landmark}</Text>
+          <Text style={styles.phoneText}>📞 {address.phoneNumber}</Text>
         </View>
       </View>
 
@@ -178,22 +225,31 @@ export default function AddressesScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {addresses.map((address) => (
-          <AddressCard key={address.id} address={address} />
-        ))}
-
-        {addresses.length === 0 && (
-          <View style={styles.emptyState}>
-            <Home size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No Saved Addresses</Text>
-            <Text style={styles.emptyText}>
-              Add your delivery addresses to make ordering faster
-            </Text>
-            <TouchableOpacity style={styles.emptyAddButton} onPress={handleAddAddress}>
-              <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.emptyAddButtonText}>Add Your First Address</Text>
-            </TouchableOpacity>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading addresses...</Text>
           </View>
+        ) : (
+          <>
+            {addresses.map((address) => (
+              <AddressCard key={address.id} address={address} />
+            ))}
+
+            {addresses.length === 0 && (
+              <View style={styles.emptyState}>
+                <Home size={48} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No Saved Addresses</Text>
+                <Text style={styles.emptyText}>
+                  Add your delivery addresses to make ordering faster
+                </Text>
+                <TouchableOpacity style={styles.emptyAddButton} onPress={handleAddAddress}>
+                  <Plus size={20} color="#FFFFFF" />
+                  <Text style={styles.emptyAddButtonText}>Add Your First Address</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </View>
@@ -248,6 +304,18 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginTop: 12,
   },
   addressCard: {
     backgroundColor: '#FFFFFF',
@@ -318,6 +386,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
   },
+  addressName: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
   addressActions: {
     flexDirection: 'row',
     gap: 8,
@@ -352,6 +426,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#007AFF',
     marginLeft: 4,
+  },
+  phoneText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#374151',
   },
   addressFooter: {
     flexDirection: 'row',

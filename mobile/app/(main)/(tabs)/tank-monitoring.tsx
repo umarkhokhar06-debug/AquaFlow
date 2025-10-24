@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,30 +27,91 @@ import {
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
 import { DrawerActions } from '@react-navigation/native';
+import { getLatestIoTData, getAllIoTData, getIoTStatus } from '@/utils/iotAPI';
 
 const { width } = Dimensions.get('window');
 
 export default function TankMonitoringScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [tankLevel, setTankLevel] = useState(25);
-  const [isOnline, setIsOnline] = useState(true);
-  const [temperature, setTemperature] = useState(24.75);
+  const [tankLevel, setTankLevel] = useState(0);
+  const [isOnline, setIsOnline] = useState(false);
+  const [temperature, setTemperature] = useState(0);
+  const [humidity, setHumidity] = useState(0);
   const [batteryLevel, setBatteryLevel] = useState(85);
-  const [todayUsage, setTodayUsage] = useState(46);
-  const [weeklyUsage, setWeeklyUsage] = useState(280);
+  const [todayUsage, setTodayUsage] = useState(0);
+  const [weeklyUsage, setWeeklyUsage] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
   const navigation = useNavigation();
 
-  const weeklyData = [
-    { day: 'Mon', level: 85 },
-    { day: 'Tue', level: 72 },
-    { day: 'Wed', level: 58 },
-    { day: 'Thu', level: 45 },
-    { day: 'Fri', level: 32 },
-    { day: 'Sat', level: 28 },
-    { day: 'Sun', level: 25 },
-  ];
+  const [weeklyData, setWeeklyData] = useState<{ day: string; level: number }[]>([]);
+
+  // Fetch IoT data on component mount and set up auto-refresh
+  useEffect(() => {
+    fetchIoTData();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchIoTData();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchIoTData = async () => {
+    try {
+      // Fetch latest data
+      const latestResponse = await getLatestIoTData();
+      if (latestResponse.success && latestResponse.data) {
+        setTankLevel(latestResponse.data.tankLevel);
+        setTemperature(latestResponse.data.temperature);
+        setHumidity(latestResponse.data.humidity);
+        setLastUpdate(new Date(latestResponse.data.receivedAt).toLocaleString());
+      }
+
+      // Fetch connection status
+      const statusResponse = await getIoTStatus();
+      if (statusResponse.success) {
+        setIsOnline(statusResponse.connected);
+      }
+
+      // Fetch historical data for weekly chart
+      const allDataResponse = await getAllIoTData(1, 7);
+      if (allDataResponse.success && allDataResponse.data) {
+        const weeklyDataProcessed = allDataResponse.data.slice(0, 7).reverse().map((item, index) => {
+          const date = new Date(item.timestamp);
+          const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          return {
+            day: days[date.getDay()],
+            level: item.tankLevel,
+          };
+        });
+        setWeeklyData(weeklyDataProcessed);
+
+        // Calculate usage (simple calculation based on level differences)
+        if (allDataResponse.data.length >= 2) {
+          const today = allDataResponse.data[0];
+          const yesterday = allDataResponse.data[1];
+          const dailyUsage = Math.abs(yesterday.tankLevel - today.tankLevel) * 10; // Rough estimate
+          setTodayUsage(Math.round(dailyUsage));
+          
+          // Weekly usage
+          const weekData = allDataResponse.data.slice(0, 7);
+          const weeklyUsageCalc = weekData.reduce((acc, curr, idx) => {
+            if (idx < weekData.length - 1) {
+              return acc + Math.abs(curr.tankLevel - weekData[idx + 1].tankLevel) * 10;
+            }
+            return acc;
+          }, 0);
+          setWeeklyUsage(Math.round(weeklyUsageCalc));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching IoT data:', error);
+      Alert.alert('Error', 'Failed to fetch sensor data. Please try again.');
+    }
+  };
 
   const alerts = [
     {
@@ -75,16 +137,12 @@ export default function TankMonitoringScreen() {
     },
   ];
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate refresh
+    await fetchIoTData();
     setTimeout(() => {
       setIsRefreshing(false);
-      // Update with new data
-      setTankLevel(Math.floor(Math.random() * 100));
-      setTemperature(24 + Math.random() * 2);
-      setBatteryLevel(80 + Math.floor(Math.random() * 20));
-    }, 2000);
+    }, 1000);
   };
 
   const handleOrderRefill = () => {
@@ -137,6 +195,25 @@ export default function TankMonitoringScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Refresh Button */}
+        <TouchableOpacity 
+          style={styles.refreshButton} 
+          onPress={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw 
+            size={20} 
+            color="#007AFF" 
+            style={isRefreshing ? { transform: [{ rotate: '360deg' }] } : undefined}
+          />
+          <Text style={styles.refreshText}>
+            {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+          </Text>
+          {lastUpdate && (
+            <Text style={styles.lastUpdateText}>Last update: {lastUpdate}</Text>
+          )}
+        </TouchableOpacity>
+
         {/* Current Water Level */}
         <View style={styles.levelCard}>
           <View style={styles.levelHeader}>
@@ -153,13 +230,13 @@ export default function TankMonitoringScreen() {
           </View>
 
           <View style={styles.levelDisplay}>
-            <Text style={styles.levelPercentage}>{tankLevel}%</Text>
+            <Text style={styles.levelPercentage}>{tankLevel.toFixed(2)}%</Text>
             <Text style={styles.levelLiters}>{Math.floor((tankLevel / 100) * 1000)} / 1000 liters</Text>
           </View>
 
           <View style={styles.progressContainer}>
             <Text style={styles.progressLabel}>Water Level</Text>
-            <Text style={styles.progressValue}>{tankLevel}%</Text>
+            <Text style={styles.progressValue}>{tankLevel.toFixed(2)}%</Text>
           </View>
           <View style={styles.progressBar}>
             <View 
@@ -221,8 +298,13 @@ export default function TankMonitoringScreen() {
           <View style={styles.sensorData}>
             <View style={styles.sensorItem}>
               <Thermometer size={16} color="#007AFF" />
-              <Text style={styles.sensorValue}>{temperature.toFixed(2)}°C</Text>
+              <Text style={styles.sensorValue}>{temperature.toFixed(1)}°C</Text>
               <Text style={styles.sensorLabel}>Temperature</Text>
+            </View>
+            <View style={styles.sensorItem}>
+              <Droplets size={16} color="#3B82F6" />
+              <Text style={styles.sensorValue}>{humidity.toFixed(1)}%</Text>
+              <Text style={styles.sensorLabel}>Humidity</Text>
             </View>
             <View style={styles.sensorItem}>
               <Battery size={16} color="#10B981" />
@@ -272,7 +354,7 @@ export default function TankMonitoringScreen() {
             
             <View style={styles.chartBars}>
               {weeklyData.map((data, index) => (
-                <View key={data.day} style={styles.barContainer}>
+                <View key={`${data.day}-${index}`} style={styles.barContainer}>
                   <View style={styles.bar}>
                     <View 
                       style={[
@@ -349,8 +431,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F0F8FF',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 16,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
   },
   refreshing: {
     opacity: 0.6,
@@ -360,6 +444,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#007AFF',
     marginLeft: 4,
+  },
+  lastUpdateText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginLeft: 8,
   },
   content: {
     flex: 1,
@@ -545,9 +635,13 @@ const styles = StyleSheet.create({
   sensorData: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   sensorItem: {
     alignItems: 'center',
+    flex: 1,
+    minWidth: 80,
   },
   sensorValue: {
     fontSize: 16,

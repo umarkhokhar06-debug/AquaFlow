@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerActions } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
+import { driverAPI, DashboardStats, DriverOrder } from '../../../utils/driverAPI';
+import { useSocket } from '../../../hooks/useSocket';
 import { 
   Menu, 
   Bell, 
@@ -31,52 +35,55 @@ export default function DriverDashboardScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
 
-  const [driverStats] = useState({
-    pendingOrders: 5,
-    todayDeliveries: 12,
-    totalEarnings: 'Rs. 3,200',
-    completionRate: '98%',
-    rating: 4.8,
+  const [loading, setLoading] = useState(true);
+  const [driverStats, setDriverStats] = useState<DashboardStats>({
+    pendingOrders: 0,
+    todayEarnings: 0,
+    todayOrders: 0,
+    monthEarnings: 0,
+    monthOrders: 0,
+    rating: 0,
+    totalRatings: 0,
   });
+  const [todayOrders, setTodayOrders] = useState<DriverOrder[]>([]);
 
-  const [todayOrders] = useState([
-    {
-      id: 'ORD-127',
-      customer: 'Ahmed Hassan',
-      address: 'House 123, Gulshan-e-Iqbal',
-      type: 'Large Tanker',
-      volume: '6000L',
-      status: 'Pending',
-      priority: 'high',
-      estimatedTime: '30 mins',
-      amount: 'Rs. 2,500',
-      phone: '+92 300 1234567',
-    },
-    {
-      id: 'ORD-126',
-      customer: 'Fatima Ali',
-      address: 'House 456, Defence Phase 2',
-      type: 'Small Tanker',
-      volume: '3500L',
-      status: 'In Progress',
-      priority: 'medium',
-      estimatedTime: '45 mins',
-      amount: 'Rs. 1,800',
-      phone: '+92 301 2345678',
-    },
-    {
-      id: 'ORD-125',
-      customer: 'Muhammad Tariq',
-      address: 'House 789, Clifton Block 5',
-      type: 'Water Bottles',
-      volume: '20L x 10',
-      status: 'Completed',
-      priority: 'low',
-      estimatedTime: 'Completed',
-      amount: 'Rs. 750',
-      phone: '+92 302 3456789',
-    },
-  ]);
+  const { connect, onNewOrder, onOrderStatusUpdate, onOrderUpdate } = useSocket();
+
+  // Refetch dashboard data
+  const refetchDashboard = useCallback(() => {
+    loadDashboardData();
+  }, []);
+
+  useEffect(() => {
+    connect();
+    loadDashboardData();
+
+    // Listen for new orders, status updates, and order updates
+    onNewOrder(refetchDashboard);
+    onOrderStatusUpdate(refetchDashboard);
+    onOrderUpdate(refetchDashboard);
+
+    // No cleanup needed since listeners are managed by useSocket
+    // If you want to remove listeners, you can use remove*Listener from useSocket
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [stats, ordersRes] = await Promise.all([
+        driverAPI.getDashboardStats(),
+        driverAPI.getOrders({ limit: 5 }),
+      ]);
+      setDriverStats(stats);
+      // Orders are already mapped in driverAPI.getOrders
+      setTodayOrders(ordersRes.orders);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -88,11 +95,13 @@ export default function DriverDashboardScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending':
+      case 'confirmed':
         return '#FF6B35';
-      case 'In Progress':
+      case 'preparing':
+        return '#F59E0B';
+      case 'out_for_delivery':
         return '#007AFF';
-      case 'Completed':
+      case 'delivered':
         return '#28A745';
       default:
         return '#6B7280';
@@ -125,28 +134,28 @@ export default function DriverDashboardScreen() {
     </View>
   );
 
-  const OrderCard = ({ order }: { order: any }) => (
+  const OrderCard = ({ order }: { order: DriverOrder }) => (
     <TouchableOpacity 
       style={styles.orderCard}
       onPress={() => router.push(`/(driver)/order/${order.id}`)}
     >
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
-          <Text style={styles.orderId}>#{order.id}</Text>
-          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(order.priority) }]}>
-            <Text style={styles.priorityText}>{order.priority.toUpperCase()}</Text>
+          <Text style={styles.orderId}>{order.orderNumber ? order.orderNumber : 'Order'}</Text>
+          <View style={[styles.priorityBadge, { backgroundColor: '#007AFF' }]}> 
+            <Text style={styles.priorityText}>ORDER</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {order.status}
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}> 
+          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}> 
+            {order.status.replace('_', ' ').toUpperCase()}
           </Text>
         </View>
       </View>
 
       <View style={styles.customerInfo}>
         <User size={16} color="#6B7280" />
-        <Text style={styles.customerName}>{order.customer}</Text>
+        <Text style={styles.customerName}>{order.customerName}</Text>
         <TouchableOpacity style={styles.phoneButton}>
           <Phone size={14} color="#007AFF" />
         </TouchableOpacity>
@@ -155,20 +164,24 @@ export default function DriverDashboardScreen() {
       <View style={styles.orderDetails}>
         <View style={styles.orderRow}>
           <MapPin size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>{order.address}</Text>
+          <Text style={styles.orderDetailText}>{order.customerAddress}</Text>
         </View>
         <View style={styles.orderRow}>
           <Package size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>{order.type} - {order.volume}</Text>
+          <Text style={styles.orderDetailText}>
+            {order.items.length} item(s) - ${order.totalAmount}
+          </Text>
         </View>
         <View style={styles.orderRow}>
           <Clock size={14} color="#6B7280" />
-          <Text style={styles.orderDetailText}>{order.estimatedTime}</Text>
+          <Text style={styles.orderDetailText}>
+            {new Date(order.estimatedDeliveryTime).toLocaleTimeString()}
+          </Text>
         </View>
       </View>
 
       <View style={styles.orderFooter}>
-        <Text style={styles.orderAmount}>{order.amount}</Text>
+        <Text style={styles.orderAmount}>${order.totalAmount}</Text>
         <ArrowRight size={16} color="#6B7280" />
       </View>
     </TouchableOpacity>
@@ -192,16 +205,22 @@ export default function DriverDashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Good morning, Ahmad!</Text>
-          <Text style={styles.welcomeSubtitle}>You have {driverStats.pendingOrders} pending deliveries today</Text>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
+      ) : (
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Welcome Section */}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.welcomeTitle}>Good morning, Driver!</Text>
+            <Text style={styles.welcomeSubtitle}>You have {driverStats.pendingOrders} pending deliveries today</Text>
+          </View>
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -212,21 +231,21 @@ export default function DriverDashboardScreen() {
             color="#FF6B35"
           />
           <StatCard
-            title="Today's Deliveries"
-            value={driverStats.todayDeliveries}
+            title="Month's Orders"
+            value={driverStats.monthOrders}
             icon={<CheckCircle size={20} color="#28A745" />}
             color="#28A745"
           />
           <StatCard
             title="Today's Earnings"
-            value={driverStats.totalEarnings}
+            value={`$${driverStats.todayEarnings?.toFixed(2)}`}
             icon={<DollarSign size={20} color="#007AFF" />}
             color="#007AFF"
           />
           <StatCard
             title="Rating"
-            value={driverStats.rating}
-            subtitle={`${driverStats.completionRate} completion`}
+            value={driverStats.rating?.toFixed(1)}
+            subtitle={`${driverStats.totalRatings} ratings`}
             icon={<TrendingUp size={20} color="#9333EA" />}
             color="#9333EA"
           />
@@ -259,8 +278,8 @@ export default function DriverDashboardScreen() {
             </TouchableOpacity>
           </View>
           
-          {todayOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
+          {todayOrders.map((order, idx) => (
+            <OrderCard key={order.id || idx} order={order} />
           ))}
         </View>
 
@@ -280,7 +299,8 @@ export default function DriverDashboardScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -289,6 +309,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',

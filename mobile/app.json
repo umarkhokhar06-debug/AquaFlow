@@ -1,5 +1,6 @@
 {
   "expo": {
+    "sdkVersion": "54.0.0",
     "name": "bolt-expo-nativewind",
     "slug": "bolt-expo-nativewind",
     "version": "1.0.0",
@@ -22,3 +23,4 @@
     }
   }
 }
+

@@ -1,6 +1,7 @@
 
-
-// create config.ts that use backend url 
+// Configuration for Tanker App
 export const config = {
-    backendUrl: 'http://192.168.18.71:5000',
+    backendUrl: 'http://192.168.18.135:4000',
+    apiUrl: 'http://192.168.18.135:4000/api',
+    authUrl: 'http://192.168.18.135:4000/api/auth',
 }

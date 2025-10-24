@@ -3,7 +3,7 @@ import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Package, MapPin, Settings, Bell, CircleHelp as HelpCircle, LogOut, X, Truck } from 'lucide-react-native';
+import { User, Package, MapPin, Settings, Bell, CircleHelp as HelpCircle, LogOut, X, Truck, DollarSign } from 'lucide-react-native';
 
 function CustomDriverDrawerContent(props: any) {
   const router = useRouter();
@@ -38,7 +38,15 @@ function CustomDriverDrawerContent(props: any) {
         <DrawerItem
           label="My Deliveries"
           icon={({ color, size }) => <Package size={size} color={color} />}
-          onPress={() => router.push('/(driver)/(tabs)/deliveries')}
+          onPress={() => router.push('./(tabs)/deliveries')}
+          labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
+          activeBackgroundColor="#F0F8FF"
+          activeTintColor="#007AFF"
+        />
+        <DrawerItem
+          label="My Earnings"
+          icon={({ color, size }) => <DollarSign size={size} color={color} />}
+          onPress={() => router.push('./earnings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
@@ -46,7 +54,7 @@ function CustomDriverDrawerContent(props: any) {
         <DrawerItem
           label="Settings"
           icon={({ color, size }) => <Settings size={size} color={color} />}
-          onPress={() => router.push('/(driver)/settings')}
+          onPress={() => router.push('./settings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
@@ -54,7 +62,7 @@ function CustomDriverDrawerContent(props: any) {
         <DrawerItem
           label="Notifications"
           icon={({ color, size }) => <Bell size={size} color={color} />}
-          onPress={() => router.push('/(driver)/notifications')}
+          onPress={() => router.push('./notifications')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"
@@ -62,7 +70,7 @@ function CustomDriverDrawerContent(props: any) {
         <DrawerItem
           label="Help & Support"
           icon={({ color, size }) => <HelpCircle size={size} color={color} />}
-          onPress={() => router.push('/(driver)/help')}
+          onPress={() => router.push('./help')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#007AFF"

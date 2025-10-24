@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StatusBar,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,23 +28,171 @@ import {
 } from 'lucide-react-native';
 import { globalstyles } from '@/app/commans/style';
 import HeaderComponent from '@/app/components/Header';
+import AddressSelectionModal from '@/app/components/AddressSelectionModal';
+import { storage, User } from '@/utils/auth';
+import { orderAPI } from '@/utils/orderAPI';
+import { Product } from '@/types/order';
+import { useSocket } from '@/hooks/useSocket';
+import { notificationService } from '@/utils/notificationService';
+
+interface SelectedAddress {
+  id: string;
+  type: 'Home' | 'Office' | 'Other';
+  fullName: string;
+  houseNumber: string;
+  portion: 'upper' | 'lower';
+  address: string;
+  landmark: string;
+  phoneNumber: string;
+  isDefault: boolean;
+  latitude?: number;
+  longitude?: number;
+}
 
 export default function DashboardScreen() {
   const [tankLevel, setTankLevel] = useState(25);
+  const [user, setUser] = useState<User | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [ordering, setOrdering] = useState<string | null>(null);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { isConnected, connect, onSystemNotification } = useSocket();
 
-  const handleServiceSelect = (service: string, price: string) => {
+  const handleServiceSelect = async (product: Product) => {
+    if (!user) {
+      Alert.alert('Error', 'Please login to place an order');
+      return;
+    }
+
+    if (!product.availability) {
+      Alert.alert('Unavailable', 'This service is currently unavailable');
+      return;
+    }
+
+    const price = `Rs. ${product.unitPrice.toLocaleString()}`;
+    
     Alert.alert(
       'Order Confirmation',
-      `You selected ${service} for ${price}. Would you like to proceed?`,
+      `You selected ${product.name} (${product.size}) for ${price}. Would you like to proceed?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Order Now', onPress: () => router.push('/(main)/(tabs)/orders') }
+        { 
+          text: 'Order Now', 
+          onPress: () => {
+            setSelectedProduct(product);
+            setShowAddressModal(true);
+          } 
+        }
       ]
     );
   };
+
+  const handleAddressSelected = (address: SelectedAddress) => {
+    setSelectedAddress(address);
+    setShowAddressModal(false);
+    
+    // Proceed with order after address is selected
+    if (selectedProduct) {
+      handleDirectOrder(selectedProduct, address);
+    }
+  };
+
+  const handleDirectOrder = async (product: Product, address: SelectedAddress) => {
+    if (!user) return;
+
+    setOrdering(product.type);
+    
+    try {
+      // Create order with selected address
+      const orderData = {
+        items: [{ type: product.type, quantity: 1 }],
+        deliveryAddress: {
+          fullName: address.fullName,
+          houseNumber: address.houseNumber,
+          portion: address.portion,
+          address: address.address,
+          phoneNumber: address.phoneNumber,
+          specialInstructions: address.landmark ? `Landmark: ${address.landmark}` : 'Please deliver to the address provided',
+          latitude: address.latitude,
+          longitude: address.longitude
+        },
+        paymentMethod: 'cash' as const,
+        notes: `Direct order for ${product.name}`
+      };
+
+      const order = await orderAPI.createOrder(orderData);
+      
+      Alert.alert(
+        'Order Placed Successfully!',
+        `Your order #${order.orderNumber} has been placed. Total: Rs. ${order.totalAmount.toLocaleString()}`,
+        [
+          { text: 'View Orders', onPress: () => router.push('/(main)/(tabs)/orders') },
+          { text: 'Continue Shopping', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Order error:', error);
+      Alert.alert(
+        'Order Failed',
+        error instanceof Error ? error.message : 'Failed to place order. Please try again.'
+      );
+    } finally {
+      setOrdering(null);
+      setSelectedProduct(null);
+    }
+  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch user data
+        const userData = await storage.getUserData();
+        setUser(userData?.user || null);
+        
+        // Fetch products
+        const productsData = await orderAPI.getProducts();
+        setProducts(productsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Failed to load data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+    
+    // Connect to socket
+    connect().catch(error => {
+      console.error('Failed to connect to socket:', error);
+    });
+  }, []);
+
+  // Set up real-time listeners
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Handle system notifications
+    const handleSystemNotification = (data: any) => {
+      console.log('System notification received:', data);
+      notificationService.handleSocketNotification(data);
+    };
+
+    // Register listener
+    onSystemNotification(handleSystemNotification);
+
+    // Cleanup listener on unmount
+    return () => {
+      // Note: We don't have removeSystemNotificationListener in the current hook
+      // This would need to be added to the hook if we want proper cleanup
+    };
+  }, [isConnected, onSystemNotification]);
 
   const openDrawer = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -54,46 +203,55 @@ export default function DashboardScreen() {
   };
 
   const ServiceCard = ({ 
-    title, 
-    volume, 
-    price, 
+    product,
     time, 
-    available, 
     icon, 
     color,
     onPress 
-  }: any) => (
-    <TouchableOpacity 
-      style={[styles.serviceCard, !available && styles.serviceCardDisabled]} 
-      onPress={available ? onPress : undefined}
-      disabled={!available}
-    >
-      <View style={styles.serviceContent}>
-        <View style={[styles.serviceIcon, { backgroundColor: color + '20' }]}>
-          {icon}
-        </View>
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceTitle}>{title}</Text>
-          <Text style={styles.serviceVolume}>{volume}</Text>
-          <View style={styles.serviceDetails}>
-            <Text style={styles.servicePrice}>{price}</Text>
-            <Text style={styles.serviceTime}>• {time}</Text>
+  }: { 
+    product: Product;
+    time: string;
+    icon: React.ReactNode;
+    color: string;
+    onPress: (product: Product) => void;
+  }) => {
+    const isOrdering = ordering === product.type;
+    const price = `Rs. ${product.unitPrice.toLocaleString()}`;
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]} 
+        onPress={product.availability ? () => onPress(product) : undefined}
+        disabled={!product.availability || isOrdering}
+      >
+        <View style={styles.serviceContent}>
+          <View style={[styles.serviceIcon, { backgroundColor: color + '20' }]}>
+            {icon}
+          </View>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceTitle}>{product.name}</Text>
+            <Text style={styles.serviceVolume}>{product.size}</Text>
+            <View style={styles.serviceDetails}>
+              <Text style={styles.servicePrice}>{price}</Text>
+              <Text style={styles.serviceTime}>• {time}</Text>
+            </View>
+          </View>
+          <View style={styles.serviceRight}>
+            <View style={[
+              styles.availabilityBadge, 
+              { backgroundColor: product.availability ? '#10B981' : '#EF4444' }
+            ]}>
+              <Text style={styles.availabilityText}>
+                {isOrdering ? 'Ordering...' : product.availability ? 'Available' : 'Unavailable'}
+              </Text>
+            </View>
+            {product.availability && !isOrdering && <ArrowRight size={20} color="#6B7280" />}
+            {isOrdering && <ActivityIndicator size="small" color="#007AFF" />}
           </View>
         </View>
-        <View style={styles.serviceRight}>
-          <View style={[
-            styles.availabilityBadge, 
-            { backgroundColor: available ? '#10B981' : '#EF4444' }
-          ]}>
-            <Text style={styles.availabilityText}>
-              {available ? 'Available' : 'Unavailable'}
-            </Text>
-          </View>
-          {available && <ArrowRight size={20} color="#6B7280" />}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={[globalstyles.container, { paddingTop: insets.top }]}>
@@ -109,7 +267,7 @@ export default function DashboardScreen() {
       >
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome back, John!</Text>
+          <Text style={styles.welcomeTitle}>Welcome back, {user?.name}!</Text>
           <Text style={styles.welcomeSubtitle}>Your water tank is at {tankLevel}% capacity</Text>
         </View>
 
@@ -135,38 +293,39 @@ export default function DashboardScreen() {
         <View style={styles.servicesSection}>
           <Text style={styles.sectionTitle}>Choose Your Service</Text>
           
-          <ServiceCard
-            title="Large Tanker"
-            volume="6000L"
-            price="Rs. 2,500"
-            time="45-60 min"
-            available={true}
-            icon={<Truck size={24} color="#007AFF" />}
-            color="#007AFF"
-            onPress={() => handleServiceSelect('Large Tanker (6000L)', 'Rs. 2,500')}
-          />
-
-          <ServiceCard
-            title="Small Tanker"
-            volume="3500L"
-            price="Rs. 1,800"
-            time="30-45 min"
-            available={true}
-            icon={<Truck size={20} color="#10B981" />}
-            color="#10B981"
-            onPress={() => handleServiceSelect('Small Tanker (3500L)', 'Rs. 1,800')}
-          />
-
-          <ServiceCard
-            title="Water Bottles"
-            volume="20L x 10"
-            price="Rs. 500"
-            time="15-30 min"
-            available={false}
-            icon={<Droplets size={20} color="#8B5CF6" />}
-            color="#8B5CF6"
-            onPress={() => handleServiceSelect('Water Bottles (20L x 10)', 'Rs. 500')}
-          />
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingText}>Loading services...</Text>
+            </View>
+          ) : (
+            products.map((product) => {
+              let time = '15-30 min';
+              let icon = <Droplets size={20} color="#8B5CF6" />;
+              let color = '#8B5CF6';
+              
+              if (product.type === 'large_tanker') {
+                time = '45-60 min';
+                icon = <Truck size={24} color="#007AFF" />;
+                color = '#007AFF';
+              } else if (product.type === 'small_tanker') {
+                time = '30-45 min';
+                icon = <Truck size={20} color="#10B981" />;
+                color = '#10B981';
+              }
+              
+              return (
+                <ServiceCard
+                  key={product.type}
+                  product={product}
+                  time={time}
+                  icon={icon}
+                  color={color}
+                  onPress={handleServiceSelect}
+                />
+              );
+            })
+          )}
         </View>
 
         {/* Express Delivery */}
@@ -204,6 +363,16 @@ export default function DashboardScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Address Selection Modal */}
+      <AddressSelectionModal 
+        visible={showAddressModal}
+        onClose={() => {
+          setShowAddressModal(false);
+          setSelectedProduct(null);
+        }}
+        onSelectAddress={handleAddressSelected}
+      />
     </View>
   );
 }
@@ -496,5 +665,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginTop: 12,
   },
 });

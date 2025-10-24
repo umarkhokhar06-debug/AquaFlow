@@ -23,7 +23,8 @@ import {
   ChevronRight,
   Smartphone,
   Volume2,
-  Lock
+  Lock,
+  Settings as SettingsIcon
 } from 'lucide-react-native';
 
 export default function SettingsScreen() {
@@ -185,6 +186,19 @@ export default function SettingsScreen() {
               title="Language"
               subtitle="English"
               onPress={() => console.log('Language settings')}
+            />
+          </View>
+        </View>
+
+        {/* Tank Monitoring Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tank Monitoring</Text>
+          <View style={styles.settingGroup}>
+            <SettingItem
+              icon={<SettingsIcon size={20} color="#007AFF" />}
+              title="Tank Calibration"
+              subtitle="Configure tank sensor calibration"
+              onPress={() => router.push('/(main)/calibration-settings')}
             />
           </View>
         </View>

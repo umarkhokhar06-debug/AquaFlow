@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   StatusBar,
   TextInput,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { driverAPI, DriverOrder } from '../../../utils/driverAPI';
+import { useSocket } from '../../../hooks/useSocket';
 import {
   Search,
   Filter,
@@ -29,93 +34,79 @@ export default function DriverDeliveriesScreen() {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [deliveries, setDeliveries] = useState<DriverOrder[]>([]);
 
-  const deliveries = [
-    {
-      id: 'ORD-127',
-      customer: 'Ahmed Hassan',
-      phone: '+92 300 1234567',
-      address: 'House 123, Upper Portion, Gulshan-e-Iqbal',
-      type: 'Large Tanker',
-      volume: '6000L',
-      status: 'Pending',
-      priority: 'high',
-      estimatedTime: '30 mins',
-      amount: 'Rs. 2,500',
-      distance: '2.5 km',
-      orderTime: '10:30 AM',
-    },
-    {
-      id: 'ORD-126',
-      customer: 'Fatima Ali',
-      phone: '+92 301 2345678',
-      address: 'House 456, Ground Floor, Defence Phase 2',
-      type: 'Small Tanker',
-      volume: '3500L',
-      status: 'In Progress',
-      priority: 'medium',
-      estimatedTime: '45 mins',
-      amount: 'Rs. 1,800',
-      distance: '4.2 km',
-      orderTime: '11:15 AM',
-    },
-    {
-      id: 'ORD-125',
-      customer: 'Muhammad Tariq',
-      phone: '+92 302 3456789',
-      address: 'House 789, Lower Portion, Clifton Block 5',
-      type: 'Water Bottles',
-      volume: '20L x 10',
-      status: 'Completed',
-      priority: 'low',
-      estimatedTime: 'Completed',
-      amount: 'Rs. 750',
-      distance: '6.8 km',
-      orderTime: '9:45 AM',
-    },
-    {
-      id: 'ORD-124',
-      customer: 'Sarah Khan',
-      phone: '+92 303 4567890',
-      address: 'House 321, Upper Portion, Nazimabad Block 3',
-      type: 'Large Tanker',
-      volume: '6000L',
-      status: 'Cancelled',
-      priority: 'medium',
-      estimatedTime: 'Cancelled',
-      amount: 'Rs. 2,500',
-      distance: '3.1 km',
-      orderTime: '8:20 AM',
-    },
-  ];
+  const { connect, onNewOrder, onOrderStatusUpdate, onOrderUpdate } = useSocket();
+
+  // Refetch deliveries
+  const refetchDeliveries = useCallback(() => {
+    loadDeliveries();
+  }, [filterStatus]);
+
+  useEffect(() => {
+    connect();
+    loadDeliveries();
+
+    // Listen for new orders, status updates, and order updates
+    onNewOrder(refetchDeliveries);
+    onOrderStatusUpdate(refetchDeliveries);
+    onOrderUpdate(refetchDeliveries);
+
+    // No cleanup needed since listeners are managed by useSocket
+    // If you want to remove listeners, you can use remove*Listener from useSocket
+  }, [filterStatus]);
+
+  const loadDeliveries = async () => {
+    try {
+      setLoading(true);
+      const params = filterStatus !== 'all' ? { status: filterStatus } : {};
+      const response = await driverAPI.getOrders(params);
+      // Orders are already mapped in driverAPI.getOrders
+      setDeliveries(response.orders);
+    } catch (error) {
+      console.error('Error loading deliveries:', error);
+      Alert.alert('Error', 'Failed to load deliveries');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDeliveries();
+    setRefreshing(false);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending':
+      case 'confirmed':
         return '#FF6B35';
-      case 'In Progress':
+      case 'preparing':
+        return '#F59E0B';
+      case 'out_for_delivery':
         return '#007AFF';
-      case 'Completed':
+      case 'delivered':
         return '#28A745';
-      case 'Cancelled':
-        return '#EF4444';
       default:
         return '#6B7280';
     }
   };
 
   const getStatusIcon = (status: string) => {
+    const color = getStatusColor(status);
     switch (status) {
-      case 'Pending':
-        return <Clock size={16} color="#FF6B35" />;
-      case 'In Progress':
-        return <Package size={16} color="#007AFF" />;
-      case 'Completed':
-        return <CheckCircle size={16} color="#28A745" />;
-      case 'Cancelled':
-        return <AlertCircle size={16} color="#EF4444" />;
+      case 'confirmed':
+        return <Clock size={12} color={color} />;
+      case 'preparing':
+        return <Package size={12} color={color} />;
+      case 'out_for_delivery':
+        return <MapPin size={12} color={color} />;
+      case 'delivered':
+        return <CheckCircle size={12} color={color} />;
       default:
-        return <Clock size={16} color="#6B7280" />;
+        return <AlertCircle size={12} color={color} />;
     }
   };
 
@@ -134,22 +125,27 @@ export default function DriverDeliveriesScreen() {
 
   const filteredDeliveries = deliveries.filter((delivery) => {
     const matchesSearch =
-      delivery.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      delivery.id.toLowerCase().includes(searchQuery.toLowerCase());
+      (delivery.customerName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (delivery.id ?? '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
-      filterStatus === 'all' ||
-      delivery.status.toLowerCase().replace(' ', '') === filterStatus;
+      filterStatus === 'all' || delivery.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
-  const DeliveryCard = ({ delivery }: { delivery: any }) => (
+  const DeliveryCard = ({ delivery }: { delivery: DriverOrder }) => (
     <TouchableOpacity
       style={styles.deliveryCard}
-      onPress={() => router.push(`/(driver)/order/${delivery.id}`)}
+      onPress={() => {
+        if (delivery.id) {
+          router.push(`/(driver)/order/${delivery.id}`);
+        } else {
+          Alert.alert('Error', 'Order ID is missing, cannot open details.');
+        }
+      }}
     >
       <View style={styles.deliveryHeader}>
         <View style={styles.deliveryInfo}>
-          <Text style={styles.deliveryId}>#{delivery.id}</Text>
+          <Text style={styles.deliveryId}>{delivery.orderNumber ? delivery.orderNumber : 'Order'}</Text>
           <View
             style={[
               styles.priorityBadge,
@@ -157,7 +153,7 @@ export default function DriverDeliveriesScreen() {
             ]}
           >
             <Text style={styles.priorityText}>
-              {delivery.priority.toUpperCase()}
+              {(delivery.priority ?? 'medium').toUpperCase()}
             </Text>
           </View>
         </View>
@@ -182,7 +178,7 @@ export default function DriverDeliveriesScreen() {
       <View style={styles.customerSection}>
         <View style={styles.customerInfo}>
           <User size={16} color="#6B7280" />
-          <Text style={styles.customerName}>{delivery.customer}</Text>
+          <Text style={styles.customerName}>{delivery.customerName}</Text>
         </View>
         <TouchableOpacity style={styles.phoneButton}>
           <Phone size={14} color="#007AFF" />
@@ -192,25 +188,28 @@ export default function DriverDeliveriesScreen() {
       <View style={styles.deliveryDetails}>
         <View style={styles.detailRow}>
           <MapPin size={14} color="#6B7280" />
-          <Text style={styles.detailText}>{delivery.address}</Text>
+          <Text style={styles.detailText}>{delivery.customerAddress}</Text>
         </View>
         <View style={styles.detailRow}>
           <Package size={14} color="#6B7280" />
           <Text style={styles.detailText}>
-            {delivery.type} - {delivery.volume}
+            {delivery.items && delivery.items.length > 0
+              ? `${delivery.items[0].productName} - ${delivery.items[0].quantity}`
+              : 'No items'}
           </Text>
         </View>
         <View style={styles.detailRow}>
           <Clock size={14} color="#6B7280" />
           <Text style={styles.detailText}>
-            {delivery.orderTime} • {delivery.distance} •{' '}
-            {delivery.estimatedTime}
+            {delivery.createdAt
+              ? new Date(delivery.createdAt).toLocaleString()
+              : ''}
           </Text>
         </View>
       </View>
 
       <View style={styles.deliveryFooter}>
-        <Text style={styles.deliveryAmount}>{delivery.amount}</Text>
+  <Text style={styles.deliveryAmount}>{delivery.totalAmount}</Text>
         <ArrowRight size={16} color="#6B7280" />
       </View>
     </TouchableOpacity>
@@ -256,7 +255,7 @@ export default function DriverDeliveriesScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.filterTabs}
         >
-          {['all', 'pending', 'inprogress', 'completed', 'cancelled'].map(
+          {['all', 'pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'].map(
             (status) => (
               <TouchableOpacity
                 key={status}
@@ -286,8 +285,8 @@ export default function DriverDeliveriesScreen() {
 
       {/* Deliveries List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredDeliveries.map((delivery) => (
-          <DeliveryCard key={delivery.id} delivery={delivery} />
+        {filteredDeliveries.map((delivery, idx) => (
+          <DeliveryCard key={delivery.id || delivery.orderNumber || idx} delivery={delivery} />
         ))}
         {filteredDeliveries.length === 0 && (
           <View style={styles.emptyState}>
