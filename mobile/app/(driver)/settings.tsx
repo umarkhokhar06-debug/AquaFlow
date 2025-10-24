@@ -10,22 +10,18 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { 
+import {
   ArrowLeft,
   Bell,
   Shield,
   Moon,
   Globe,
   HelpCircle,
-  FileText,
-  Star,
   ChevronRight,
   Smartphone,
   Volume2,
   Lock,
   User,
-  Car,
-  DollarSign
 } from 'lucide-react-native';
 import { driverAPI, DriverSettings } from '../../utils/driverAPI';
 
@@ -33,15 +29,11 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<DriverSettings>({
-    notifications: {
-      push_enabled: true,
-      sound_enabled: true,
-      new_orders: true,
-      order_updates: true,
-      promotions: false,
-      system_updates: true,
-    },
+  const [settings, setSettings] = useState<any>({
+    notificationsEnabled: true,
+    soundEnabled: true,
+    language: 'en',
+    autoAcceptOrders: false,
     privacy: {
       location_sharing: true,
       data_analytics: false,
@@ -63,7 +55,20 @@ export default function SettingsScreen() {
     try {
       setLoading(true);
       const settingsData = await driverAPI.getSettings();
-      setSettings(settingsData);
+      setSettings({
+        ...settingsData,
+        privacy: settingsData.privacy ?? {
+          location_sharing: true,
+          data_analytics: false,
+          marketing_communications: false,
+        },
+        preferences: settingsData.preferences ?? {
+          language: 'en',
+          currency: 'PKR',
+          distance_unit: 'km',
+          dark_mode: false,
+        }
+      });
     } catch (error) {
       console.error('Error loading settings:', error);
       Alert.alert('Error', 'Failed to load settings');
@@ -85,13 +90,11 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleNotificationChange = (key: keyof DriverSettings['notifications'], value: boolean) => {
+  const handleNotificationChange = (key: string, value: boolean) => {
+    // For backend structure, just map keys directly
     const newSettings = {
       ...settings,
-      notifications: {
-        ...settings.notifications,
-        [key]: value,
-      },
+      [key]: value,
     };
     updateSettings(newSettings);
   };
@@ -157,14 +160,6 @@ export default function SettingsScreen() {
     router.push('/(driver)/(tabs)/profile');
   };
 
-  const navigateToVehicle = () => {
-    router.push('./vehicle');
-  };
-
-  const navigateToEarnings = () => {
-    router.push('./earnings');
-  };
-
   const navigateToHelp = () => {
     router.push('./help');
   };
@@ -197,20 +192,6 @@ export default function SettingsScreen() {
           onPress: navigateToProfile,
           showChevron: true,
         },
-        {
-          icon: <Car size={20} color="#10B981" />,
-          title: 'Vehicle Information',
-          subtitle: 'Update your vehicle details',
-          onPress: navigateToVehicle,
-          showChevron: true,
-        },
-        {
-          icon: <DollarSign size={20} color="#F59E0B" />,
-          title: 'Earnings & Payments',
-          subtitle: 'View earnings and payment methods',
-          onPress: navigateToEarnings,
-          showChevron: true,
-        },
       ],
     },
     {
@@ -221,24 +202,16 @@ export default function SettingsScreen() {
           title: 'Push Notifications',
           subtitle: 'Receive push notifications',
           toggle: true,
-          value: settings.notifications.push_enabled,
-          onToggle: (value: boolean) => handleNotificationChange('push_enabled', value),
+          value: settings.notificationsEnabled,
+          onToggle: (value: boolean) => handleNotificationChange('notificationsEnabled', value),
         },
         {
           icon: <Volume2 size={20} color="#EF4444" />,
           title: 'Sound Notifications',
           subtitle: 'Play sounds for notifications',
           toggle: true,
-          value: settings.notifications.sound_enabled,
-          onToggle: (value: boolean) => handleNotificationChange('sound_enabled', value),
-        },
-        {
-          icon: <Smartphone size={20} color="#06B6D4" />,
-          title: 'New Orders',
-          subtitle: 'Get notified of new delivery orders',
-          toggle: true,
-          value: settings.notifications.new_orders,
-          onToggle: (value: boolean) => handleNotificationChange('new_orders', value),
+          value: settings.soundEnabled,
+          onToggle: (value: boolean) => handleNotificationChange('soundEnabled', value),
         },
       ],
     },
@@ -270,26 +243,19 @@ export default function SettingsScreen() {
         },
       ],
     },
-    {
-      title: 'Preferences',
-      items: [
-        {
-          icon: <Moon size={20} color="#4B5563" />,
-          title: 'Dark Mode',
-          subtitle: 'Switch to dark theme',
-          toggle: true,
-          value: settings.preferences.dark_mode,
-          onToggle: (value: boolean) => handlePreferenceChange('dark_mode', value),
-        },
-        {
-          icon: <Globe size={20} color="#6366F1" />,
-          title: 'Language',
-          subtitle: `Current: ${settings.preferences.language.toUpperCase()}`,
-          onPress: () => Alert.alert('Language', 'Language selection coming soon!'),
-          showChevron: true,
-        },
-      ],
-    },
+    // {
+    //   title: 'Preferences',
+    //   items: [
+    //     {
+    //       icon: <Moon size={20} color="#4B5563" />,
+    //       title: 'Dark Mode',
+    //       subtitle: 'Switch to dark theme',
+    //       toggle: true,
+    //       value: settings.preferences.dark_mode,
+    //       onToggle: (value: boolean) => handlePreferenceChange('dark_mode', value),
+    //     },
+    //   ],
+    // },
     {
       title: 'Support',
       items: [
@@ -298,20 +264,6 @@ export default function SettingsScreen() {
           title: 'Help & Support',
           subtitle: 'Get help and contact support',
           onPress: navigateToHelp,
-          showChevron: true,
-        },
-        {
-          icon: <FileText size={20} color="#6B7280" />,
-          title: 'Terms & Conditions',
-          subtitle: 'Read our terms and conditions',
-          onPress: () => Alert.alert('Terms & Conditions', 'Terms and conditions would be displayed here.'),
-          showChevron: true,
-        },
-        {
-          icon: <Star size={20} color="#F59E0B" />,
-          title: 'Rate App',
-          subtitle: 'Rate our app on the store',
-          onPress: () => Alert.alert('Rate App', 'This would open the app store rating.'),
           showChevron: true,
         },
       ],

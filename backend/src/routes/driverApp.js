@@ -63,6 +63,7 @@ router.get('/support/faqs', async (req, res) => {
 });
 
 // Settings
+router.get('/settings', driverAppController.getSettings);
 router.put('/settings', driverAppController.updateSettings);
 
 // Earnings

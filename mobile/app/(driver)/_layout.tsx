@@ -60,14 +60,6 @@ function CustomDriverDrawerContent(props: any) {
           activeTintColor="#007AFF"
         />
         <DrawerItem
-          label="Notifications"
-          icon={({ color, size }) => <Bell size={size} color={color} />}
-          onPress={() => router.push('./notifications')}
-          labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
-          activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
-        />
-        <DrawerItem
           label="Help & Support"
           icon={({ color, size }) => <HelpCircle size={size} color={color} />}
           onPress={() => router.push('./help')}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,93 +6,135 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Bell, CircleCheck as CheckCircle, Clock, Truck, Droplets, TriangleAlert as AlertTriangle, Settings } from 'lucide-react-native';
+import { ArrowLeft, Bell, CircleCheck as CheckCircle, Truck, Droplets, TriangleAlert as AlertTriangle, Settings } from 'lucide-react-native';
+import { driverAPI, Notification } from '../../utils/driverAPI';
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      type: 'order',
-      title: 'Order Delivered Successfully',
-      message: 'Your Large Tanker (6000L) order has been delivered to your location.',
-      time: '5 minutes ago',
-      read: false,
-      icon: 'success',
-    },
-    {
-      id: '2',
-      type: 'tracking',
-      title: 'Driver En Route',
-      message: 'Ahmad Khan is on the way with your water delivery. ETA: 25 minutes.',
-      time: '30 minutes ago',
-      read: false,
-      icon: 'truck',
-    },
-    {
-      id: '3',
-      type: 'tank',
-      title: 'Low Water Level Alert',
-      message: 'Your water tank is at 15% capacity. Consider ordering a refill soon.',
-      time: '2 hours ago',
-      read: true,
-      icon: 'warning',
-    },
-    {
-      id: '4',
-      type: 'order',
-      title: 'Order Confirmed',
-      message: 'Your Small Tanker (3500L) order has been confirmed and will be processed shortly.',
-      time: '1 day ago',
-      read: true,
-      icon: 'success',
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'Welcome to AquaDispatch',
-      message: 'Thank you for joining AquaDispatch! Get started by placing your first water order.',
-      time: '3 days ago',
-      read: true,
-      icon: 'info',
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await driverAPI.getNotifications({ page: 1, limit: 50 });
+      setNotifications(response.notifications);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      Alert.alert('Error', 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await driverAPI.markNotificationAsRead(id);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const getNotificationIcon = (iconType: string) => {
-    switch (iconType) {
-      case 'success':
+  const markAllAsRead = async () => {
+    try {
+      await driverAPI.markAllNotificationsAsRead();
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'order_assigned':
         return <CheckCircle size={20} color="#28A745" />;
-      case 'truck':
+      case 'order_update':
         return <Truck size={20} color="#007AFF" />;
-      case 'warning':
+      case 'payment_received':
+        return <CheckCircle size={20} color="#10B981" />;
+      case 'system_update':
         return <AlertTriangle size={20} color="#FF6B35" />;
-      case 'info':
+      case 'promotion':
         return <Droplets size={20} color="#9333EA" />;
       default:
         return <Bell size={20} color="#6B7280" />;
     }
   };
 
+  const formatTime = (createdAt: string): string => {
+    try {
+      const date = new Date(createdAt);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      return date.toLocaleDateString();
+    } catch {
+      return 'Unknown time';
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient
+          colors={['#007AFF', '#0056CC']}
+          style={[styles.header, { paddingTop: insets.top + 20 }]}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.headerTitle}>
+              <Text style={styles.title}>Notifications</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => router.push('/(main)/settings')}
+            >
+              <Settings size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading notifications...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -118,7 +160,7 @@ export default function NotificationsScreen() {
           </View>
           <TouchableOpacity 
             style={styles.settingsButton}
-            onPress={() => router.push('/(main)/settings')}
+            onPress={() => router.push('/(driver)/settings')}
           >
             <Settings size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -151,7 +193,7 @@ export default function NotificationsScreen() {
           >
             <View style={styles.notificationContent}>
               <View style={styles.notificationIcon}>
-                {getNotificationIcon(notification.icon)}
+                {getNotificationIcon(notification.type)}
               </View>
               <View style={styles.notificationText}>
                 <Text style={[
@@ -164,7 +206,7 @@ export default function NotificationsScreen() {
                   {notification.message}
                 </Text>
                 <Text style={styles.notificationTime}>
-                  {notification.time}
+                  {formatTime(notification.createdAt)}
                 </Text>
               </View>
               {!notification.read && (
@@ -174,7 +216,7 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
         ))}
 
-        {notifications.length === 0 && (
+        {notifications.length === 0 && !loading && (
           <View style={styles.emptyState}>
             <Bell size={48} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No Notifications</Text>
@@ -192,6 +234,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
   },
   header: {
     paddingBottom: 20,

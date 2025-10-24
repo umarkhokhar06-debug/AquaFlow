@@ -33,7 +33,7 @@ export default function DriverDeliveriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('confirmed');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deliveries, setDeliveries] = useState<DriverOrder[]>([]);
@@ -243,9 +243,6 @@ export default function DriverDeliveriesScreen() {
             onChangeText={setSearchQuery}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Filter size={20} color="#007AFF" />
-        </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
@@ -255,7 +252,7 @@ export default function DriverDeliveriesScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.filterTabs}
         >
-          {['all', 'pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'].map(
+          {['all', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'].map(
             (status) => (
               <TouchableOpacity
                 key={status}
@@ -310,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FF',
   },
   header: {
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
   },
   headerContent: {
@@ -369,7 +366,7 @@ const styles = StyleSheet.create({
   },
   filterTabs: {
     paddingHorizontal: 20,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   filterTab: {
     paddingHorizontal: 16,

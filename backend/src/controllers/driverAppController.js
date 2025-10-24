@@ -725,6 +725,32 @@ const driverAppController = {
   },
 
   // Settings
+  getSettings: async (req, res) => {
+    try {
+      const driverId = req.user.id;
+      
+      const driver = await User.findById(driverId).select('settings');
+      
+      if (!driver) {
+        return res.status(404).json({
+          success: false,
+          message: 'Driver not found'
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: driver.settings
+      });
+    } catch (error) {
+      console.error('Get settings error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error retrieving settings'
+      });
+    }
+  },
+
   updateSettings: async (req, res) => {
     try {
       const driverId = req.user.id;
