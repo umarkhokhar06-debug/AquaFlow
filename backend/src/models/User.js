@@ -33,6 +33,15 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't include password in queries by default
   },
+  phoneNumber: {
+    type: String,
+    trim: true,
+    maxlength: [15, 'Phone number cannot exceed 15 characters'],
+    match: [
+      /^[0-9\s\-\+\(\)]+$/,
+      'Please provide a valid phone number'
+    ]
+  },
   // Customer-specific fields
   fullName: {
     type: String,

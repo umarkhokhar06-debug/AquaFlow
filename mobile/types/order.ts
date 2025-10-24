@@ -41,6 +41,12 @@ export interface Driver {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    lastUpdated?: string;
+  };
 }
 
 export interface Order {

@@ -186,7 +186,7 @@ const orderService = {
     try {
       const orders = await Order.find({ customer: customerId })
         .sort({ orderDate: -1 })
-        .populate('driver', 'name email');
+        .populate('driver', 'name email phoneNumber location');
 
       return {
         success: true,
@@ -208,7 +208,9 @@ const orderService = {
           driver: order.driver ? {
             id: order.driver._id,
             name: order.driver.name,
-            email: order.driver.email
+            email: order.driver.email,
+            phone: order.driver.phoneNumber,
+            location: order.driver.location
           } : null,
           notes: order.notes,
           createdAt: order.createdAt,
