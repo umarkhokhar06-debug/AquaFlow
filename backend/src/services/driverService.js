@@ -3,6 +3,58 @@ const Order = require('../models/Order');
 const socketService = require('./socketService');
 
 const driverService = {
+  // ============ PROFILE MANAGEMENT ============
+
+  // Update driver profile
+  updateDriverProfile: async (driverId, updateData) => {
+    try {
+      const driver = await User.findById(driverId);
+      
+      if (!driver || driver.userType !== 'driver') {
+        throw new Error('Driver not found');
+      }
+
+      // Update allowed fields
+      if (updateData.name) driver.name = updateData.name;
+      if (updateData.email) driver.email = updateData.email;
+      
+      if (updateData.vehicleInfo) {
+        driver.vehicleInfo = {
+          ...driver.vehicleInfo,
+          ...updateData.vehicleInfo
+        };
+      }
+
+      if (updateData.settings) {
+        driver.settings = {
+          ...driver.settings,
+          ...updateData.settings
+        };
+      }
+
+      await driver.save();
+
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        driver: {
+          id: driver._id,
+          name: driver.name,
+          email: driver.email,
+          vehicleInfo: driver.vehicleInfo,
+          settings: driver.settings,
+          rating: driver.rating || 0,
+          totalRatings: driver.totalRatings || 0,
+          status: driver.driverStatus,
+          createdAt: driver.createdAt
+        }
+      };
+    } catch (error) {
+      console.error('Update driver profile error:', error);
+      throw error;
+    }
+  },
+
   // Get all drivers with status and queue information
   getAllDrivers: async (filters = {}, page = 1, limit = 10) => {
     try {
@@ -87,7 +139,10 @@ const driverService = {
           maxQueueSize: driver.maxQueueSize,
           location: driver.location,
           vehicleInfo: driver.vehicleInfo,
+          settings: driver.settings,
           status: driver.status,
+          rating: driver.rating || 0,
+          totalRatings: driver.totalRatings || 0,
           createdAt: driver.createdAt
         }
       };

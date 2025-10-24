@@ -8,6 +8,13 @@ const router = express.Router();
 // All routes require authentication
 router.use(authMiddleware);
 
+// ============ PROFILE ROUTES (Driver only) ============
+router.get('/profile', requireDriver, driverController.getProfile);
+router.put('/profile', requireDriver, driverController.updateProfile);
+router.put('/vehicle', requireDriver, driverController.updateVehicleInfo);
+router.put('/settings', requireDriver, driverController.updateSettings);
+
+// ============ ADMIN ROUTES ============
 // Admin only routes
 router.get('/', requireAdmin, driverController.getAllDrivers);
 router.get('/search', requireAdmin, driverController.searchDrivers);

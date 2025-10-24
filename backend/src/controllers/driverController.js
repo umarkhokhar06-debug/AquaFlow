@@ -1,6 +1,149 @@
 const driverService = require('../services/driverService');
 
 const driverController = {
+  // ============ PROFILE MANAGEMENT ============
+  
+  // Get driver profile (for authenticated driver)
+  getProfile: async (req, res) => {
+    try {
+      const driverId = req.user.id;
+      const result = await driverService.getDriverById(driverId);
+      
+      if (!result.success) {
+        return res.status(404).json(result);
+      }
+
+      res.status(200).json({
+        success: true,
+        data: result.driver
+      });
+    } catch (error) {
+      console.error('Get profile error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error retrieving profile'
+      });
+    }
+  },
+
+  // Update driver profile
+  updateProfile: async (req, res) => {
+    try {
+      const driverId = req.user.id;
+      const { name, email, vehicleInfo, settings } = req.body;
+
+      const updateData = {};
+      if (name) updateData.name = name;
+      if (email) updateData.email = email;
+      if (vehicleInfo) updateData.vehicleInfo = vehicleInfo;
+      if (settings) updateData.settings = settings;
+
+      const result = await driverService.updateDriverProfile(driverId, updateData);
+      
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        driver: result.driver
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      
+      if (error.message === 'Driver not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Driver not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Server error updating profile'
+      });
+    }
+  },
+
+  // Update vehicle info
+  updateVehicleInfo: async (req, res) => {
+    try {
+      const driverId = req.user.id;
+      const { vehicleType, vehicleNumber, licensePlate, insuranceNumber, capacity } = req.body;
+
+      const vehicleInfo = {
+        vehicleType,
+        vehicleNumber,
+        licensePlate,
+        insuranceNumber,
+        capacity
+      };
+
+      const result = await driverService.updateDriverProfile(driverId, { vehicleInfo });
+      
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Vehicle information updated successfully',
+        driver: result.driver
+      });
+    } catch (error) {
+      console.error('Update vehicle info error:', error);
+      
+      if (error.message === 'Driver not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Driver not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Server error updating vehicle info'
+      });
+    }
+  },
+
+  // Update notification settings
+  updateSettings: async (req, res) => {
+    try {
+      const driverId = req.user.id;
+      const { settings } = req.body;
+
+      const result = await driverService.updateDriverProfile(driverId, { settings });
+      
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Settings updated successfully',
+        driver: result.driver
+      });
+    } catch (error) {
+      console.error('Update settings error:', error);
+      
+      if (error.message === 'Driver not found') {
+        return res.status(404).json({
+          success: false,
+          message: 'Driver not found'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Server error updating settings'
+      });
+    }
+  },
+
+  // ============ ADMIN ROUTES ============
+  
   // Get all drivers
   getAllDrivers: async (req, res) => {
     try {
