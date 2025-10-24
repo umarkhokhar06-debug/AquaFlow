@@ -720,4 +720,19 @@ export const driverAPI = {
       throw new Error('Network error');
     }
   },
+
+  async logout(): Promise<{ success: boolean; message: string }> {
+    try {
+      const AsyncStorage = await import('@react-native-async-storage/async-storage');
+      await AsyncStorage.default.removeItem('driver_auth_token');
+      await AsyncStorage.default.removeItem('userData');
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    } catch (error) {
+      console.error('Error logging out:', error);
+      throw new Error('Failed to logout');
+    }
+  },
 };
