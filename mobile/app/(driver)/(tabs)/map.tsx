@@ -11,6 +11,7 @@ import {
   Linking,
   ScrollView,
   ActivityIndicator,
+  PanResponder,
 } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ import {
   Fuel,
   Gauge,
   ChevronRight,
+  ChevronUp,
 } from 'lucide-react-native';
 import { socketService } from '@/utils/socketService';
 import { driverAPI, DriverOrder } from '@/utils/driverAPI';
@@ -40,19 +42,50 @@ const LATITUDE_DELTA = 0.0922;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
 export default function DriverMapScreen() {
+  // Listen for live order status updates
+  useEffect(() => {
+    // Handler for order status update event from socket
+    const handleOrderStatusUpdate = (data: { orderId: string; status: string }) => {
+      // Only allow valid statuses for DriverOrder
+      const validStatuses = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'] as const;
+      if (!validStatuses.includes(data.status as any)) return;
+      setOrders(prevOrders => {
+        const found = prevOrders.find(o => o.id === data.orderId);
+        if (!found) return prevOrders;
+        // Update the order in the list
+        return prevOrders.map(o =>
+          o.id === data.orderId ? { ...o, status: data.status as typeof validStatuses[number] } : o
+        );
+      });
+      // If the selected order is updated, update its status as well
+      setSelectedOrder(prev => {
+        if (prev && prev.id === data.orderId) {
+          return { ...prev, status: data.status as typeof validStatuses[number] };
+        }
+        return prev;
+      });
+    };
+
+    socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+    return () => {
+      socketService.removeOrderStatusUpdateListener(handleOrderStatusUpdate);
+    };
+  }, []);
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<DriverOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<DriverOrder | null>(null);
-  const [driverLocation, setDriverLocation] = useState({
-    latitude: 24.8607,
-    longitude: 67.0011,
-  });
+  const [driverLocation, setDriverLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [distanceRemaining, setDistanceRemaining] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [drawerHeight] = useState(new Animated.Value(120)); // Starting height for collapsed state
   const mapRef = useRef<MapView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -116,46 +149,42 @@ export default function DriverMapScreen() {
     };
   }, []);
 
-  // Update customer location when selected order changes
+  // Update customer location when selected order or driver location changes
   useEffect(() => {
-    console.log('[DriverMapScreen] Selected order:', selectedOrder);
-    console.log('[DriverMapScreen] deliveryLocation:', selectedOrder?.deliveryLocation);
-    console.log('[DriverMapScreen] latitude:', selectedOrder?.deliveryLocation?.latitude);
-    console.log('[DriverMapScreen] longitude:', selectedOrder?.deliveryLocation?.longitude);
-    
-    if (selectedOrder && selectedOrder.deliveryLocation && 
-        selectedOrder.deliveryLocation.latitude && 
-        selectedOrder.deliveryLocation.longitude &&
-        selectedOrder.deliveryLocation.latitude !== 0 &&
-        selectedOrder.deliveryLocation.longitude !== 0) {
-      console.log('[DriverMapScreen] Selected order changed:', selectedOrder.orderNumber);
+    if (!driverLocation) return;
+    if (
+      selectedOrder &&
+      selectedOrder.deliveryLocation &&
+      selectedOrder.deliveryLocation.latitude &&
+      selectedOrder.deliveryLocation.longitude &&
+      selectedOrder.deliveryLocation.latitude !== 0 &&
+      selectedOrder.deliveryLocation.longitude !== 0
+    ) {
       const customerLoc = {
         latitude: selectedOrder.deliveryLocation.latitude,
         longitude: selectedOrder.deliveryLocation.longitude,
       };
-      
       // Calculate distance and time
       const distance = calculateDistance(driverLocation, customerLoc);
       setDistanceRemaining(distance);
-      
       const avgSpeed = 40; // km/h
       const timeInMinutes = Math.round((distance / avgSpeed) * 60);
       setEstimatedTime(timeInMinutes);
-      
       setIsNavigating(true);
-      
+      // Fetch route coordinates from Google Maps
+      fetchRouteCoordinates(driverLocation, customerLoc);
       // Center map on both locations
-      if (mapRef.current) {
+      if (mapRef.current && driverLocation) {
         mapRef.current.fitToCoordinates([driverLocation, customerLoc], {
-          edgePadding: { top: 100, right: 50, bottom: 400, left: 50 },
+          edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
           animated: true,
         });
       }
     } else {
-      console.log('[DriverMapScreen] Selected order has no valid delivery location');
       setIsNavigating(false);
+      setRouteCoordinates([]);
     }
-  }, [selectedOrder]);
+  }, [selectedOrder, driverLocation]);
 
   const fetchActiveOrders = async () => {
     try {
@@ -220,45 +249,18 @@ export default function DriverMapScreen() {
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
           };
-          
-          console.log('[DriverMapScreen] Location updated:', newLocation, `Speed: ${location.coords.speed} m/s`);
-          
           setDriverLocation(newLocation);
           setCurrentSpeed(location.coords.speed ? Math.round(location.coords.speed * 3.6) : 0); // Convert m/s to km/h
-          
           // Emit location update to backend via socket (only if connected)
           if (socketService.isSocketConnected()) {
-            console.log('[DriverMapScreen] Emitting location to backend via socket');
             socketService.emitDriverLocation(newLocation);
-          } else {
-            console.warn('[DriverMapScreen] Socket not connected, cannot emit location');
           }
-
           // Update map view
           if (mapRef.current) {
             mapRef.current.animateCamera({
               center: newLocation,
               heading: location.coords.heading || 0,
             });
-          }
-
-          // Calculate distance to customer if order is selected
-          if (selectedOrder && selectedOrder.deliveryLocation &&
-              selectedOrder.deliveryLocation.latitude &&
-              selectedOrder.deliveryLocation.longitude &&
-              selectedOrder.deliveryLocation.latitude !== 0 &&
-              selectedOrder.deliveryLocation.longitude !== 0) {
-            const customerLoc = {
-              latitude: selectedOrder.deliveryLocation.latitude,
-              longitude: selectedOrder.deliveryLocation.longitude,
-            };
-            const distance = calculateDistance(newLocation, customerLoc);
-            setDistanceRemaining(distance);
-            
-            // Estimate time (simple calculation: distance / average speed)
-            const avgSpeed = 40; // km/h
-            const timeInMinutes = Math.round((distance / avgSpeed) * 60);
-            setEstimatedTime(timeInMinutes);
           }
         }
       );
@@ -281,6 +283,79 @@ export default function DriverMapScreen() {
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  };
+
+  const fetchRouteCoordinates = async (start: { latitude: number; longitude: number }, end: { latitude: number; longitude: number }) => {
+    try {
+      const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // TODO: Add your API key
+      
+      // If no API key is set, use straight line as fallback
+      if (GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') {
+        console.log('[DriverMapScreen] Using straight line path (no API key configured)');
+        setRouteCoordinates([start, end]);
+        return;
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${start.latitude},${start.longitude}&destination=${end.latitude},${end.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const points = decodePolyline(route.overview_polyline.points);
+        setRouteCoordinates(points);
+        console.log('[DriverMapScreen] Route fetched with', points.length, 'points');
+      } else {
+        console.warn('[DriverMapScreen] No routes found, using straight line');
+        setRouteCoordinates([start, end]);
+      }
+    } catch (error) {
+      console.error('[DriverMapScreen] Error fetching route:', error);
+      // Fallback to straight line
+      setRouteCoordinates([start, end]);
+    }
+  };
+
+  const decodePolyline = (encoded: string): Array<{ latitude: number; longitude: number }> => {
+    const poly: Array<{ latitude: number; longitude: number }> = [];
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < encoded.length) {
+      let result = 0;
+      let shift = 0;
+      let b;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      result = 0;
+      shift = 0;
+
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      poly.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+
+    return poly;
   };
 
   const handleCallCustomer = () => {
@@ -344,7 +419,8 @@ export default function DriverMapScreen() {
       longitude: selectedOrder.deliveryLocation.longitude,
     };
     
-    if (mapRef.current) {
+    // Ensure driverLocation is available before calling fitToCoordinates to satisfy TypeScript
+    if (mapRef.current && driverLocation) {
       mapRef.current.fitToCoordinates([driverLocation, customerLoc], {
         edgePadding: { top: 100, right: 50, bottom: 400, left: 50 },
         animated: true,
@@ -363,6 +439,10 @@ export default function DriverMapScreen() {
       longitude: selectedOrder.deliveryLocation.longitude,
     };
     
+    if (!driverLocation) {
+      Alert.alert('Location not ready', 'Waiting for your location...');
+      return;
+    }
     const url = `https://www.google.com/maps/dir/?api=1&origin=${driverLocation.latitude},${driverLocation.longitude}&destination=${customerLoc.latitude},${customerLoc.longitude}&travelmode=driving`;
     Linking.openURL(url);
   };
@@ -434,11 +514,282 @@ export default function DriverMapScreen() {
     );
   };
 
+  const DrawerSheet = ({
+    selectedOrder,
+    orders,
+    onOrderSelect,
+    onCallCustomer,
+    onMessageCustomer,
+    onMarkDelivered,
+    onReportIssue,
+    onOpenMaps,
+  }: any) => {
+  const windowHeight = Dimensions.get('window').height;
+  const SNAP_TOP = windowHeight * 0.30;
+  const SNAP_BOTTOM = windowHeight * 0.70;
+  const animatedY = useRef(new Animated.Value(SNAP_BOTTOM)).current;
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // Animate to snap point
+    const animateTo = (toValue: number) => {
+      Animated.spring(animatedY, {
+        toValue,
+        useNativeDriver: false,
+        tension: 80,
+        friction: 12,
+      }).start();
+    };
+
+    // Open/close helpers
+    const open = () => {
+      setIsExpanded(true);
+      animateTo(SNAP_TOP);
+    };
+    const close = () => {
+      setIsExpanded(false);
+      animateTo(SNAP_BOTTOM);
+    };
+
+    // PanResponder for drag
+    const panResponder = useRef(
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
+        onPanResponderMove: (_, gestureState) => {
+          let newY = (isExpanded ? SNAP_TOP : SNAP_BOTTOM) + gestureState.dy;
+          if (newY < SNAP_TOP) newY = SNAP_TOP;
+          if (newY > SNAP_BOTTOM) newY = SNAP_BOTTOM;
+          animatedY.setValue(newY);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const shouldOpen = gestureState.vy < -0.3 || (isExpanded ? gestureState.dy < 60 : gestureState.dy < -60);
+          const shouldClose = gestureState.vy > 0.3 || (isExpanded ? gestureState.dy > 60 : gestureState.dy > -60);
+          if (shouldOpen) open();
+          else if (shouldClose) close();
+          else animateTo(isExpanded ? SNAP_TOP : SNAP_BOTTOM);
+        },
+      })
+    ).current;
+
+    // Snap to correct position on expand/collapse
+    useEffect(() => {
+      animateTo(isExpanded ? SNAP_TOP : SNAP_BOTTOM);
+    }, [isExpanded]);
+
+    return (
+      <Animated.View
+        style={[
+          styles.drawerContainer,
+          {
+            top: animatedY,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            zIndex: 10,
+            overflow: 'hidden',
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        {/* Handle Bar */}
+        <View style={styles.drawerHandle}>
+          <View style={styles.handleBar} />
+        </View>
+
+        {/* Main Header (always visible) */}
+        <TouchableOpacity
+          style={styles.drawerHeader}
+          onPress={isExpanded ? close : open}
+          activeOpacity={0.7}
+        >
+          <View style={styles.drawerHeaderLeft}>
+            <View style={styles.drawerCustomerIcon}>
+              <Package size={20} color="#007AFF" />
+            </View>
+            <View>
+              <Text style={styles.drawerCustomerName}>{selectedOrder.customerName}</Text>
+              <Text style={styles.drawerOrderNumber}>
+                Order {selectedOrder.orderNumber || `#${selectedOrder.id.slice(-6)}`}
+              </Text>
+            </View>
+          </View>
+          <ChevronUp size={20} color="#6B7280" style={{ transform: [{ rotate: isExpanded ? '0deg' : '180deg' }] }} />
+        </TouchableOpacity>
+
+        {/* Quick Actions (always visible) */}
+        <View style={styles.drawerQuickActions}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={onCallCustomer}
+          >
+            <Phone size={18} color="#007AFF" />
+            <Text style={styles.quickActionText}>Call</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={onMessageCustomer}
+          >
+            <MessageCircle size={18} color="#007AFF" />
+            <Text style={styles.quickActionText}>Message</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={onOpenMaps}
+          >
+            <Navigation size={18} color="#007AFF" />
+            <Text style={styles.quickActionText}>Navigate</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.quickActionPrimary]}
+            onPress={() => {
+              onMarkDelivered();
+            }}
+          >
+            <CheckCircle size={18} color="#FFFFFF" />
+            <Text style={[styles.quickActionText, { color: '#FFFFFF' }]}>Delivered</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Extra Details (only visible when expanded) */}
+        {isExpanded && (
+          <ScrollView
+            style={styles.drawerContent}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Orders List */}
+            <View style={styles.expandedOrdersList}>
+              <Text style={styles.expandedOrdersTitle}>Active Orders ({orders.length})</Text>
+              {orders.map((order: DriverOrder, idx: number) => (
+                <TouchableOpacity
+                  key={order.id || `order-${idx}`}
+                  style={[
+                    styles.expandedOrderItem,
+                    selectedOrder?.id === order.id && styles.expandedOrderItemSelected,
+                  ]}
+                  onPress={() => onOrderSelect(order)}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.expandedOrderItemLeft}>
+                    <Text style={styles.expandedOrderNumber}>
+                      {order.orderNumber || `#${order.id.slice(-6)}`}
+                    </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20', marginTop: 6 }]}>
+                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(order.status) }]} />
+                      <Text style={[styles.statusText, { color: getStatusColor(order.status), fontSize: 11 }]}>
+                        {getStatusText(order.status)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.expandedOrderItemRight}>
+                    <Text style={styles.expandedOrderAmount}>Rs. {order.totalAmount?.toLocaleString()}</Text>
+                    <Text style={styles.expandedOrderCustomer}>{order.customerName}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Current Order Details */}
+            <View style={styles.currentOrderDetails}>
+              <Text style={styles.sectionTitle}>Delivery Details</Text>
+
+              <View style={styles.detailCard}>
+                <View style={styles.detailCardRow}>
+                  <MapPin size={16} color="#007AFF" />
+                  <View style={styles.detailCardText}>
+                    <Text style={styles.detailCardLabel}>Location</Text>
+                    <Text style={styles.detailCardValue}>
+                      {selectedOrder.deliveryLocation?.address || 'No address'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailCardRow}>
+                  <Package size={16} color="#007AFF" />
+                  <View style={styles.detailCardText}>
+                    <Text style={styles.detailCardLabel}>Items</Text>
+                    <Text style={styles.detailCardValue}>
+                      {selectedOrder.items?.map((item: any) => `${item.quantity}x ${item.productName}`).join(', ')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailCardRow}>
+                  <Clock size={16} color="#F59E0B" />
+                  <View style={styles.detailCardText}>
+                    <Text style={styles.detailCardLabel}>ETA</Text>
+                    <Text style={styles.detailCardValue}>{estimatedTime} mins</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailCardRow}>
+                  <Gauge size={16} color="#10B981" />
+                  <View style={styles.detailCardText}>
+                    <Text style={styles.detailCardLabel}>Distance</Text>
+                    <Text style={styles.detailCardValue}>{distanceRemaining.toFixed(1)} km</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.drawerActions}>
+                <TouchableOpacity
+                  style={styles.drawerPrimaryButton}
+                  onPress={() => {
+                    onMarkDelivered();
+                    close();
+                  }}
+                >
+                  <CheckCircle size={18} color="#FFFFFF" />
+                  <Text style={styles.drawerPrimaryButtonText}>Mark Delivered</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.drawerSecondaryButton}
+                  onPress={onOpenMaps}
+                >
+                  <Navigation size={18} color="#007AFF" />
+                  <Text style={styles.drawerSecondaryButtonText}>Open Maps</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.drawerOutlineButton}
+                  onPress={onCallCustomer}
+                >
+                  <Phone size={16} color="#007AFF" />
+                  <Text style={styles.drawerOutlineButtonText}>Call</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.drawerOutlineButton}
+                  onPress={onMessageCustomer}
+                >
+                  <MessageCircle size={16} color="#007AFF" />
+                  <Text style={styles.drawerOutlineButtonText}>Message</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.drawerDangerButton}
+                  onPress={onReportIssue}
+                >
+                  <AlertCircle size={16} color="#EF4444" />
+                  <Text style={styles.drawerDangerButtonText}>Report Issue</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        )}
+      </Animated.View>
+    );
+  };
+
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" />
       
-      {loading ? (
+  {loading || !driverLocation ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Loading orders...</Text>
@@ -453,34 +804,13 @@ export default function DriverMapScreen() {
         </View>
       ) : (
         <>
-          {/* Orders List */}
-          <View style={styles.ordersSection}>
-            <View style={styles.ordersSectionHeader}>
-              <Text style={styles.ordersSectionTitle}>Active Orders ({orders.length})</Text>
-              <TouchableOpacity onPress={fetchActiveOrders}>
-                <Package size={20} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.ordersScroll}
-              contentContainerStyle={styles.ordersScrollContent}
-            >
-              {orders.map((order, idx) => (
-                <OrderCard key={order.id || `order-${idx}`} order={order} />
-              ))}
-            </ScrollView>
-          </View>
-
           {selectedOrder && selectedOrder.deliveryLocation && 
            selectedOrder.deliveryLocation.latitude && 
            selectedOrder.deliveryLocation.longitude &&
            selectedOrder.deliveryLocation.latitude !== 0 &&
            selectedOrder.deliveryLocation.longitude !== 0 ? (
             <>
-              {/* Map Container */}
+              {/* Full Map Container */}
               <View style={styles.mapContainer}>
                 <MapView
                   ref={mapRef}
@@ -496,17 +826,13 @@ export default function DriverMapScreen() {
                   showsMyLocationButton={false}
                 >
                   {/* Route Polyline */}
-                  <Polyline
-                    coordinates={[
-                      driverLocation,
-                      {
-                        latitude: selectedOrder.deliveryLocation.latitude,
-                        longitude: selectedOrder.deliveryLocation.longitude,
-                      }
-                    ]}
-                    strokeColor="#007AFF"
-                    strokeWidth={4}
-                  />
+                  {routeCoordinates.length > 0 && (
+                    <Polyline
+                      coordinates={routeCoordinates}
+                      strokeColor="#007AFF"
+                      strokeWidth={4}
+                    />
+                  )}
 
                   {/* Driver Marker */}
                   <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
@@ -532,107 +858,69 @@ export default function DriverMapScreen() {
                   </Marker>
                 </MapView>
 
-                {/* Top Info Bar */}
-                <View style={styles.topInfoBar}>
-                  <View style={styles.topInfoLeft}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedOrder.status) + '20' }]}>
-                      <View style={[styles.statusDot, { backgroundColor: getStatusColor(selectedOrder.status) }]} />
-                      <Text style={[styles.statusText, { color: getStatusColor(selectedOrder.status) }]}>
-                        {getStatusText(selectedOrder.status)}
-                      </Text>
-                    </View>
-                    {/* Socket Connection Indicator */}
-                    <View style={[styles.socketBadge, { backgroundColor: socketConnected ? '#10B98120' : '#EF444420' }]}>
-                      <View style={[styles.socketDot, { backgroundColor: socketConnected ? '#10B981' : '#EF4444' }]} />
-                      <Text style={[styles.socketText, { color: socketConnected ? '#10B981' : '#EF4444' }]}>
-                        {socketConnected ? 'Live' : 'Offline'}
-                      </Text>
-                    </View>
+                {/* Top Status Bar */}
+                <View style={styles.topStatusBar}>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedOrder.status) + '20' }]}>
+                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(selectedOrder.status) }]} />
+                    <Text style={[styles.statusText, { color: getStatusColor(selectedOrder.status) }]}>
+                      {getStatusText(selectedOrder.status)}
+                    </Text>
                   </View>
-                  <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap}>
+                  
+                  <View style={[styles.socketBadge, { backgroundColor: socketConnected ? '#10B98120' : '#EF444420' }]}>
+                    <View style={[styles.socketDot, { backgroundColor: socketConnected ? '#10B981' : '#EF4444' }]} />
+                    <Text style={[styles.socketText, { color: socketConnected ? '#10B981' : '#EF4444' }]}>
+                      {socketConnected ? 'Live' : 'Offline'}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity 
+                    style={styles.centerButton} 
+                    onPress={() => {
+                      const customerLoc = {
+                        latitude: selectedOrder.deliveryLocation.latitude,
+                        longitude: selectedOrder.deliveryLocation.longitude,
+                      };
+                      if (mapRef.current) {
+                        mapRef.current.fitToCoordinates([driverLocation, customerLoc], {
+                          edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
+                          animated: true,
+                        });
+                      }
+                    }}
+                  >
                     <Navigation size={20} color="#007AFF" />
                   </TouchableOpacity>
                 </View>
 
-                {/* Speed and Distance Indicators */}
-                <View style={styles.metricsContainer}>
-                  <View style={styles.metricCard}>
-                    <Gauge size={16} color="#007AFF" />
-                    <Text style={styles.metricValue}>{currentSpeed}</Text>
-                    <Text style={styles.metricLabel}>km/h</Text>
+                {/* Mini Metrics */}
+                <View style={styles.miniMetricsContainer}>
+                  <View style={styles.miniMetricCard}>
+                    <Gauge size={14} color="#007AFF" />
+                    <Text style={styles.miniMetricValue}>{currentSpeed} km/h</Text>
                   </View>
-                  <View style={styles.metricCard}>
-                    <MapPin size={16} color="#EF4444" />
-                    <Text style={styles.metricValue}>{distanceRemaining.toFixed(1)}</Text>
-                    <Text style={styles.metricLabel}>km left</Text>
+                  <View style={styles.miniMetricCard}>
+                    <MapPin size={14} color="#EF4444" />
+                    <Text style={styles.miniMetricValue}>{distanceRemaining.toFixed(1)} km</Text>
+                  </View>
+                  <View style={styles.miniMetricCard}>
+                    <Clock size={14} color="#F59E0B" />
+                    <Text style={styles.miniMetricValue}>{estimatedTime} min</Text>
                   </View>
                 </View>
               </View>
 
-              {/* Bottom Card */}
-              <View style={styles.bottomCard}>
-                {/* ETA Section */}
-                <View style={styles.etaSection}>
-                  <View style={styles.etaContent}>
-                    <Clock size={24} color="#007AFF" />
-                    <View style={styles.etaTextContainer}>
-                      <Text style={styles.etaValue}>{estimatedTime} mins</Text>
-                      <Text style={styles.etaLabel}>Estimated Arrival</Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity style={styles.navigateButton} onPress={openGoogleMaps}>
-                    <Navigation size={16} color="#FFFFFF" />
-                    <Text style={styles.navigateButtonText}>Navigate</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Customer Info */}
-                <View style={styles.customerCard}>
-                  <View style={styles.customerHeader}>
-                    <View style={styles.customerIconContainer}>
-                      <Package size={20} color="#007AFF" />
-                    </View>
-                    <View style={styles.customerInfo}>
-                      <Text style={styles.customerName}>{selectedOrder.customerName}</Text>
-                      <Text style={styles.orderNumberSmall}>Order {selectedOrder.orderNumber || `#${selectedOrder.id.slice(-6)}`}</Text>
-                    </View>
-                    <View style={styles.customerActions}>
-                      <TouchableOpacity style={styles.iconButton} onPress={handleCallCustomer}>
-                        <Phone size={18} color="#007AFF" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.iconButton} onPress={handleMessageCustomer}>
-                        <MessageCircle size={18} color="#007AFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.deliveryDetails}>
-                    <View style={styles.detailRow}>
-                      <MapPin size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>{selectedOrder.deliveryLocation.address}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Package size={14} color="#6B7280" />
-                      <Text style={styles.detailText}>
-                        {selectedOrder.items?.map(item => `${item.quantity}x ${item.productName}`).join(', ')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Action Buttons */}
-                <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity style={styles.primaryButton} onPress={handleMarkDelivered}>
-                    <CheckCircle size={20} color="#FFFFFF" />
-                    <Text style={styles.primaryButtonText}>Mark as Delivered</Text>
-                    <ArrowRight size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryButton} onPress={handleReportIssue}>
-                    <AlertCircle size={18} color="#EF4444" />
-                    <Text style={styles.secondaryButtonText}>Report Issue</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              {/* Draggable Bottom Drawer */}
+              <DrawerSheet
+                selectedOrder={selectedOrder}
+                orders={orders}
+                onOrderSelect={setSelectedOrder}
+                onCallCustomer={handleCallCustomer}
+                onMessageCustomer={handleMessageCustomer}
+                onMarkDelivered={handleMarkDelivered}
+                onReportIssue={handleReportIssue}
+                onOpenMaps={() => openGoogleMaps()}
+              />
             </>
           ) : selectedOrder ? (
             <View style={styles.noLocationContainer}>
@@ -674,7 +962,25 @@ export default function DriverMapScreen() {
                 </View>
               </View>
             </View>
-          ) : null}
+          ) : (
+            <View style={styles.selectOrderContainer}>
+              <Package size={48} color="#D1D5DB" />
+              <Text style={styles.selectOrderTitle}>Select an Order</Text>
+              <Text style={styles.selectOrderText}>
+                Choose an order from the list below to view it on the map
+              </Text>
+              
+              <ScrollView 
+                style={styles.ordersListContainer}
+                contentContainerStyle={styles.ordersListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {orders.map((order: DriverOrder, idx: number) => (
+                  <OrderCard key={order.id || `order-${idx}`} order={order} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </>
       )}
     </View>
@@ -716,90 +1022,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  ordersSection: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  ordersSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  ordersSectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
-  },
-  ordersScroll: {
-    flexGrow: 0,
-  },
-  ordersScrollContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  orderCard: {
-    width: 280,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  orderCardSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#F0F8FF',
-  },
-  orderCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  orderCardLeft: {
+  selectOrderContainer: {
     flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 60,
   },
-  orderNumber: {
-    fontSize: 16,
+  selectOrderTitle: {
+    fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     color: '#1F2937',
-    marginBottom: 6,
+    marginTop: 16,
   },
-  orderCardBody: {
-    marginBottom: 12,
-    gap: 8,
-  },
-  orderDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  orderDetailText: {
-    fontSize: 13,
+  selectOrderText: {
+    fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
-    flex: 1,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 32,
   },
-  orderCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+  ordersListContainer: {
+    width: '100%',
   },
-  orderAmount: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: '#1F2937',
-  },
-  orderCustomer: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#9CA3AF',
+  ordersListContent: {
+    gap: 12,
+    paddingBottom: 20,
   },
   mapContainer: {
     flex: 1,
@@ -843,17 +1092,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  topInfoBar: {
+  topStatusBar: {
     position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
+    top: 24,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  topInfoLeft: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
@@ -917,90 +1162,341 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  metricsContainer: {
+  miniMetricsContainer: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
+    bottom: 120,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
-  metricCard: {
+  miniMetricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
   },
-  metricValue: {
-    fontSize: 20,
+  miniMetricValue: {
+    fontSize: 12,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+  },
+  /* Drawer Styles */
+  drawerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  drawerHandle: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  drawerHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  drawerCustomerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  drawerCustomerName: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  drawerOrderNumber: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+  },
+  drawerCloseButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  drawerCloseText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#007AFF',
+  },
+  drawerContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  expandedOrdersList: {
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  expandedOrdersTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  expandedOrderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  expandedOrderItemSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#F0F8FF',
+  },
+  expandedOrderItemLeft: {
+    flex: 1,
+  },
+  expandedOrderNumber: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+  },
+  expandedOrderItemRight: {
+    alignItems: 'flex-end',
+  },
+  expandedOrderAmount: {
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
     color: '#1F2937',
-    marginTop: 4,
   },
-  metricLabel: {
+  expandedOrderCustomer: {
     fontSize: 11,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
-  bottomCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
+  currentOrderDetails: {
+    paddingTop: 12,
   },
-  etaSection: {
+  sectionTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  detailCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 12,
+  },
+  detailCardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  detailCardText: {
+    flex: 1,
+  },
+  detailCardLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  detailCardValue: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+  },
+  drawerActions: {
+    gap: 10,
+    marginBottom: 10,
+  },
+  drawerPrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  drawerPrimaryButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  drawerSecondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  drawerSecondaryButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#007AFF',
+  },
+  drawerOutlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  drawerOutlineButtonText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#007AFF',
+  },
+  drawerDangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  drawerDangerButtonText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#EF4444',
+  },
+  drawerQuickActions: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  quickActionPrimary: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  quickActionText: {
+    fontSize: 11,
+    fontFamily: 'Inter-SemiBold',
+    color: '#007AFF',
+    marginTop: 6,
+  },
+  orderCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  orderCardSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#F0F8FF',
+  },
+  orderCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    marginBottom: 12,
   },
-  etaContent: {
+  orderCardLeft: {
+    flex: 1,
+  },
+  orderNumber: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  orderCardBody: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  orderDetail: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  etaTextContainer: {
-    marginLeft: 12,
+  orderDetailText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    flex: 1,
   },
-  etaValue: {
-    fontSize: 20,
+  orderCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  orderAmount: {
+    fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: '#1F2937',
   },
-  etaLabel: {
+  orderCustomer: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-  },
-  navigateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
-  },
-  navigateButtonText: {
-    fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    color: '#9CA3AF',
   },
   customerCard: {
     backgroundColor: '#F9FAFB',
@@ -1061,47 +1557,6 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginLeft: 8,
     flex: 1,
-  },
-  actionButtonsContainer: {
-    gap: 10,
-    marginBottom: 10,
-  },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10B981',
-    paddingVertical: 16,
-    borderRadius: 16,
-    gap: 8,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-    flex: 1,
-    textAlign: 'center',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FEF2F2',
-    paddingVertical: 14,
-    borderRadius: 16,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#EF4444',
   },
   noLocationContainer: {
     flex: 1,
