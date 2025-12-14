@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,27 @@ import {
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  RefreshCw, 
-  Droplets, 
-  Thermometer, 
-  Battery, 
+import {
+  ArrowLeft,
+  RefreshCw,
+  Droplets,
+  Thermometer,
+  Battery,
   TrendingUp,
   TrendingDown,
   Calendar,
   BarChart3,
   Wifi,
   WifiOff,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
 import { DrawerActions } from '@react-navigation/native';
-import { getLatestIoTData, getAllIoTData, getIoTStatus } from '@/utils/iotAPI';
+import {
+  getLatestIoTData,
+  getAllIoTData,
+  getIoTStatus,
+} from '@/utils/iotAPI';
 
 const { width } = Dimensions.get('window');
 
@@ -42,16 +46,19 @@ export default function TankMonitoringScreen() {
   const [todayUsage, setTodayUsage] = useState(0);
   const [weeklyUsage, setWeeklyUsage] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<string>('');
-  const navigation = useNavigation();
-  const [isalreadyLowAlerted, setIsalreadyLowAlerted] = useState(false);
+    const navigation = useNavigation();
+  const [lastUpdate, setLastUpdate] = useState('');
+  const [weeklyData, setWeeklyData] = useState<
+    { day: string; level: number }[]
+  >([]);
 
-  const [weeklyData, setWeeklyData] = useState<{ day: string; level: number }[]>([]);
+  // 🔒 ONE-TIME ALERT REF
+  const lowWaterAlertShown = useRef(false);
 
-  // Fetch IoT data on component mount and set up auto-refresh
+  // 🔁 Auto refresh
   useEffect(() => {
     fetchIoTData();
-    
+
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchIoTData();
@@ -62,26 +69,36 @@ export default function TankMonitoringScreen() {
 
   const fetchIoTData = async () => {
     try {
-      // Fetch latest data
+      setIsRefreshing(true);
+
       const latestResponse = await getLatestIoTData();
+
       if (latestResponse.success && latestResponse.data) {
-        setTankLevel(latestResponse.data.tankLevel);
-        setTemperature(latestResponse.data.temperature);
-        setHumidity(latestResponse.data.humidity);
-        setLastUpdate(new Date(latestResponse.data.receivedAt).toLocaleString());
-        if (latestResponse.data.tankLevel < 20 && !isalreadyLowAlerted) {
-          setIsalreadyLowAlerted(true); // mark as alerted first to prevent multiple triggers
+        const data = latestResponse.data;
+
+        setTankLevel(data.tankLevel);
+        setTemperature(data.temperature);
+        setHumidity(data.humidity);
+        setLastUpdate(new Date(data.receivedAt).toLocaleString());
+
+        // 🚨 LOW WATER ALERT (ONCE ONLY)
+        if (data.tankLevel < 20 && !lowWaterAlertShown.current) {
+          lowWaterAlertShown.current = true;
+
           Alert.alert(
             'Critical Low Water Level',
             'Tank is below 20%. Immediate action required.',
             [
               {
                 text: 'OK',
-                onPress: () => router.push('/(main)/(tabs)'), // redirect to home page
+                onPress: () => router.replace('/(main)/(tabs)'),
               },
             ],
             { cancelable: false }
           );
+        }
+        else if (data.tankLevel >= 20) {
+          lowWaterAlertShown.current = false;
         }
       }
 
