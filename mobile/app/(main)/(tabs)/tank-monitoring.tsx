@@ -44,6 +44,7 @@ export default function TankMonitoringScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const navigation = useNavigation();
+  const [isalreadyLowAlerted, setIsalreadyLowAlerted] = useState(false);
 
   const [weeklyData, setWeeklyData] = useState<{ day: string; level: number }[]>([]);
 
@@ -54,7 +55,7 @@ export default function TankMonitoringScreen() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchIoTData();
-    }, 30000);
+    }, 1000);
     
     return () => clearInterval(interval);
   }, []);
@@ -68,6 +69,20 @@ export default function TankMonitoringScreen() {
         setTemperature(latestResponse.data.temperature);
         setHumidity(latestResponse.data.humidity);
         setLastUpdate(new Date(latestResponse.data.receivedAt).toLocaleString());
+        if (latestResponse.data.tankLevel < 20 && !isalreadyLowAlerted) {
+          setIsalreadyLowAlerted(true); // mark as alerted first to prevent multiple triggers
+          Alert.alert(
+            'Critical Low Water Level',
+            'Tank is below 20%. Immediate action required.',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.push('/(main)/(tabs)'), // redirect to home page
+              },
+            ],
+            { cancelable: false }
+          );
+        }
       }
 
       // Fetch connection status
