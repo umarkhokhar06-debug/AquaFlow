@@ -197,6 +197,38 @@ export const driverManagementAPI = {
   }
 }
 
+// Device Management API calls
+export const deviceManagementAPI = {
+  // Get all devices across all houses (Admin only)
+  getDevices: (params = {}) => {
+    const queryParams = new URLSearchParams()
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== '') {
+        queryParams.append(key, params[key])
+      }
+    })
+    return api.get(`/devices?${queryParams.toString()}`)
+  },
+
+  // Register a new device and assign it to a house/owner (Admin only)
+  createDevice: (deviceData) => api.post('/devices', deviceData),
+
+  // Update device details / reassign owner / recalibrate (Admin only)
+  updateDevice: (deviceMongoId, updates) => api.put(`/devices/${deviceMongoId}`, updates),
+
+  // Remove a device (Admin only)
+  deleteDevice: (deviceMongoId) => api.delete(`/devices/${deviceMongoId}`),
+
+  // Grant a tenant read access to a device (Owner or Admin)
+  addTenant: (deviceMongoId, email) => api.post(`/devices/${deviceMongoId}/tenants`, { email }),
+
+  // Revoke a tenant's access (Owner or Admin)
+  removeTenant: (deviceMongoId, userId) => api.delete(`/devices/${deviceMongoId}/tenants/${userId}`),
+
+  // Latest reading for a device
+  getLatestReading: (deviceId) => api.get(`/iot/${deviceId}/latest`)
+}
+
 // Generic API calls
 export const apiCall = {
   get: (url, config) => api.get(url, config),

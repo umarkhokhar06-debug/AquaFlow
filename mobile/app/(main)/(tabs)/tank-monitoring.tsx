@@ -24,14 +24,18 @@ import {
   Wifi,
   WifiOff,
   AlertTriangle,
+  Users,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
 import { DrawerActions } from '@react-navigation/native';
 import {
   getLatestIoTData,
   getAllIoTData,
-  getIoTStatus,
+  getMyDevices,
+  Device,
 } from '@/utils/iotAPI';
+import { storage } from '@/utils/auth';
+import { useSocket } from '@/hooks/useSocket';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +43,9 @@ export default function TankMonitoringScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [tankLevel, setTankLevel] = useState(0);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(false);
   const [temperature, setTemperature] = useState(0);
   const [humidity, setHumidity] = useState(0);
@@ -55,61 +62,119 @@ export default function TankMonitoringScreen() {
   // 🔒 ONE-TIME ALERT REF
   const lowWaterAlertShown = useRef(false);
 
-  // 🔁 Auto refresh
-  useEffect(() => {
-    fetchIoTData();
+  const {
+    isConnected,
+    connect,
+    onDeviceReading,
+    removeDeviceReadingListener,
+    joinDeviceRoom,
+    leaveDeviceRoom,
+  } = useSocket();
 
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      fetchIoTData();
-    }, 1000);
-    
-    return () => clearInterval(interval);
+  const applyLatestReading = (data: { tankLevel: number; temperature: number; humidity: number; receivedAt: string }) => {
+    setTankLevel(data.tankLevel);
+    setTemperature(data.temperature);
+    setHumidity(data.humidity);
+    setLastUpdate(new Date(data.receivedAt).toLocaleString());
+    setIsOnline(true);
+
+    // 🚨 LOW WATER ALERT (ONCE ONLY, until level recovers)
+    if (data.tankLevel < 20 && !lowWaterAlertShown.current) {
+      lowWaterAlertShown.current = true;
+
+      Alert.alert(
+        'Critical Low Water Level',
+        'Tank is below 20%. Immediate action required.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/(main)/(tabs)'),
+          },
+        ],
+        { cancelable: false }
+      );
+    } else if (data.tankLevel >= 20) {
+      lowWaterAlertShown.current = false;
+    }
+  };
+
+  // Load the devices this user can access, then select the first one
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        const userData = await storage.getUserData();
+        setCurrentUserId(userData?.user?.id || null);
+
+        const response = await getMyDevices();
+        if (response.success && response.devices.length > 0) {
+          setDevices(response.devices);
+          setSelectedDeviceId(response.devices[0].deviceId);
+        }
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+        Alert.alert('Error', 'Failed to load your devices. Please try again.');
+      }
+    };
+    loadDevices();
   }, []);
 
-  const fetchIoTData = async () => {
+  // Make sure the socket is connected once we know who the user is
+  useEffect(() => {
+    if (!isConnected) {
+      connect().catch((error) => console.error('Failed to connect socket:', error));
+    }
+  }, [isConnected]);
+
+  // Live readings: join this device's room and update the instant we get a push,
+  // instead of waiting on a poll interval
+  useEffect(() => {
+    if (!selectedDeviceId || !isConnected) return;
+
+    joinDeviceRoom(selectedDeviceId);
+
+    const handleReading = (data: import('@/utils/socketService').DeviceReadingData) => {
+      if (data.deviceId !== selectedDeviceId) return;
+      applyLatestReading(data);
+    };
+
+    onDeviceReading(handleReading);
+
+    return () => {
+      removeDeviceReadingListener(handleReading);
+      leaveDeviceRoom(selectedDeviceId);
+    };
+  }, [selectedDeviceId, isConnected]);
+
+  // Fetch once immediately on device switch (so the screen isn't empty until the next reading),
+  // then keep the historical chart/usage stats refreshed periodically
+  useEffect(() => {
+    if (!selectedDeviceId) return;
+
+    fetchIoTData(selectedDeviceId);
+
+    const interval = setInterval(() => {
+      fetchIoTData(selectedDeviceId, { latestOnly: false });
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [selectedDeviceId]);
+
+  const fetchIoTData = async (deviceId: string, options: { latestOnly?: boolean } = {}) => {
     try {
       setIsRefreshing(true);
 
-      const latestResponse = await getLatestIoTData();
+      const latestResponse = await getLatestIoTData(deviceId);
 
       if (latestResponse.success && latestResponse.data) {
-        const data = latestResponse.data;
-
-        setTankLevel(data.tankLevel);
-        setTemperature(data.temperature);
-        setHumidity(data.humidity);
-        setLastUpdate(new Date(data.receivedAt).toLocaleString());
-
-        // 🚨 LOW WATER ALERT (ONCE ONLY)
-        if (data.tankLevel < 20 && !lowWaterAlertShown.current) {
-          lowWaterAlertShown.current = true;
-
-          Alert.alert(
-            'Critical Low Water Level',
-            'Tank is below 20%. Immediate action required.',
-            [
-              {
-                text: 'OK',
-                onPress: () => router.replace('/(main)/(tabs)'),
-              },
-            ],
-            { cancelable: false }
-          );
-        }
-        else if (data.tankLevel >= 20) {
-          lowWaterAlertShown.current = false;
-        }
+        applyLatestReading(latestResponse.data);
       }
 
-      // Fetch connection status
-      const statusResponse = await getIoTStatus();
-      if (statusResponse.success) {
-        setIsOnline(statusResponse.connected);
+      if (options.latestOnly) {
+        return;
       }
 
       // Fetch historical data for weekly chart
-      const allDataResponse = await getAllIoTData(1, 7);
+      const allDataResponse = await getAllIoTData(deviceId, 1, 7);
       if (allDataResponse.success && allDataResponse.data) {
         const weeklyDataProcessed = allDataResponse.data.slice(0, 7).reverse().map((item, index) => {
           const date = new Date(item.timestamp);
@@ -170,8 +235,9 @@ export default function TankMonitoringScreen() {
   ];
 
   const handleRefresh = async () => {
+    if (!selectedDeviceId) return;
     setIsRefreshing(true);
-    await fetchIoTData();
+    await fetchIoTData(selectedDeviceId);
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
@@ -227,6 +293,60 @@ export default function TankMonitoringScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Device Switcher */}
+        {devices.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.deviceSwitcher}
+            contentContainerStyle={styles.deviceSwitcherContent}
+          >
+            {devices.map((device) => (
+              <TouchableOpacity
+                key={device._id}
+                style={[
+                  styles.deviceChip,
+                  selectedDeviceId === device.deviceId && styles.deviceChipActive,
+                ]}
+                onPress={() => setSelectedDeviceId(device.deviceId)}
+              >
+                <Text
+                  style={[
+                    styles.deviceChipTitle,
+                    selectedDeviceId === device.deviceId && styles.deviceChipTitleActive,
+                  ]}
+                >
+                  {device.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.deviceChipSubtitle,
+                    selectedDeviceId === device.deviceId && styles.deviceChipSubtitleActive,
+                  ]}
+                >
+                  {device.houseLabel}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {(() => {
+          const selectedDevice = devices.find((d) => d.deviceId === selectedDeviceId);
+          if (!selectedDevice || selectedDevice.owner._id !== currentUserId) return null;
+          return (
+            <TouchableOpacity
+              style={styles.manageAccessButton}
+              onPress={() => router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: selectedDevice.deviceId } })}
+            >
+              <Users size={16} color="#007AFF" />
+              <Text style={styles.manageAccessButtonText}>
+                Manage who can see this device ({1 + selectedDevice.tenants.length})
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
+
         {/* Refresh Button */}
         <TouchableOpacity 
           style={styles.refreshButton} 
@@ -457,6 +577,58 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Inter-SemiBold',
     color: '#1F2937',
+  },
+  deviceSwitcher: {
+    marginBottom: 12,
+  },
+  deviceSwitcherContent: {
+    gap: 10,
+    paddingRight: 4,
+  },
+  deviceChip: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 140,
+  },
+  deviceChipActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#007AFF',
+  },
+  deviceChipTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+  },
+  deviceChipTitleActive: {
+    color: '#007AFF',
+  },
+  deviceChipSubtitle: {
+    fontSize: 11,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  deviceChipSubtitleActive: {
+    color: '#3B82F6',
+  },
+  manageAccessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  manageAccessButtonText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#007AFF',
   },
   refreshButton: {
     flexDirection: 'row',

@@ -89,6 +89,18 @@ function CustomDrawerContent(props: any) {
           activeTintColor="#007AFF"
         /> */}
         <DrawerItem
+          label="My Devices"
+          icon={({ color, size }) => (
+            <View style={{ width: 28, alignItems: 'center' }}>
+              <Droplets size={size} color={color} />
+            </View>
+          )}
+          onPress={() => router.push('/(main)/calibration-settings')}
+          labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
+          activeBackgroundColor="#F0F8FF"
+          activeTintColor="#007AFF"
+        />
+        <DrawerItem
           label="Settings"
           icon={({ color, size }) => (
             <View style={{ width: 28, alignItems: 'center' }}>

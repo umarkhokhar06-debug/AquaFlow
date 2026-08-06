@@ -6,92 +6,38 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Save, Settings } from 'lucide-react-native';
-import { getCalibration, setCalibration } from '@/utils/iotAPI';
+import { ArrowLeft, Gauge, Users, Wifi, WifiOff, ScanLine } from 'lucide-react-native';
+import { getMyDevices, Device } from '@/utils/iotAPI';
+import { storage } from '@/utils/auth';
 
-export default function CalibrationSettingsScreen() {
+export default function DeviceListScreen() {
   const router = useRouter();
-  const [tankDepth, setTankDepth] = useState('');
-  const [tankFullDistance, setTankFullDistance] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
-    fetchCalibration();
+    fetchDevices();
   }, []);
 
-  const fetchCalibration = async () => {
+  const fetchDevices = async () => {
     try {
       setFetching(true);
-      const response = await getCalibration();
-      if (response.success && response.calibration) {
-        setTankDepth(response.calibration.tank_depth.toString());
-        setTankFullDistance(response.calibration.tank_full_distance.toString());
+      const userData = await storage.getUserData();
+      setCurrentUserId(userData?.user?.id || null);
+
+      const response = await getMyDevices();
+      if (response.success) {
+        setDevices(response.devices);
       }
     } catch (error) {
-      console.log('No calibration found or error fetching:', error);
-      // It's okay if there's no calibration yet
+      console.log('Error fetching devices:', error);
     } finally {
       setFetching(false);
-    }
-  };
-
-  const handleSave = async () => {
-    const depth = parseFloat(tankDepth);
-    const fullDistance = parseFloat(tankFullDistance);
-
-    if (!tankDepth || !tankFullDistance) {
-      Alert.alert('Validation Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (isNaN(depth) || isNaN(fullDistance)) {
-      Alert.alert('Validation Error', 'Please enter valid numbers');
-      return;
-    }
-
-    if (depth <= 0 || fullDistance < 0) {
-      Alert.alert('Validation Error', 'Values must be positive numbers');
-      return;
-    }
-
-    if (fullDistance >= depth) {
-      Alert.alert(
-        'Validation Error',
-        'Tank full distance must be less than tank depth'
-      );
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await setCalibration(depth, fullDistance);
-      
-      if (response.success) {
-        Alert.alert(
-          'Success',
-          'Calibration settings saved successfully',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', response.message || 'Failed to save calibration');
-      }
-    } catch (error) {
-      console.error('Error saving calibration:', error);
-      Alert.alert('Error', 'Failed to save calibration settings');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -99,7 +45,7 @@ export default function CalibrationSettingsScreen() {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading calibration settings...</Text>
+        <Text style={styles.loadingText}>Loading your devices...</Text>
       </View>
     );
   }
@@ -108,109 +54,98 @@ export default function CalibrationSettingsScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header */}
       <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tank Calibration</Text>
-          <View style={styles.placeholder} />
+          <Text style={styles.headerTitle}>My Devices</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(main)/scan-invite')}>
+            <ScanLine size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Info Card */}
+        {devices.length === 0 && (
+          <TouchableOpacity style={styles.scanInviteCard} onPress={() => router.push('/(main)/scan-invite')}>
+            <ScanLine size={22} color="#007AFF" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.scanInviteTitle}>Have an invite code?</Text>
+              <Text style={styles.scanInviteText}>Scan the QR someone shared with you to get access to their device.</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.infoCard}>
-          <Settings size={24} color="#007AFF" />
-          <Text style={styles.infoTitle}>Calibration Settings</Text>
+          <Gauge size={24} color="#007AFF" />
+          <Text style={styles.infoTitle}>Tank Calibration</Text>
           <Text style={styles.infoText}>
-            Configure your tank sensor calibration values to ensure accurate water
-            level readings. Tank depth is the total height of your tank, and tank
-            full distance is the sensor reading when the tank is full.
+            Calibration is set by the admin when a device is installed, so readings
+            stay consistent with what the sensor actually reports. If a value looks
+            wrong, contact support to have it recalibrated.
           </Text>
         </View>
 
-        {/* Calibration Form */}
-        <View style={styles.formCard}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Tank Depth (cm)</Text>
-            <Text style={styles.description}>
-              Total height of the water tank in centimeters
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={tankDepth}
-              onChangeText={setTankDepth}
-              placeholder="e.g., 100"
-              keyboardType="numeric"
-              placeholderTextColor="#9CA3AF"
-            />
+        {devices.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No devices are linked to your account yet.</Text>
           </View>
+        )}
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Tank Full Distance (cm)</Text>
-            <Text style={styles.description}>
-              Sensor distance reading when tank is completely full
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={tankFullDistance}
-              onChangeText={setTankFullDistance}
-              placeholder="e.g., 10"
-              keyboardType="numeric"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+        {devices.map((device) => {
+          const isOwner = device.owner._id === currentUserId;
+          return (
+            <View key={device._id} style={styles.deviceCard}>
+              <View style={styles.deviceHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.deviceName}>{device.name}</Text>
+                  <Text style={styles.deviceHouse}>{device.houseLabel}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: device.status === 'active' ? '#D1FAE5' : '#FEE2E2' }]}>
+                  {device.status === 'active' ? <Wifi size={12} color="#10B981" /> : <WifiOff size={12} color="#EF4444" />}
+                  <Text style={[styles.statusText, { color: device.status === 'active' ? '#10B981' : '#EF4444' }]}>
+                    {device.status}
+                  </Text>
+                </View>
+              </View>
 
-          {/* Calculation Example */}
-          {tankDepth && tankFullDistance && (
-            <View style={styles.exampleCard}>
-              <Text style={styles.exampleTitle}>Current Configuration</Text>
-              <View style={styles.exampleRow}>
-                <Text style={styles.exampleLabel}>Tank Depth:</Text>
-                <Text style={styles.exampleValue}>{tankDepth} cm</Text>
+              <View style={styles.calibrationRow}>
+                <View style={styles.calibrationItem}>
+                  <Text style={styles.calibrationLabel}>Tank Depth</Text>
+                  <Text style={styles.calibrationValue}>{device.calibration.tank_depth} cm</Text>
+                </View>
+                <View style={styles.calibrationItem}>
+                  <Text style={styles.calibrationLabel}>Full Distance</Text>
+                  <Text style={styles.calibrationValue}>{device.calibration.tank_full_distance} cm</Text>
+                </View>
+                <View style={styles.calibrationItem}>
+                  <Text style={styles.calibrationLabel}>Capacity</Text>
+                  <Text style={styles.calibrationValue}>{device.tankCapacityLiters} L</Text>
+                </View>
+                <View style={styles.calibrationItem}>
+                  <Text style={styles.calibrationLabel}>Alert Below</Text>
+                  <Text style={styles.calibrationValue}>{device.lowWaterThreshold}%</Text>
+                </View>
               </View>
-              <View style={styles.exampleRow}>
-                <Text style={styles.exampleLabel}>Full Distance:</Text>
-                <Text style={styles.exampleValue}>{tankFullDistance} cm</Text>
-              </View>
-              <View style={styles.exampleRow}>
-                <Text style={styles.exampleLabel}>Usable Depth:</Text>
-                <Text style={styles.exampleValue}>
-                  {(parseFloat(tankDepth) - parseFloat(tankFullDistance)).toFixed(1)} cm
+
+              <View style={styles.footerRow}>
+                <Text style={styles.roleText}>
+                  {isOwner ? 'You own this device' : 'You have tenant access'}
                 </Text>
+                {isOwner && (
+                  <TouchableOpacity
+                    style={styles.manageButton}
+                    onPress={() => router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: device.deviceId } })}
+                  >
+                    <Users size={14} color="#007AFF" />
+                    <Text style={styles.manageButtonText}>Manage Access</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-          )}
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Save size={20} color="#FFFFFF" />
-              <Text style={styles.saveButtonText}>Save Calibration</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* Help Text */}
-        <View style={styles.helpCard}>
-          <Text style={styles.helpTitle}>💡 Calibration Tips</Text>
-          <Text style={styles.helpText}>
-            • Measure your tank height from bottom to the sensor position{'\n'}
-            • The full distance should be the sensor reading when water touches the sensor{'\n'}
-            • Make sure the sensor is mounted securely at the top of the tank{'\n'}
-            • Recalibrate if you move or adjust the sensor position
-          </Text>
-        </View>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -283,7 +218,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  formCard: {
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  scanInviteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  scanInviteTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  scanInviteText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    lineHeight: 17,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+  },
+  deviceCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
@@ -294,100 +264,79 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  formGroup: {
-    marginBottom: 24,
+  deviceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  label: {
+  deviceName: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#1F2937',
-    marginBottom: 4,
   },
-  description: {
+  deviceHouse: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    fontFamily: 'Inter-SemiBold',
+    marginLeft: 4,
+  },
+  calibrationRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  calibrationItem: {
+    minWidth: '45%',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 10,
+  },
+  calibrationLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter-Regular',
+    color: '#9CA3AF',
+    marginBottom: 2,
+  },
+  calibrationValue: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
+  },
+  roleText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
-    marginBottom: 8,
   },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1F2937',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  exampleCard: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  exampleTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  exampleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  exampleLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-  },
-  exampleValue: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginBottom: 16,
+  manageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: 4,
   },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: 16,
+  manageButtonText: {
+    fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  helpCard: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  helpTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#92400E',
-    marginBottom: 12,
-  },
-  helpText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#78350F',
-    lineHeight: 22,
+    color: '#007AFF',
   },
 });

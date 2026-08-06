@@ -1,6 +1,28 @@
 import { config } from '@/config';
 
+// Get auth token from storage
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    const { storage } = await import('./auth');
+    const userData = await storage.getUserData();
+    return userData?.token || null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+};
+
+const authHeaders = async () => {
+  const token = await getAuthToken();
+  if (!token) throw new Error('Authentication required');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+};
+
 export interface IoTData {
+  deviceId: string;
   humidity: number;
   temperature: number;
   tankLevel: number;
@@ -33,130 +55,137 @@ export interface IoTStatusResponse {
   message: string;
 }
 
-export interface CalibrationData {
-  tank_depth: number;
-  tank_full_distance: number;
-  createdAt?: string;
-  updatedAt?: string;
+export interface DeviceOwnerOrTenant {
+  _id: string;
+  name: string;
+  email: string;
+  fullName?: string;
 }
 
-export interface CalibrationResponse {
-  success: boolean;
-  calibration: CalibrationData;
-  message?: string;
+export interface Device {
+  _id: string;
+  deviceId: string;
+  name: string;
+  houseLabel: string;
+  owner: DeviceOwnerOrTenant;
+  tenants: { user: DeviceOwnerOrTenant; addedAt: string }[];
+  calibration: { tank_depth: number; tank_full_distance: number };
+  tankCapacityLiters: number;
+  lowWaterThreshold: number;
+  status: 'active' | 'inactive' | 'maintenance';
+  isSimulated: boolean;
+  lastSeenAt: string | null;
 }
 
-// Get latest IoT data
-export const getLatestIoTData = async (): Promise<IoTResponse> => {
-  try {
-    const response = await fetch(`${config.apiUrl}/iot/latest`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+// --- Device data (per-device, access-controlled) ---
 
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // //   return null;
-    // }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching latest IoT data:', error);
-    throw error;
-  }
+export const getLatestIoTData = async (deviceId: string): Promise<IoTResponse> => {
+  const response = await fetch(`${config.apiUrl}/iot/${deviceId}/latest`, {
+    method: 'GET',
+    headers: await authHeaders(),
+  });
+  return response.json();
 };
 
-// Get all IoT data with pagination
-export const getAllIoTData = async (page: number = 1, limit: number = 50): Promise<IoTAllResponse> => {
-  try {
-    const response = await fetch(`${config.apiUrl}/iot/all?page=${page}&limit=${limit}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching all IoT data:', error);
-    throw error;
+export const getAllIoTData = async (
+  deviceId: string,
+  page: number = 1,
+  limit: number = 50
+): Promise<IoTAllResponse> => {
+  const response = await fetch(`${config.apiUrl}/iot/${deviceId}/all?page=${page}&limit=${limit}`, {
+    method: 'GET',
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  return response.json();
 };
 
-// Get IoT connection status
 export const getIoTStatus = async (): Promise<IoTStatusResponse> => {
-  try {
-    const response = await fetch(`${config.apiUrl}/iot/status`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching IoT status:', error);
-    throw error;
+  const response = await fetch(`${config.apiUrl}/iot/status`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  return response.json();
 };
 
-// Get calibration settings
-export const getCalibration = async (): Promise<CalibrationResponse> => {
-  try {
-    const response = await fetch(`${config.apiUrl}/calibration`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+// --- Devices ---
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching calibration:', error);
-    throw error;
+export const getMyDevices = async (): Promise<{ success: boolean; devices: Device[] }> => {
+  const response = await fetch(`${config.apiUrl}/devices/my`, {
+    method: 'GET',
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
+  return response.json();
 };
 
-// Set calibration settings
-export const setCalibration = async (
-  tank_depth: number,
-  tank_full_distance: number
-): Promise<CalibrationResponse> => {
-  try {
-    const response = await fetch(`${config.apiUrl}/calibration`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ tank_depth, tank_full_distance }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error setting calibration:', error);
-    throw error;
+export const addTenant = async (
+  deviceMongoId: string,
+  identifier: { email?: string; phoneNumber?: string }
+): Promise<{ success: boolean; device?: Device; message?: string }> => {
+  const response = await fetch(`${config.apiUrl}/devices/${deviceMongoId}/tenants`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify(identifier),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `HTTP error! status: ${response.status}`);
   }
+  return data;
+};
+
+export interface DeviceInvite {
+  success: boolean;
+  token: string;
+  expiresAt: string;
+  device: { deviceId: string; name: string; houseLabel: string };
+}
+
+export const createDeviceInvite = async (deviceMongoId: string): Promise<DeviceInvite> => {
+  const response = await fetch(`${config.apiUrl}/devices/${deviceMongoId}/invites`, {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+  }
+  return data;
+};
+
+export const redeemDeviceInvite = async (
+  token: string
+): Promise<{ success: boolean; device?: Device; message?: string }> => {
+  const response = await fetch(`${config.apiUrl}/devices/invites/${token}/accept`, {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+  }
+  return data;
+};
+
+export const removeTenant = async (
+  deviceMongoId: string,
+  userId: string
+): Promise<{ success: boolean; device?: Device; message?: string }> => {
+  const response = await fetch(`${config.apiUrl}/devices/${deviceMongoId}/tenants/${userId}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+  }
+  return data;
 };

@@ -1,0 +1,38 @@
+[
+  {
+    "deviceId": "SIM-001",
+    "name": "Ground Floor Tank",
+    "houseLabel": "House J5-10 (Ground Floor)",
+    "ownerEmail": "customer@example.com",
+    "tank_depth": 100,
+    "tank_full_distance": 10,
+    "tankCapacityLiters": 1000,
+    "startLevel": 85,
+    "drainPerMinute": 0.6,
+    "refillAtLevel": 15
+  },
+  {
+    "deviceId": "SIM-002",
+    "name": "Rooftop Tank",
+    "houseLabel": "House J5-10 (Rooftop)",
+    "ownerEmail": "customer@example.com",
+    "tank_depth": 120,
+    "tank_full_distance": 15,
+    "tankCapacityLiters": 1500,
+    "startLevel": 40,
+    "drainPerMinute": 0.9,
+    "refillAtLevel": 15
+  },
+  {
+    "deviceId": "SIM-003",
+    "name": "Main Tank",
+    "houseLabel": "House 70",
+    "ownerEmail": "malikvicks89@gmail.com",
+    "tank_depth": 90,
+    "tank_full_distance": 8,
+    "tankCapacityLiters": 800,
+    "startLevel": 60,
+    "drainPerMinute": 0.4,
+    "refillAtLevel": 15
+  }
+]

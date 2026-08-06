@@ -2,15 +2,43 @@ const iotDataService = require('../services/iotDataService');
 const iotSubscriber = require('../iotnode/fetchiotdata');
 
 class IoTDataController {
-  // Get latest IoT data
+  // Ingestion endpoint: a device (real or simulated) pushes a reading here.
+  // No user auth — devices identify themselves by deviceId, matching how the
+  // ESP32 firmware will call this once it talks HTTP instead of/alongside MQTT.
+  async ingestData(req, res) {
+    try {
+      const { deviceId, humidity, temperature, distance, timestamp } = req.body;
+
+      if (!deviceId) {
+        return res.status(400).json({ success: false, message: 'deviceId is required' });
+      }
+
+      const iotData = await iotDataService.processIoTData(deviceId, {
+        humidity,
+        temperature,
+        distance,
+        timestamp
+      });
+
+      res.status(201).json({ success: true, data: iotData });
+    } catch (error) {
+      console.error('Error ingesting IoT data:', error);
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to ingest IoT data'
+      });
+    }
+  }
+
+  // Get latest reading for a device (req.device set by requireDeviceAccess)
   async getLatestData(req, res) {
     try {
-      const latestData = iotDataService.getLatestData();
-      
+      const latestData = await iotDataService.getLatestData(req.device.deviceId);
+
       if (!latestData) {
         return res.status(404).json({
           success: false,
-          message: 'No IoT data available yet'
+          message: 'No IoT data available yet for this device'
         });
       }
 
@@ -28,13 +56,13 @@ class IoTDataController {
     }
   }
 
-  // Get all IoT data with pagination
+  // Get all readings for a device with pagination
   async getAllData(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 50;
 
-      const result = await iotDataService.getAllData(page, limit);
+      const result = await iotDataService.getAllData(req.device.deviceId, page, limit);
 
       res.status(200).json({
         success: true,
@@ -42,7 +70,7 @@ class IoTDataController {
       });
     } catch (error) {
       console.error('Error fetching IoT data:', error);
-      res.status(500).json({
+      res.status(error.status || 500).json({
         success: false,
         message: 'Failed to fetch IoT data',
         error: error.message
@@ -50,11 +78,11 @@ class IoTDataController {
     }
   }
 
-  // Get IoT connection status
+  // Get IoT connection status (AWS IoT Core MQTT link, for real devices)
   async getConnectionStatus(req, res) {
     try {
       const isConnected = iotSubscriber.getConnectionStatus();
-      
+
       res.status(200).json({
         success: true,
         connected: isConnected,
@@ -74,7 +102,7 @@ class IoTDataController {
   async connectToIoT(req, res) {
     try {
       await iotSubscriber.connect();
-      
+
       res.status(200).json({
         success: true,
         message: 'Successfully connected to AWS IoT Core'

@@ -31,7 +31,7 @@ import HeaderComponent from '@/app/components/Header';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
-import { getLatestIoTData } from '@/utils/iotAPI';
+import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
 import { Product } from '@/types/order';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
@@ -160,11 +160,15 @@ export default function DashboardScreen() {
         const productsData = await orderAPI.getProducts();
         setProducts(productsData);
         
-        // Fetch IoT data for tank level
+        // Fetch tank level for the user's first accessible device
         try {
-          const iotData = await getLatestIoTData();
-          if (iotData.success && iotData.data) {
-            setTankLevel(iotData.data.tankLevel);
+          const devicesRes = await getMyDevices();
+          const firstDevice = devicesRes.success ? devicesRes.devices[0] : null;
+          if (firstDevice) {
+            const iotData = await getLatestIoTData(firstDevice.deviceId);
+            if (iotData.success && iotData.data) {
+              setTankLevel(iotData.data.tankLevel);
+            }
           }
         } catch (iotError) {
           console.error('Error fetching IoT data:', iotError);

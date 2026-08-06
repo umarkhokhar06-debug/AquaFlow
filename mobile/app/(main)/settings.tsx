@@ -196,8 +196,8 @@ export default function SettingsScreen() {
           <View style={styles.settingGroup}>
             <SettingItem
               icon={<SettingsIcon size={20} color="#007AFF" />}
-              title="Tank Calibration"
-              subtitle="Configure tank sensor calibration"
+              title="My Devices"
+              subtitle="View tank devices and manage tenant access"
               onPress={() => router.push('/(main)/calibration-settings')}
             />
           </View>

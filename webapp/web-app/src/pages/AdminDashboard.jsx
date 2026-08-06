@@ -6,6 +6,7 @@ import Profile from '../components/Profile'
 import UserManagement from '../components/UserManagement'
 import OrderManagement from '../components/OrderManagement'
 import DriverManagement from '../components/DriverManagement'
+import DeviceManagement from '../components/DeviceManagement'
 import NotificationSystem from '../components/NotificationSystem'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import { FiUsers, FiPackage, FiDollarSign, FiTruck, FiWifi, FiWifiOff } from 'react-icons/fi'
@@ -424,6 +425,8 @@ const AdminDashboard = () => {
         return <OrderManagement />
       case 'drivers':
         return <DriverManagement />
+      case 'devices':
+        return <DeviceManagement />
       case 'profile':
         return <Profile />
       default:

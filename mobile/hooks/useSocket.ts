@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { socketService, NewOrderData, OrderStatusUpdateData, OrderAssignmentData, OrderUpdateData, UserUpdateData, SystemNotificationData } from '../utils/socketService';
+import { socketService, NewOrderData, OrderStatusUpdateData, OrderAssignmentData, OrderUpdateData, UserUpdateData, SystemNotificationData, DeviceReadingData, LowWaterAlertData } from '../utils/socketService';
 
 export interface UseSocketReturn {
   isConnected: boolean;
@@ -11,12 +11,18 @@ export interface UseSocketReturn {
   onOrderUpdate: (callback: (data: OrderUpdateData) => void) => void;
   onUserUpdate: (callback: (data: UserUpdateData) => void) => void;
   onSystemNotification: (callback: (data: SystemNotificationData) => void) => void;
+  onDeviceReading: (callback: (data: DeviceReadingData) => void) => void;
+  onLowWaterAlert: (callback: (data: LowWaterAlertData) => void) => void;
+  joinDeviceRoom: (deviceId: string) => void;
+  leaveDeviceRoom: (deviceId: string) => void;
   removeNewOrderListener: (callback: (data: NewOrderData) => void) => void;
   removeOrderStatusUpdateListener: (callback: (data: OrderStatusUpdateData) => void) => void;
   removeOrderAssignmentListener: (callback: (data: OrderAssignmentData) => void) => void;
   removeOrderUpdateListener: (callback: (data: OrderUpdateData) => void) => void;
   removeUserUpdateListener: (callback: (data: UserUpdateData) => void) => void;
   removeSystemNotificationListener: (callback: (data: SystemNotificationData) => void) => void;
+  removeDeviceReadingListener: (callback: (data: DeviceReadingData) => void) => void;
+  removeLowWaterAlertListener: (callback: (data: LowWaterAlertData) => void) => void;
 }
 
 export const useSocket = (): UseSocketReturn => {
@@ -59,6 +65,22 @@ export const useSocket = (): UseSocketReturn => {
     socketService.onSystemNotification(callback);
   }, []);
 
+  const onDeviceReading = useCallback((callback: (data: DeviceReadingData) => void) => {
+    socketService.onDeviceReading(callback);
+  }, []);
+
+  const onLowWaterAlert = useCallback((callback: (data: LowWaterAlertData) => void) => {
+    socketService.onLowWaterAlert(callback);
+  }, []);
+
+  const joinDeviceRoom = useCallback((deviceId: string) => {
+    socketService.joinDeviceRoom(deviceId);
+  }, []);
+
+  const leaveDeviceRoom = useCallback((deviceId: string) => {
+    socketService.leaveDeviceRoom(deviceId);
+  }, []);
+
   const removeNewOrderListener = useCallback((callback: (data: NewOrderData) => void) => {
     socketService.removeNewOrderListener(callback);
   }, []);
@@ -81,6 +103,14 @@ export const useSocket = (): UseSocketReturn => {
 
   const removeSystemNotificationListener = useCallback((callback: (data: SystemNotificationData) => void) => {
     socketService.removeSystemNotificationListener(callback);
+  }, []);
+
+  const removeDeviceReadingListener = useCallback((callback: (data: DeviceReadingData) => void) => {
+    socketService.removeDeviceReadingListener(callback);
+  }, []);
+
+  const removeLowWaterAlertListener = useCallback((callback: (data: LowWaterAlertData) => void) => {
+    socketService.removeLowWaterAlertListener(callback);
   }, []);
 
   useEffect(() => {
@@ -106,11 +136,17 @@ export const useSocket = (): UseSocketReturn => {
     onOrderUpdate,
     onUserUpdate,
     onSystemNotification,
+    onDeviceReading,
+    onLowWaterAlert,
+    joinDeviceRoom,
+    leaveDeviceRoom,
     removeNewOrderListener,
     removeOrderStatusUpdateListener,
     removeOrderAssignmentListener,
     removeOrderUpdateListener,
     removeUserUpdateListener,
     removeSystemNotificationListener,
+    removeDeviceReadingListener,
+    removeLowWaterAlertListener,
   };
 };

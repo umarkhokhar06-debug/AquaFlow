@@ -126,6 +126,18 @@ const socketService = {
         }
       });
 
+      // Join a device's room to receive live tank-level readings for it
+      socket.on('join-device-room', ({ deviceId } = {}) => {
+        if (!deviceId) return;
+        socket.join(`device-${deviceId.toUpperCase()}`);
+        console.log(`Client ${socket.id} joined device room: ${deviceId}`);
+      });
+
+      socket.on('leave-device-room', ({ deviceId } = {}) => {
+        if (!deviceId) return;
+        socket.leave(`device-${deviceId.toUpperCase()}`);
+      });
+
       // Handle disconnection
       socket.on('disconnect', () => {
         console.log(`Client disconnected: ${socket.id}`);
@@ -328,6 +340,41 @@ const socketService = {
       });
 
       console.log(`Driver location update emitted: ${driverId}`);
+    }
+  },
+
+  // Emit a new IoT reading to anyone viewing this device, plus the admin room
+  emitDeviceReading(device, reading) {
+    if (this.io) {
+      const payload = {
+        type: 'device-reading',
+        data: reading,
+        timestamp: new Date().toISOString()
+      };
+      this.io.to(`device-${device.deviceId}`).emit('device-reading', payload);
+      this.io.to('admin-room').emit('device-reading', payload);
+    }
+  },
+
+  // Emit a low-water alert to every recipient's personal room, and to admins
+  emitLowWaterAlert(device, tankLevel, recipientUserIds = []) {
+    if (this.io) {
+      const payload = {
+        type: 'low-water-alert',
+        data: {
+          deviceId: device.deviceId,
+          deviceName: device.name,
+          houseLabel: device.houseLabel,
+          tankLevel,
+          threshold: device.lowWaterThreshold,
+          timestamp: new Date().toISOString()
+        }
+      };
+      recipientUserIds.forEach(userId => {
+        this.io.to(`customer-${userId}`).emit('low-water-alert', payload);
+      });
+      this.io.to('admin-room').emit('low-water-alert', payload);
+      console.log(`Low water alert emitted for device ${device.deviceId}: ${tankLevel.toFixed(1)}%`);
     }
   },
 

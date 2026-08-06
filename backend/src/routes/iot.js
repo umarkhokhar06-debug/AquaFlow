@@ -1,19 +1,20 @@
 const express = require('express');
 const iotController = require('../controllers/iotController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const requireDeviceAccess = require('../middlewares/requireDeviceAccess');
 
 const router = express.Router();
 
-// Get latest IoT data (simple route as requested)
-router.get('/latest', iotController.getLatestData);
+// Device ingestion — no user auth, devices identify themselves by deviceId.
+// This is what the simulator script (and later the real ESP32 firmware) calls.
+router.post('/data', iotController.ingestData);
 
-// Get all IoT data with pagination
-router.get('/all', iotController.getAllData);
-
-// Get IoT connection status
+// IoT (AWS) connection status/testing — unrelated to any specific device
 router.get('/status', iotController.getConnectionStatus);
-
-// Manually connect to IoT (for testing)
 router.post('/connect', iotController.connectToIoT);
+
+// Per-device reads, restricted to the device's owner/tenants/admin
+router.get('/:deviceId/latest', authMiddleware, requireDeviceAccess, iotController.getLatestData);
+router.get('/:deviceId/all', authMiddleware, requireDeviceAccess, iotController.getAllData);
 
 module.exports = router;

@@ -90,6 +90,24 @@ export interface SystemNotificationData {
   timestamp: string;
 }
 
+export interface DeviceReadingData {
+  deviceId: string;
+  humidity: number;
+  temperature: number;
+  tankLevel: number;
+  timestamp: string;
+  receivedAt: string;
+}
+
+export interface LowWaterAlertData {
+  deviceId: string;
+  deviceName: string;
+  houseLabel: string;
+  tankLevel: number;
+  threshold: number;
+  timestamp: string;
+}
+
 export interface DriverLocationData {
   driverId: string;
   location: {
@@ -114,6 +132,8 @@ class SocketService {
   private orderUpdateListeners: ((data: OrderUpdateData) => void)[] = [];
   private userUpdateListeners: ((data: UserUpdateData) => void)[] = [];
   private systemNotificationListeners: ((data: SystemNotificationData) => void)[] = [];
+  private deviceReadingListeners: ((data: DeviceReadingData) => void)[] = [];
+  private lowWaterAlertListeners: ((data: LowWaterAlertData) => void)[] = [];
   private connectionListeners: ((connected: boolean) => void)[] = [];
 
   async connect(): Promise<void> {
@@ -219,6 +239,27 @@ class SocketService {
       console.log('System notification received:', data);
       this.systemNotificationListeners.forEach(listener => listener(data.data));
     });
+
+    // IoT device readings (only received for rooms this client has joined)
+    this.socket.on('device-reading', (data: SocketEventData) => {
+      this.deviceReadingListeners.forEach(listener => listener(data.data));
+    });
+
+    this.socket.on('low-water-alert', (data: SocketEventData) => {
+      console.log('Low water alert received:', data);
+      this.lowWaterAlertListeners.forEach(listener => listener(data.data));
+    });
+  }
+
+  // Join/leave a specific device's room to receive its live readings
+  joinDeviceRoom(deviceId: string): void {
+    if (!this.socket || !this.isConnected) return;
+    this.socket.emit('join-device-room', { deviceId });
+  }
+
+  leaveDeviceRoom(deviceId: string): void {
+    if (!this.socket) return;
+    this.socket.emit('leave-device-room', { deviceId });
   }
 
   private async joinUserRoom(): Promise<void> {
@@ -279,6 +320,14 @@ class SocketService {
     this.connectionListeners.push(callback);
   }
 
+  onDeviceReading(callback: (data: DeviceReadingData) => void): void {
+    this.deviceReadingListeners.push(callback);
+  }
+
+  onLowWaterAlert(callback: (data: LowWaterAlertData) => void): void {
+    this.lowWaterAlertListeners.push(callback);
+  }
+
   // Remove event listeners
   removeNewOrderListener(callback: (data: NewOrderData) => void): void {
     this.newOrderListeners = this.newOrderListeners.filter(cb => cb !== callback);
@@ -310,6 +359,14 @@ class SocketService {
 
   removeConnectionChangeListener(callback: (connected: boolean) => void): void {
     this.connectionListeners = this.connectionListeners.filter(cb => cb !== callback);
+  }
+
+  removeDeviceReadingListener(callback: (data: DeviceReadingData) => void): void {
+    this.deviceReadingListeners = this.deviceReadingListeners.filter(cb => cb !== callback);
+  }
+
+  removeLowWaterAlertListener(callback: (data: LowWaterAlertData) => void): void {
+    this.lowWaterAlertListeners = this.lowWaterAlertListeners.filter(cb => cb !== callback);
   }
 
   // Utility methods

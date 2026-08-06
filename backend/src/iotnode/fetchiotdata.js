@@ -64,7 +64,11 @@ class IoTSubscriber {
       let jsonString = payload.toString();
       const data = JSON.parse(jsonString);
       console.log('Parsed data:', data);
-      iotDataService.processIoTData(data)
+      if (!data.deviceId) {
+        console.error('Ignoring AWS IoT message with no deviceId:', data);
+        return;
+      }
+      iotDataService.processIoTData(data.deviceId, data)
         .then(() => {
           console.log('Data processed and saved successfully');
         })
