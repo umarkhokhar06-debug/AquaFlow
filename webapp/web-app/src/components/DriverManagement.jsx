@@ -16,7 +16,6 @@ import {
   FiAlertCircle,
   FiMapPin,
   FiList,
-  FiPlay,
   FiStopCircle,
   FiArrowUp,
   FiArrowDown,
@@ -248,19 +247,6 @@ const DriverManagement = () => {
         {statusConfig.label}
       </span>
     )
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'free':
-        return <FiPlay className="w-4 h-4" />
-      case 'busy':
-        return <FiClock className="w-4 h-4" />
-      case 'offline':
-        return <FiStopCircle className="w-4 h-4" />
-      default:
-        return <FiAlertCircle className="w-4 h-4" />
-    }
   }
 
   const formatCurrency = (amount) => {

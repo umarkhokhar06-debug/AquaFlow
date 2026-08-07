@@ -248,25 +248,6 @@ const OrderManagement = () => {
     )
   }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending':
-        return <FiClock className="w-4 h-4" />
-      case 'confirmed':
-        return <FiCheckCircle className="w-4 h-4" />
-      case 'preparing':
-        return <FiPackage className="w-4 h-4" />
-      case 'out_for_delivery':
-        return <FiTruck className="w-4 h-4" />
-      case 'delivered':
-        return <FiCheckCircle className="w-4 h-4" />
-      case 'cancelled':
-        return <FiX className="w-4 h-4" />
-      default:
-        return <FiAlertCircle className="w-4 h-4" />
-    }
-  }
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
