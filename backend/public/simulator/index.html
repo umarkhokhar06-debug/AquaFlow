@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AquaFlow Device Simulator</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0b1220;
+    --panel: #121a2b;
+    --border: #223049;
+    --text: #e7ecf5;
+    --muted: #93a1b8;
+    --accent: #3aa0ff;
+    --accent-2: #22c55e;
+    --danger: #ef4444;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; font-size: 0.9rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin: 12px 0 4px; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0d1526;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .err { color: var(--danger); font-size: 0.85rem; margin-top: 10px; min-height: 1em; }
+  #app { display: none; max-width: 900px; margin: 0 auto; }
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .toolbar-actions { display: flex; gap: 10px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .device-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .device-name { font-weight: 600; font-size: 1rem; }
+  .device-meta { color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+  .level-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .level-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: #0d1526;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .level-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0%; transition: width 0.3s; }
+  .level-pct { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+  .set-row { display: flex; gap: 8px; margin-top: 12px; }
+  .set-row input { width: 80px; }
+  .set-row button { flex: 1; }
+  .status-line { font-size: 0.75rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
+  .empty { color: var(--muted); text-align: center; padding: 40px; }
+</style>
+</head>
+<body>
+
+  <div id="login-screen" class="card">
+    <h1>AquaFlow Simulator</h1>
+    <p class="subtitle">Admin login required to control devices.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" />
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" />
+    <button class="btn-primary" style="width:100%; margin-top:18px;" onclick="login()">Sign in</button>
+    <div class="err" id="login-err"></div>
+  </div>
+
+  <div id="app">
+    <div class="toolbar">
+      <div>
+        <h1>AquaFlow Device Simulator</h1>
+        <p class="subtitle">Set water levels manually, or randomize every device at once.</p>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn-primary" onclick="randomizeAll()">🎲 Randomize All Devices</button>
+        <button class="btn-ghost" onclick="loadDevices()">Refresh</button>
+        <button class="btn-ghost" onclick="logout()">Log out</button>
+      </div>
+    </div>
+    <div id="devices" class="grid"></div>
+  </div>
+
+<script>
+const API_URL = window.location.origin + '/api';
+let token = localStorage.getItem('aquaflow_admin_token') || '';
+let devices = [];
+
+function levelToDistance(levelPercent, tank_depth, tank_full_distance) {
+  const clamped = Math.max(0, Math.min(100, levelPercent));
+  return tank_depth - (clamped / 100) * (tank_depth - tank_full_distance);
+}
+function distanceToLevel(distance, tank_depth, tank_full_distance) {
+  const range = tank_depth - tank_full_distance;
+  if (!range) return 0;
+  const pct = ((tank_depth - distance) / range) * 100;
+  return Math.max(0, Math.min(100, pct));
+}
+
+async function login() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const body = await res.json();
+    if (!res.ok || !body.success) throw new Error(body.message || 'Login failed');
+    if (body.user && body.user.userType !== 'admin') {
+      throw new Error('This account is not an admin. Use an admin login.');
+    }
+    token = body.token;
+    localStorage.setItem('aquaflow_admin_token', token);
+    showApp();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+function logout() {
+  token = '';
+  localStorage.removeItem('aquaflow_admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'block';
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadDevices();
+}
+
+async function authedFetch(path, opts = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...opts,
+    headers: {
+      ...(opts.headers || {}),
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (res.status === 401) {
+    logout();
+    throw new Error('Session expired, please log in again.');
+  }
+  return res;
+}
+
+async function loadDevices() {
+  const container = document.getElementById('devices');
+  try {
+    const res = await authedFetch('/devices?limit=200');
+    const body = await res.json();
+    if (!res.ok || !body.success) throw new Error(body.message || 'Failed to load devices');
+    devices = body.devices || body.data || [];
+
+    // Pull latest reading for each device to show current level
+    await Promise.all(devices.map(async (d) => {
+      try {
+        const r = await authedFetch(`/iot/${d.deviceId}/latest`);
+        const b = await r.json();
+        d._latest = b.success ? b.data : null;
+      } catch { d._latest = null; }
+    }));
+
+    render();
+  } catch (e) {
+    container.innerHTML = `<div class="empty">${e.message}</div>`;
+  }
+}
+
+function render() {
+  const container = document.getElementById('devices');
+  if (!devices.length) {
+    container.innerHTML = '<div class="empty">No devices registered yet.</div>';
+    return;
+  }
+  container.innerHTML = devices.map(deviceCardHtml).join('');
+}
+
+function deviceCardHtml(d) {
+  const depth = d.calibration?.tank_depth ?? 0;
+  const full = d.calibration?.tank_full_distance ?? 0;
+  const latest = d._latest;
+  const level = latest ? distanceToLevel(latest.distance, depth, full) : null;
+  const levelStr = level === null ? '—' : `${level.toFixed(0)}%`;
+  const barWidth = level === null ? 0 : level;
+  return `
+    <div class="device-card" data-device="${d.deviceId}">
+      <div class="device-name">${escapeHtml(d.name)}</div>
+      <div class="device-meta">${escapeHtml(d.houseLabel || '')} · ${escapeHtml(d.deviceId)}</div>
+      <div class="level-row">
+        <div class="level-bar-wrap"><div class="level-bar" style="width:${barWidth}%"></div></div>
+        <div class="level-pct">${levelStr}</div>
+      </div>
+      <div class="set-row">
+        <input type="number" min="0" max="100" placeholder="0-100" id="input-${d.deviceId}" />
+        <button class="btn-primary" onclick="setLevel('${d.deviceId}')">Set level</button>
+      </div>
+      <div class="set-row">
+        <button class="btn-ghost" style="flex:1" onclick="randomizeOne('${d.deviceId}')">🎲 Randomize this device</button>
+      </div>
+      <div class="status-line" id="status-${d.deviceId}"></div>
+    </div>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function sendReading(device, levelPercent) {
+  const depth = device.calibration?.tank_depth ?? 0;
+  const full = device.calibration?.tank_full_distance ?? 0;
+  const distance = levelToDistance(levelPercent, depth, full);
+  const temperature = Number((27 + Math.random() * 4).toFixed(1));
+  const humidity = Number((40 + Math.random() * 15).toFixed(1));
+
+  const res = await fetch(`${API_URL}/iot/data`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      deviceId: device.deviceId,
+      distance: Number(distance.toFixed(2)),
+      temperature,
+      humidity,
+      timestamp: new Date().toISOString()
+    })
+  });
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.message || 'Failed to send reading');
+  return levelPercent;
+}
+
+async function setLevel(deviceId) {
+  const input = document.getElementById(`input-${deviceId}`);
+  const statusEl = document.getElementById(`status-${deviceId}`);
+  const val = parseFloat(input.value);
+  if (isNaN(val) || val < 0 || val > 100) {
+    statusEl.textContent = 'Enter a value between 0 and 100.';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  const device = devices.find(d => d.deviceId === deviceId);
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = 'Sending...';
+  try {
+    await sendReading(device, val);
+    statusEl.textContent = `Set to ${val}% at ${new Date().toLocaleTimeString()}`;
+    await loadDevices();
+  } catch (e) {
+    statusEl.textContent = e.message;
+    statusEl.style.color = 'var(--danger)';
+  }
+}
+
+async function randomizeOne(deviceId) {
+  const device = devices.find(d => d.deviceId === deviceId);
+  const val = Math.round(Math.random() * 100);
+  const statusEl = document.getElementById(`status-${deviceId}`);
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = 'Sending...';
+  try {
+    await sendReading(device, val);
+    statusEl.textContent = `Randomized to ${val}% at ${new Date().toLocaleTimeString()}`;
+    await loadDevices();
+  } catch (e) {
+    statusEl.textContent = e.message;
+    statusEl.style.color = 'var(--danger)';
+  }
+}
+
+async function randomizeAll() {
+  await Promise.all(devices.map(d => {
+    const val = Math.round(Math.random() * 100);
+    const statusEl = document.getElementById(`status-${d.deviceId}`);
+    if (statusEl) { statusEl.textContent = 'Sending...'; statusEl.style.color = 'var(--muted)'; }
+    return sendReading(d, val)
+      .then(() => { if (statusEl) statusEl.textContent = `Randomized to ${val}%`; })
+      .catch(e => { if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--danger)'; } });
+  }));
+  await loadDevices();
+}
+
+if (token) showApp();
+</script>
+</body>
+</html>
