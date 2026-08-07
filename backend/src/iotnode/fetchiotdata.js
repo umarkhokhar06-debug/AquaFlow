@@ -11,19 +11,30 @@ class IoTSubscriber {
 
   connect() {
     try {
-      // Use file paths from environment variables
-      const crtFolder = path.join(__dirname, '..', 'crt');
-      this.device = awsIot.device({
-        keyPath: path.join(crtFolder, 'private.key'),
-        certPath: path.join(crtFolder, 'certificate.crt'),
-        caPath: path.join(crtFolder, 'rootCA.pem'),
+      const deviceOptions = {
         clientId: `aquaflow-backend-${Date.now()}`,
         host: process.env.AWS_IOT_ENDPOINT,
         keepalive: 60,
         protocol: 'mqtts',
         port: 8883,
         reconnectPeriod: 1000
-      });
+      };
+
+      // Prefer inline PEM content from env vars (works on hosts with no
+      // writable/persistent filesystem, e.g. Render); fall back to the
+      // crt/ folder for local development.
+      if (process.env.AWS_IOT_CERTIFICATE && process.env.AWS_IOT_PRIVATE_KEY) {
+        deviceOptions.privateKey = Buffer.from(process.env.AWS_IOT_PRIVATE_KEY.replace(/\\n/g, '\n'));
+        deviceOptions.clientCert = Buffer.from(process.env.AWS_IOT_CERTIFICATE.replace(/\\n/g, '\n'));
+        deviceOptions.caCert = Buffer.from((process.env.AWS_ROOT_CA1 || '').replace(/\\n/g, '\n'));
+      } else {
+        const crtFolder = path.join(__dirname, '..', 'crt');
+        deviceOptions.keyPath = path.join(crtFolder, 'private.key');
+        deviceOptions.certPath = path.join(crtFolder, 'certificate.crt');
+        deviceOptions.caPath = path.join(crtFolder, 'rootCA.pem');
+      }
+
+      this.device = awsIot.device(deviceOptions);
 
       this.device.on('connect', () => {
         this.isConnected = true;
