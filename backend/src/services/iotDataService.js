@@ -125,6 +125,40 @@ class IoTDataService {
     return latest;
   }
 
+  // Latest reading for every device, keyed by deviceId. Uses the in-memory
+  // cache first (instant) and only hits the DB for devices never seen since
+  // this process started — cheap even for hundreds of devices.
+  async getLatestForAllDevices() {
+    const devices = await Device.find().select('deviceId');
+    const result = {};
+
+    await Promise.all(devices.map(async (d) => {
+      result[d.deviceId] = await this.getLatestData(d.deviceId);
+    }));
+
+    return result;
+  }
+
+  // Push a fresh random reading to every simulated device. Used by both the
+  // automatic 1-minute loop and the simulator panel's "Randomize All" button.
+  async randomizeAllDevices() {
+    const devices = await Device.find({ isSimulated: true });
+
+    await Promise.all(devices.map((device) => {
+      const level = Math.random() * 100;
+      const { tank_depth, tank_full_distance } = device.calibration;
+      const distance = tank_depth - (level / 100) * (tank_depth - tank_full_distance);
+      return this.processIoTData(device.deviceId, {
+        distance: Number(distance.toFixed(2)),
+        temperature: Number((27 + Math.random() * 4).toFixed(1)),
+        humidity: Number((40 + Math.random() * 15).toFixed(1)),
+        timestamp: new Date()
+      });
+    }));
+
+    return devices.length;
+  }
+
   async getAllData(deviceId, page = 1, limit = 50) {
     const device = await Device.findOne({ deviceId: deviceId.trim().toUpperCase() });
     if (!device) {

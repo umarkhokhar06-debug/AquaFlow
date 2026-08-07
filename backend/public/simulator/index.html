@@ -96,6 +96,10 @@
   .set-row button { flex: 1; }
   .status-line { font-size: 0.75rem; color: var(--muted); margin-top: 8px; min-height: 1em; }
   .empty { color: var(--muted); text-align: center; padding: 40px; }
+  .search-row { margin-bottom: 16px; }
+  .search-row input { max-width: 320px; }
+  .countdown { color: var(--muted); font-size: 0.8rem; }
+  .device-count { color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -115,13 +119,19 @@
     <div class="toolbar">
       <div>
         <h1>AquaFlow Device Simulator</h1>
-        <p class="subtitle">Set water levels manually, or randomize every device at once.</p>
+        <p class="subtitle">Set water levels manually, or randomize every device at once. All simulated devices also auto-randomize every minute on their own.</p>
       </div>
       <div class="toolbar-actions">
         <button class="btn-primary" onclick="randomizeAll()">🎲 Randomize All Devices</button>
-        <button class="btn-ghost" onclick="loadDevices()">Refresh</button>
+        <button class="btn-ghost" onclick="loadDevicesAndRender()">Refresh</button>
         <button class="btn-ghost" onclick="logout()">Log out</button>
       </div>
+    </div>
+    <div class="search-row">
+      <input type="text" id="search" placeholder="Search by name, house, or device ID..." oninput="applyFilter()" />
+    </div>
+    <div class="device-count">
+      <span id="device-count-text"></span> · next auto-randomize in <span class="countdown" id="countdown">60s</span>
     </div>
     <div id="devices" class="grid"></div>
   </div>
@@ -130,6 +140,10 @@
 const API_URL = window.location.origin + '/api';
 let token = localStorage.getItem('aquaflow_admin_token') || '';
 let devices = [];
+let filterText = '';
+let countdownSeconds = 60;
+let pollTimer = null;
+let countdownTimer = null;
 
 function levelToDistance(levelPercent, tank_depth, tank_full_distance) {
   const clamped = Math.max(0, Math.min(100, levelPercent));
@@ -176,7 +190,20 @@ function logout() {
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  loadDevices();
+  loadDevicesAndRender();
+  startAutoRefresh();
+}
+
+function startAutoRefresh() {
+  clearInterval(pollTimer);
+  clearInterval(countdownTimer);
+  countdownSeconds = 60;
+  pollTimer = setInterval(refreshLatestOnly, 60 * 1000);
+  countdownTimer = setInterval(() => {
+    countdownSeconds = countdownSeconds > 0 ? countdownSeconds - 1 : 60;
+    const el = document.getElementById('countdown');
+    if (el) el.textContent = `${countdownSeconds}s`;
+  }, 1000);
 }
 
 async function authedFetch(path, opts = {}) {
@@ -194,22 +221,23 @@ async function authedFetch(path, opts = {}) {
   return res;
 }
 
-async function loadDevices() {
+async function fetchLatestAll() {
+  const res = await authedFetch('/iot/latest-all');
+  const body = await res.json();
+  if (!res.ok || !body.success) throw new Error(body.message || 'Failed to load latest readings');
+  return body.data || {};
+}
+
+async function loadDevicesAndRender() {
   const container = document.getElementById('devices');
   try {
-    const res = await authedFetch('/devices?limit=200');
+    const res = await authedFetch('/devices?limit=500');
     const body = await res.json();
     if (!res.ok || !body.success) throw new Error(body.message || 'Failed to load devices');
     devices = body.devices || body.data || [];
 
-    // Pull latest reading for each device to show current level
-    await Promise.all(devices.map(async (d) => {
-      try {
-        const r = await authedFetch(`/iot/${d.deviceId}/latest`);
-        const b = await r.json();
-        d._latest = b.success ? b.data : null;
-      } catch { d._latest = null; }
-    }));
+    const latestByDevice = await fetchLatestAll();
+    devices.forEach(d => { d._latest = latestByDevice[d.deviceId] || null; });
 
     render();
   } catch (e) {
@@ -217,13 +245,58 @@ async function loadDevices() {
   }
 }
 
+// Lightweight periodic refresh: just re-pulls latest readings and patches
+// the existing cards in place, so it doesn't interrupt anyone mid-typing
+// in a "set level" field.
+async function refreshLatestOnly() {
+  try {
+    const latestByDevice = await fetchLatestAll();
+    devices.forEach(d => {
+      d._latest = latestByDevice[d.deviceId] || null;
+      patchDeviceCard(d);
+    });
+  } catch (e) {
+    // Silent — a failed background refresh shouldn't interrupt the UI
+    console.error('Auto-refresh failed:', e.message);
+  }
+}
+
+function patchDeviceCard(d) {
+  const card = document.querySelector(`.device-card[data-device="${d.deviceId}"]`);
+  if (!card) return;
+  const depth = d.calibration?.tank_depth ?? 0;
+  const full = d.calibration?.tank_full_distance ?? 0;
+  const level = d._latest ? distanceToLevel(d._latest.distance, depth, full) : null;
+  const bar = card.querySelector('.level-bar');
+  const pct = card.querySelector('.level-pct');
+  if (bar) bar.style.width = `${level === null ? 0 : level}%`;
+  if (pct) pct.textContent = level === null ? '—' : `${level.toFixed(0)}%`;
+}
+
+function applyFilter() {
+  filterText = document.getElementById('search').value.trim().toLowerCase();
+  render();
+}
+
+function visibleDevices() {
+  if (!filterText) return devices;
+  return devices.filter(d =>
+    d.name.toLowerCase().includes(filterText) ||
+    (d.houseLabel || '').toLowerCase().includes(filterText) ||
+    d.deviceId.toLowerCase().includes(filterText)
+  );
+}
+
 function render() {
   const container = document.getElementById('devices');
-  if (!devices.length) {
-    container.innerHTML = '<div class="empty">No devices registered yet.</div>';
+  const visible = visibleDevices();
+  document.getElementById('device-count-text').textContent =
+    filterText ? `${visible.length} of ${devices.length} devices` : `${devices.length} devices`;
+  if (!visible.length) {
+    container.innerHTML = '<div class="empty">No devices match.</div>';
     return;
   }
-  container.innerHTML = devices.map(deviceCardHtml).join('');
+  container.innerHTML = visible.map(deviceCardHtml).join('');
 }
 
 function deviceCardHtml(d) {
@@ -295,7 +368,7 @@ async function setLevel(deviceId) {
   try {
     await sendReading(device, val);
     statusEl.textContent = `Set to ${val}% at ${new Date().toLocaleTimeString()}`;
-    await loadDevices();
+    await refreshLatestOnly();
   } catch (e) {
     statusEl.textContent = e.message;
     statusEl.style.color = 'var(--danger)';
@@ -311,7 +384,7 @@ async function randomizeOne(deviceId) {
   try {
     await sendReading(device, val);
     statusEl.textContent = `Randomized to ${val}% at ${new Date().toLocaleTimeString()}`;
-    await loadDevices();
+    await refreshLatestOnly();
   } catch (e) {
     statusEl.textContent = e.message;
     statusEl.style.color = 'var(--danger)';
@@ -319,15 +392,15 @@ async function randomizeOne(deviceId) {
 }
 
 async function randomizeAll() {
-  await Promise.all(devices.map(d => {
-    const val = Math.round(Math.random() * 100);
-    const statusEl = document.getElementById(`status-${d.deviceId}`);
-    if (statusEl) { statusEl.textContent = 'Sending...'; statusEl.style.color = 'var(--muted)'; }
-    return sendReading(d, val)
-      .then(() => { if (statusEl) statusEl.textContent = `Randomized to ${val}%`; })
-      .catch(e => { if (statusEl) { statusEl.textContent = e.message; statusEl.style.color = 'var(--danger)'; } });
-  }));
-  await loadDevices();
+  try {
+    const res = await authedFetch('/iot/randomize-all', { method: 'POST' });
+    const body = await res.json();
+    if (!res.ok || !body.success) throw new Error(body.message || 'Failed to randomize devices');
+    await refreshLatestOnly();
+    countdownSeconds = 60;
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 if (token) showApp();

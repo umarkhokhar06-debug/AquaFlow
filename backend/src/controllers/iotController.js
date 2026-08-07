@@ -116,6 +116,36 @@ class IoTDataController {
       });
     }
   }
+
+  // Admin: latest reading for every device in one call (simulator panel)
+  async getLatestForAllDevices(req, res) {
+    try {
+      const latest = await iotDataService.getLatestForAllDevices();
+      res.status(200).json({ success: true, data: latest });
+    } catch (error) {
+      console.error('Error fetching latest data for all devices:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch latest data for all devices',
+        error: error.message
+      });
+    }
+  }
+
+  // Admin: push a fresh random reading to every simulated device right now
+  async randomizeAllDevices(req, res) {
+    try {
+      const count = await iotDataService.randomizeAllDevices();
+      res.status(200).json({ success: true, message: `Randomized ${count} device(s)` });
+    } catch (error) {
+      console.error('Error randomizing devices:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to randomize devices',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new IoTDataController();

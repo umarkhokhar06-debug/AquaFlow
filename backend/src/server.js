@@ -2,6 +2,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const socketService = require('./services/socketService');
 const iotSubscriber = require('./iotnode/fetchiotdata');
+const deviceSimulatorLoop = require('./services/deviceSimulatorLoop');
 
 const PORT = process.env.PORT || 5000;
 
@@ -24,6 +25,9 @@ const startServer = async () => {
 
     // Initialize Socket.IO
     socketService.initialize(server);
+
+    // Keep simulated devices reporting fresh random data every minute
+    deviceSimulatorLoop.start();
 
     // Connect to AWS IoT Core
     try {

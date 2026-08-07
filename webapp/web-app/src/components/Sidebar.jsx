@@ -1,16 +1,18 @@
 import React from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { 
-  FiBarChart2, 
-  FiUsers, 
-  FiPackage, 
+import {
+  FiBarChart2,
+  FiUsers,
+  FiPackage,
   FiTruck,
   FiCpu,
   FiTrendingUp,
-  FiFileText, 
-  FiSettings, 
+  FiFileText,
+  FiSettings,
   FiUser,
-  FiHome
+  FiHome,
+  FiSliders,
+  FiExternalLink
 } from 'react-icons/fi'
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -22,6 +24,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'orders', label: 'Orders', icon: FiPackage },
     { id: 'drivers', label: 'Drivers', icon: FiTruck },
     { id: 'devices', label: 'Devices', icon: FiCpu },
+    { id: 'device-simulator', label: 'Device Simulator', icon: FiSliders, external: true },
     { id: 'analytics', label: 'Analytics', icon: FiTrendingUp },
     { id: 'reports', label: 'Reports', icon: FiFileText },
     { id: 'settings', label: 'Settings', icon: FiSettings },
@@ -45,10 +48,14 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         <div className="px-3 space-y-1">
           {tabs.map((tab) => {
             const IconComponent = tab.icon
+            const openSimulator = () => {
+              const backendUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:4000'
+              window.open(`${backendUrl}/simulator/`, '_blank', 'noopener,noreferrer')
+            }
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={tab.external ? openSimulator : () => setActiveTab(tab.id)}
                 className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   activeTab === tab.id
                     ? 'bg-gray-800 text-white'
@@ -57,6 +64,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               >
                 <IconComponent className="mr-3 h-5 w-5" />
                 {tab.label}
+                {tab.external && <FiExternalLink className="ml-auto h-3.5 w-3.5 opacity-60" />}
               </button>
             )
           })}

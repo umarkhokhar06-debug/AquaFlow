@@ -8,6 +8,10 @@ const authService = {
     try {
       const { userType, name, email, password, ...additionalFields } = userData;
 
+      if (userType === 'admin') {
+        throw new Error('Admin accounts cannot be self-registered');
+      }
+
       // Check if user already exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
