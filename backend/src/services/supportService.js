@@ -1,5 +1,7 @@
 const SupportTicket = require('../models/SupportTicket');
+const User = require('../models/User');
 const notificationService = require('./notificationService');
+const auditLogService = require('./auditLogService');
 
 const supportService = {
   // Create a new support ticket
@@ -58,6 +60,32 @@ const supportService = {
       };
     } catch (error) {
       console.error('Error getting user tickets:', error);
+      throw error;
+    }
+  },
+
+  // Staff-facing: list/search across all tickets, not scoped to one user.
+  getAllTickets: async (filters = {}) => {
+    try {
+      const { status, category, priority, assignedTo, page = 1, limit = 20 } = filters;
+      const query = {};
+      if (status) query.status = status;
+      if (category) query.category = category;
+      if (priority) query.priority = priority;
+      if (assignedTo) query.assignedTo = assignedTo;
+
+      const tickets = await SupportTicket.find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .populate('user', 'name email userType')
+        .populate('assignedTo', 'name userType');
+
+      const total = await SupportTicket.countDocuments(query);
+
+      return { tickets, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) } };
+    } catch (error) {
+      console.error('Error listing tickets:', error);
       throw error;
     }
   },
@@ -163,11 +191,13 @@ const supportService = {
     }
   },
 
-  // Resolve ticket
-  resolveTicket: async (ticketId, resolvedBy, resolution) => {
+  // Resolve ticket. actorUser is optional so existing internal callers keep
+  // working, but any staff-facing route should pass it -- SRS §7: "Critical
+  // support actions and order changes are logged."
+  resolveTicket: async (ticketId, resolvedBy, resolution, actorUser = null) => {
     try {
       const ticket = await SupportTicket.findById(ticketId);
-      
+
       if (!ticket) {
         throw new Error('Ticket not found');
       }
@@ -187,6 +217,15 @@ const supportService = {
         },
         'medium'
       );
+
+      if (actorUser) {
+        await auditLogService.record({
+          action: 'SUPPORT_TICKET_RESOLVED',
+          actorUser,
+          targetUser: null,
+          changes: { ticketNumber: ticket.ticketNumber, resolution }
+        });
+      }
 
       return ticket;
     } catch (error) {
@@ -228,6 +267,61 @@ const supportService = {
       return ticket;
     } catch (error) {
       console.error('Error assigning ticket:', error);
+      throw error;
+    }
+  },
+
+  // SRS §7: "If physical intervention is required, the system can
+  // create/assign a technician appointment." Reuses the existing ticket
+  // rather than a separate appointment model -- assigning it to a
+  // technician IS the appointment; picks whichever active technician
+  // currently has the fewest open/in-progress tickets (simple load
+  // balancing, no scheduling calendar exists yet to do better than that).
+  assignTechnician: async (ticketId, actorUser) => {
+    try {
+      const ticket = await SupportTicket.findById(ticketId);
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      const technicians = await User.find({ userType: 'technician', status: 'active' }).select('_id name');
+      if (technicians.length === 0) {
+        throw new Error('No active technicians available to assign');
+      }
+
+      const loadCounts = await SupportTicket.aggregate([
+        { $match: { assignedTo: { $in: technicians.map(t => t._id) }, status: { $in: ['open', 'in_progress'] } } },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]);
+      const loadById = new Map(loadCounts.map(l => [l._id.toString(), l.count]));
+      const technician = technicians.reduce((least, t) =>
+        (loadById.get(t._id.toString()) || 0) < (loadById.get(least._id.toString()) || 0) ? t : least
+      , technicians[0]);
+
+      ticket.assignedTo = technician._id;
+      ticket.status = 'in_progress';
+      ticket.updatedAt = new Date();
+      await ticket.save();
+
+      await notificationService.createNotification(
+        technician._id,
+        'Technician appointment assigned',
+        `You've been assigned to ticket #${ticket.ticketNumber}: ${ticket.subject}`,
+        'system_update',
+        { ticketId: ticket._id, ticketNumber: ticket.ticketNumber },
+        'high'
+      );
+
+      await auditLogService.record({
+        action: 'TECHNICIAN_ASSIGNED',
+        actorUser,
+        targetUser: technician,
+        changes: { ticketNumber: ticket.ticketNumber }
+      });
+
+      return ticket;
+    } catch (error) {
+      console.error('Error assigning technician:', error);
       throw error;
     }
   },

@@ -101,12 +101,18 @@ const supportTicketSchema = new mongoose.Schema({
   }
 });
 
-// Generate ticket number before saving
-supportTicketSchema.pre('save', async function(next) {
+// Generate ticket number before validation runs -- ticketNumber is
+// required, and pre('save') hooks fire AFTER validation, so this has to be
+// pre('validate') or every ticket creation fails validation first.
+supportTicketSchema.pre('validate', async function(next) {
   if (this.isNew) {
     const count = await this.constructor.countDocuments();
     this.ticketNumber = `TKT-${String(count + 1).padStart(6, '0')}`;
   }
+  next();
+});
+
+supportTicketSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   next();
 });
