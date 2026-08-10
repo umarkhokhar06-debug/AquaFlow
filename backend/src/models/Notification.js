@@ -21,7 +21,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['order_assigned', 'order_cancelled', 'payment_received', 'system_update', 'promotional', 'emergency'],
+    enum: ['order_assigned', 'order_cancelled', 'payment_received', 'system_update', 'promotional', 'emergency', 'predictive_reorder'],
     default: 'system_update'
   },
   isRead: {

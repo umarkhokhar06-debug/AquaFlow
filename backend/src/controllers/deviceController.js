@@ -1,7 +1,8 @@
 const deviceService = require('../services/deviceService');
 const Device = require('../models/Device');
+const { ADMIN_TIER_ROLES } = require('../constants/roles');
 
-const isAdmin = (user) => user.userType === 'admin';
+const isAdmin = (user) => ADMIN_TIER_ROLES.includes(user.userType);
 
 const isOwnerOrAdmin = async (req, res, deviceMongoId) => {
   const device = await Device.findById(deviceMongoId);

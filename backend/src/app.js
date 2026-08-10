@@ -14,6 +14,7 @@ const driverAppRoutes = require('./routes/driverApp');
 const deviceRoutes = require('./routes/devices');
 const truckRoutes = require('./routes/trucks');
 const dispatchRoutes = require('./routes/dispatch');
+const forecastRoutes = require('./routes/forecast');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/driver', driverAppRoutes); // Driver mobile app routes
 app.use('/api/devices', deviceRoutes);
 app.use('/api/admin/trucks', truckRoutes);
 app.use('/api/dispatch', dispatchRoutes);
+app.use('/api/forecast', forecastRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

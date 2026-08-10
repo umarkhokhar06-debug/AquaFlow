@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ADMIN_TIER_ROLES } = require('../constants/roles');
 
 const deviceSchema = new mongoose.Schema({
   deviceId: {
@@ -126,7 +127,7 @@ deviceSchema.index({ 'invites.token': 1 });
 // True if the given userId is the owner, a tenant, or an admin
 deviceSchema.methods.isAccessibleBy = function(user) {
   if (!user) return false;
-  if (user.userType === 'admin') return true;
+  if (ADMIN_TIER_ROLES.includes(user.userType)) return true;
   const userId = user.id?.toString() || user._id?.toString();
   if (this.owner.toString() === userId) return true;
   return this.tenants.some(t => t.user.toString() === userId);

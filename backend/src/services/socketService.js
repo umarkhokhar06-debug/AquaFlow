@@ -1,4 +1,5 @@
 const socketAuthMiddleware = require('../middlewares/socketAuthMiddleware');
+const { ADMIN_TIER_ROLES } = require('../constants/roles');
 
 const socketService = {
   io: null,
@@ -27,7 +28,7 @@ const socketService = {
 
       // Join admin room for admin users
       socket.on('join-admin-room', () => {
-        if (socket.user.userType === 'admin') {
+        if (ADMIN_TIER_ROLES.includes(socket.user.userType)) {
           socket.join('admin-room');
           console.log(`Admin joined admin room: ${socket.id}`);
         }
@@ -35,7 +36,7 @@ const socketService = {
 
       // Join driver room for driver users
       socket.on('join-driver-room', () => {
-        if (socket.user.userType === 'driver' || socket.user.userType === 'admin') {
+        if (socket.user.userType === 'driver' || ADMIN_TIER_ROLES.includes(socket.user.userType)) {
           socket.join('driver-room');
           socket.join(`driver-${socket.user.id}`);
           console.log(`Driver/Admin joined driver room: ${socket.id}`);

@@ -3,6 +3,7 @@ const connectDB = require('./config/db');
 const socketService = require('./services/socketService');
 const iotSubscriber = require('./iotnode/fetchiotdata');
 const deviceSimulatorLoop = require('./services/deviceSimulatorLoop');
+const nightlyScanLoop = require('./services/nightlyScanLoop');
 
 const PORT = process.env.PORT || 5000;
 
@@ -28,6 +29,9 @@ const startServer = async () => {
 
     // Keep simulated devices reporting fresh random data every minute
     deviceSimulatorLoop.start();
+
+    // Nightly IoT scan + consumption forecast (~2 AM server time)
+    nightlyScanLoop.start();
 
     // Connect to AWS IoT Core
     try {
