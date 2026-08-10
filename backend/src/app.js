@@ -17,6 +17,7 @@ const dispatchRoutes = require('./routes/dispatch');
 const forecastRoutes = require('./routes/forecast');
 const reportRoutes = require('./routes/reports');
 const promoCodeRoutes = require('./routes/promoCodes');
+const financeRoutes = require('./routes/finance');
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/dispatch', dispatchRoutes);
 app.use('/api/forecast', forecastRoutes);
 app.use('/api/admin/reports', reportRoutes);
 app.use('/api/promo-codes', promoCodeRoutes);
+app.use('/api/admin/finance', financeRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
