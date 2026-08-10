@@ -63,12 +63,12 @@ const userManagementController = {
     try {
       const { userId } = req.params;
       const updateData = req.body;
-      const result = await userManagementService.updateUser(userId, updateData, req.user.id);
+      const result = await userManagementService.updateUser(userId, updateData, req.user);
       res.status(200).json(result);
 
     } catch (error) {
       console.error('Update user error:', error);
-      
+
       if (error.message === 'User not found') {
         return res.status(404).json({
           success: false,
@@ -76,7 +76,7 @@ const userManagementController = {
         });
       }
 
-      if (error.message === 'Cannot change admin user type') {
+      if (error.message === 'Cannot change admin-tier user type') {
         return res.status(403).json({
           success: false,
           message: error.message
@@ -104,12 +104,12 @@ const userManagementController = {
     try {
       const { userId } = req.params;
       const { reason } = req.body;
-      const result = await userManagementService.blockUser(userId, req.user.id, reason);
+      const result = await userManagementService.blockUser(userId, req.user, reason);
       res.status(200).json(result);
 
     } catch (error) {
       console.error('Block user error:', error);
-      
+
       if (error.message === 'User not found') {
         return res.status(404).json({
           success: false,
@@ -124,7 +124,7 @@ const userManagementController = {
         });
       }
 
-      if (error.message === 'Cannot block other admin users') {
+      if (error.message === 'Cannot block other admin-tier users') {
         return res.status(403).json({
           success: false,
           message: error.message
@@ -142,7 +142,7 @@ const userManagementController = {
   unblockUser: async (req, res) => {
     try {
       const { userId } = req.params;
-      const result = await userManagementService.unblockUser(userId);
+      const result = await userManagementService.unblockUser(userId, req.user);
       res.status(200).json(result);
 
     } catch (error) {
@@ -182,12 +182,12 @@ const userManagementController = {
         });
       }
 
-      const result = await userManagementService.changeUserType(userId, userType, req.user.id);
+      const result = await userManagementService.changeUserType(userId, userType, req.user);
       res.status(200).json(result);
 
     } catch (error) {
       console.error('Change user type error:', error);
-      
+
       if (error.message === 'User not found') {
         return res.status(404).json({
           success: false,
@@ -195,7 +195,14 @@ const userManagementController = {
         });
       }
 
-      if (error.message === 'Cannot change admin user type') {
+      if (error.message === 'Cannot change admin-tier user type') {
+        return res.status(403).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.message === 'Only a super admin can assign admin or super_admin roles') {
         return res.status(403).json({
           success: false,
           message: error.message
@@ -227,12 +234,12 @@ const userManagementController = {
   deleteUser: async (req, res) => {
     try {
       const { userId } = req.params;
-      const result = await userManagementService.deleteUser(userId, req.user.id);
+      const result = await userManagementService.deleteUser(userId, req.user);
       res.status(200).json(result);
 
     } catch (error) {
       console.error('Delete user error:', error);
-      
+
       if (error.message === 'User not found') {
         return res.status(404).json({
           success: false,
@@ -240,7 +247,7 @@ const userManagementController = {
         });
       }
 
-      if (error.message === 'Cannot delete admin users') {
+      if (error.message === 'Cannot delete admin-tier users') {
         return res.status(403).json({
           success: false,
           message: error.message
@@ -250,6 +257,61 @@ const userManagementController = {
       res.status(500).json({
         success: false,
         message: 'Server error deleting user'
+      });
+    }
+  },
+
+  // Admin/super_admin creates a staff account directly
+  createEmployee: async (req, res) => {
+    try {
+      const { name, email, password, userType } = req.body;
+
+      if (!name || !email || !password || !userType) {
+        return res.status(400).json({
+          success: false,
+          message: 'name, email, password, and userType are required'
+        });
+      }
+
+      const result = await userManagementService.createEmployee(req.user, { name, email, password, userType });
+      res.status(201).json(result);
+
+    } catch (error) {
+      console.error('Create employee error:', error);
+
+      if (error.message === 'User already exists with this email') {
+        return res.status(409).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.message === 'Only a super admin can create admin or super_admin accounts') {
+        return res.status(403).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.message.startsWith('userType must be one of')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(err => err.message);
+        return res.status(400).json({
+          success: false,
+          message: 'Validation error',
+          errors: messages
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Server error creating employee'
       });
     }
   },

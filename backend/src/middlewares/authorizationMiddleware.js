@@ -144,11 +144,14 @@ const canManageUsers = (req, res, next) => {
 };
 
 // Convenience middleware for common roles
-const requireAdmin = requireRole('admin');
+// requireAdmin accepts admin OR super_admin — super_admin inherits every
+// admin-gated route for free via this one change (see authorizationService.isAdmin)
+const requireAdmin = requireAnyRole(['admin', 'super_admin']);
+const requireSuperAdmin = requireRole('super_admin');
 const requireDriver = requireRole('driver');
 const requireCustomer = requireRole('customer');
-const requireAdminOrDriver = requireAnyRole(['admin', 'driver']);
-const requireAdminOrCustomer = requireAnyRole(['admin', 'customer']);
+const requireAdminOrDriver = requireAnyRole(['admin', 'super_admin', 'driver']);
+const requireAdminOrCustomer = requireAnyRole(['admin', 'super_admin', 'customer']);
 
 module.exports = {
   requireRole,
@@ -157,6 +160,7 @@ module.exports = {
   canAccessCustomerData,
   canManageUsers,
   requireAdmin,
+  requireSuperAdmin,
   requireDriver,
   requireCustomer,
   requireAdminOrDriver,

@@ -10,6 +10,7 @@ router.use(authMiddleware);
 router.use(requireAdmin);
 
 // User management routes
+router.post('/', userManagementController.createEmployee);
 router.get('/', userManagementController.getAllUsers);
 router.get('/search', userManagementController.searchUsers);
 router.get('/statistics', userManagementController.getUserStatistics);

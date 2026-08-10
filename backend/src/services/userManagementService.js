@@ -1,4 +1,7 @@
 const User = require('../models/User');
+const authorizationService = require('./authorizationService');
+const auditLogService = require('./auditLogService');
+const { ALL_ROLES, ADMIN_TIER_ROLES, EMPLOYEE_CREATABLE_ROLES } = require('../constants/roles');
 
 const userManagementService = {
   // Get all users with pagination and filtering
@@ -102,16 +105,16 @@ const userManagementService = {
   },
 
   // Update user details
-  updateUser: async (userId, updateData, adminId) => {
+  updateUser: async (userId, updateData, actorUser) => {
     try {
       const user = await User.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Prevent updating admin user type by non-admin
-      if (updateData.userType && user.userType === 'admin' && user._id.toString() !== adminId) {
-        throw new Error('Cannot change admin user type');
+      // Prevent updating admin-tier user type by anyone other than themselves
+      if (updateData.userType && authorizationService.isAdminTier(user) && user._id.toString() !== actorUser.id.toString()) {
+        throw new Error('Cannot change admin-tier user type');
       }
 
       // Remove sensitive fields that shouldn't be updated directly
@@ -154,7 +157,7 @@ const userManagementService = {
   },
 
   // Block user
-  blockUser: async (userId, adminId, reason = '') => {
+  blockUser: async (userId, actorUser, reason = '') => {
     try {
       const user = await User.findById(userId);
       if (!user) {
@@ -165,17 +168,24 @@ const userManagementService = {
         throw new Error('User is already blocked');
       }
 
-      // Prevent blocking other admins
-      if (user.userType === 'admin' && user._id.toString() !== adminId) {
-        throw new Error('Cannot block other admin users');
+      // Prevent blocking other admin-tier users
+      if (authorizationService.isAdminTier(user) && user._id.toString() !== actorUser.id.toString()) {
+        throw new Error('Cannot block other admin-tier users');
       }
 
       user.status = 'blocked';
       user.blockedAt = new Date();
-      user.blockedBy = adminId;
+      user.blockedBy = actorUser.id;
       user.blockedReason = reason;
 
       await user.save();
+
+      await auditLogService.record({
+        action: 'USER_BLOCKED',
+        actorUser,
+        targetUser: user,
+        changes: { reason }
+      });
 
       return {
         success: true,
@@ -197,7 +207,7 @@ const userManagementService = {
   },
 
   // Unblock user
-  unblockUser: async (userId) => {
+  unblockUser: async (userId, actorUser) => {
     try {
       const user = await User.findById(userId);
       if (!user) {
@@ -214,6 +224,12 @@ const userManagementService = {
       user.blockedReason = null;
 
       await user.save();
+
+      await auditLogService.record({
+        action: 'USER_UNBLOCKED',
+        actorUser,
+        targetUser: user
+      });
 
       return {
         success: true,
@@ -233,22 +249,26 @@ const userManagementService = {
   },
 
   // Change user type
-  changeUserType: async (userId, newUserType, adminId) => {
+  changeUserType: async (userId, newUserType, actorUser) => {
     try {
       const user = await User.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Prevent changing admin user type
-      if (user.userType === 'admin' && user._id.toString() !== adminId) {
-        throw new Error('Cannot change admin user type');
+      // Prevent changing admin-tier user type by anyone other than themselves
+      if (authorizationService.isAdminTier(user) && user._id.toString() !== actorUser.id.toString()) {
+        throw new Error('Cannot change admin-tier user type');
       }
 
       // Validate new user type
-      const validTypes = ['customer', 'driver', 'admin'];
-      if (!validTypes.includes(newUserType)) {
+      if (!ALL_ROLES.includes(newUserType)) {
         throw new Error('Invalid user type');
+      }
+
+      // Only a super_admin may promote someone into an admin-tier role
+      if (ADMIN_TIER_ROLES.includes(newUserType) && !authorizationService.isSuperAdmin(actorUser)) {
+        throw new Error('Only a super admin can assign admin or super_admin roles');
       }
 
       // If changing to customer, ensure required fields are present
@@ -266,8 +286,16 @@ const userManagementService = {
         user.address = undefined;
       }
 
+      const previousType = user.userType;
       user.userType = newUserType;
       await user.save();
+
+      await auditLogService.record({
+        action: 'ROLE_CHANGED',
+        actorUser,
+        targetUser: user,
+        changes: { before: previousType, after: newUserType }
+      });
 
       return {
         success: true,
@@ -291,17 +319,23 @@ const userManagementService = {
   },
 
   // Delete user
-  deleteUser: async (userId, adminId) => {
+  deleteUser: async (userId, actorUser) => {
     try {
       const user = await User.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Prevent deleting admin users
-      if (user.userType === 'admin') {
-        throw new Error('Cannot delete admin users');
+      // Prevent deleting admin-tier users
+      if (authorizationService.isAdminTier(user)) {
+        throw new Error('Cannot delete admin-tier users');
       }
+
+      await auditLogService.record({
+        action: 'USER_DELETED',
+        actorUser,
+        targetUser: user
+      });
 
       await User.findByIdAndDelete(userId);
 
@@ -312,6 +346,51 @@ const userManagementService = {
 
     } catch (error) {
       console.error('Delete user error:', error);
+      throw error;
+    }
+  },
+
+  // Admin/super_admin creates a staff account directly (matches SRS: "Admin
+  // creates employees according to operational role"). Only super_admin may
+  // create admin/super_admin accounts.
+  createEmployee: async (actorUser, { name, email, password, userType }) => {
+    try {
+      if (!EMPLOYEE_CREATABLE_ROLES.includes(userType)) {
+        throw new Error(`userType must be one of: ${EMPLOYEE_CREATABLE_ROLES.join(', ')}`);
+      }
+
+      if (ADMIN_TIER_ROLES.includes(userType) && !authorizationService.isSuperAdmin(actorUser)) {
+        throw new Error('Only a super admin can create admin or super_admin accounts');
+      }
+
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        throw new Error('User already exists with this email');
+      }
+
+      const user = await User.create({ name, email, password, userType });
+
+      await auditLogService.record({
+        action: 'USER_CREATED',
+        actorUser,
+        targetUser: user
+      });
+
+      return {
+        success: true,
+        message: 'Employee created successfully',
+        user: {
+          id: user._id,
+          userType: user.userType,
+          name: user.name,
+          email: user.email,
+          status: user.status,
+          createdAt: user.createdAt
+        }
+      };
+
+    } catch (error) {
+      console.error('Create employee error:', error);
       throw error;
     }
   },

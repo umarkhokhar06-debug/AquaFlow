@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const tokenService = require('./tokenService');
 const bcrypt = require('bcryptjs');
+const { STAFF_ROLES } = require('../constants/roles');
 
 const authService = {
   // Register user with user type support
@@ -8,8 +9,8 @@ const authService = {
     try {
       const { userType, name, email, password, ...additionalFields } = userData;
 
-      if (userType === 'admin') {
-        throw new Error('Admin accounts cannot be self-registered');
+      if (STAFF_ROLES.includes(userType)) {
+        throw new Error('Staff accounts cannot be self-registered. Contact an administrator.');
       }
 
       // Check if user already exists

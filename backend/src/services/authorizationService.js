@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { ADMIN_TIER_ROLES } = require('../constants/roles');
 
 const authorizationService = {
   // Check if user has specific role
@@ -17,9 +18,22 @@ const authorizationService = {
     return roles.includes(user.userType);
   },
 
-  // Check if user is admin
+  // Check if user is admin-tier (admin or super_admin — super_admin inherits
+  // every admin capability plus more, see isSuperAdmin/isAdminTier below)
   isAdmin: (user) => {
-    return authorizationService.hasRole(user, 'admin');
+    return authorizationService.hasAnyRole(user, ADMIN_TIER_ROLES);
+  },
+
+  // Exact super_admin check, for the few places that need it literally
+  // (e.g. "only a super_admin may promote someone to admin")
+  isSuperAdmin: (user) => {
+    return authorizationService.hasRole(user, 'super_admin');
+  },
+
+  // Semantic alias of isAdmin(), named explicitly so call sites protecting
+  // admin/super_admin accounts read clearly (vs. the softened isAdmin)
+  isAdminTier: (user) => {
+    return authorizationService.hasAnyRole(user, ADMIN_TIER_ROLES);
   },
 
   // Check if user is driver
@@ -115,6 +129,14 @@ const authorizationService = {
     const permissions = [];
 
     switch (user.userType) {
+      case 'super_admin':
+        permissions.push(
+          'manage_admins',
+          'manage_roles',
+          'manage_system_config',
+          'view_audit_log'
+        );
+        // falls through — super_admin also gets every admin permission
       case 'admin':
         permissions.push(
           'manage_users',
@@ -128,7 +150,38 @@ const authorizationService = {
           'manage_system'
         );
         break;
-      
+
+      case 'dispatcher':
+        permissions.push(
+          'view_all_orders',
+          'update_orders',
+          'access_driver_features',
+          'assign_driver_to_order',
+          'view_driver_locations',
+          'view_own_profile'
+        );
+        break;
+
+      case 'call_center_agent':
+        permissions.push(
+          'create_orders',
+          'view_all_orders',
+          'update_orders',
+          'view_all_customers',
+          'view_customer_data',
+          'manage_support_tickets',
+          'view_own_profile'
+        );
+        break;
+
+      case 'technician':
+        permissions.push(
+          'manage_devices',
+          'manage_calibration',
+          'view_own_profile'
+        );
+        break;
+
       case 'driver':
         permissions.push(
           'view_all_orders',
@@ -137,7 +190,7 @@ const authorizationService = {
           'view_customer_data'
         );
         break;
-      
+
       case 'customer':
         permissions.push(
           'create_orders',
@@ -159,16 +212,16 @@ const authorizationService = {
 
   // Validate user type transition (if needed in the future)
   canChangeUserType: (currentUser, targetUser, newUserType) => {
-    // Only admin can change user types
-    if (!authorizationService.isAdmin(currentUser)) {
+    // Only admin-tier can change user types
+    if (!authorizationService.isAdminTier(currentUser)) {
       return false;
     }
-    
-    // Prevent changing admin user types (safety measure)
-    if (targetUser.userType === 'admin' && currentUser.id !== targetUser.id) {
+
+    // Prevent changing admin-tier user types (safety measure)
+    if (authorizationService.isAdminTier(targetUser) && currentUser.id !== targetUser.id) {
       return false;
     }
-    
+
     return true;
   }
 };

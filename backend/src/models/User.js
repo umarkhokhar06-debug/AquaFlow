@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { ALL_ROLES } = require('../constants/roles');
 
 const userSchema = new mongoose.Schema({
   userType: {
     type: String,
     required: [true, 'Please provide a user type'],
     enum: {
-      values: ['customer', 'driver', 'admin'],
-      message: 'User type must be customer, driver, or admin'
+      values: ALL_ROLES,
+      message: `User type must be one of: ${ALL_ROLES.join(', ')}`
     }
   },
   // Common fields for all user types
