@@ -396,6 +396,12 @@ const driverService = {
       if (order) {
         order.status = 'delivered';
         order.deliveredAt = new Date();
+        // Cash is collected by the driver at the point of delivery; non-cash
+        // orders are marked paid separately, only once Stripe confirms the
+        // charge server-side (see paymentService).
+        if (order.paymentMethod === 'cash' && order.paymentStatus === 'pending') {
+          order.paymentStatus = 'paid';
+        }
         await order.save();
 
         // Emit order completion event

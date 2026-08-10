@@ -18,6 +18,8 @@ const forecastRoutes = require('./routes/forecast');
 const reportRoutes = require('./routes/reports');
 const promoCodeRoutes = require('./routes/promoCodes');
 const financeRoutes = require('./routes/finance');
+const paymentRoutes = require('./routes/payments');
+const paymentController = require('./controllers/paymentController');
 
 const app = express();
 
@@ -26,6 +28,10 @@ app.use(cors({
   origin: process.env.CLIENT_URL || '*',
   credentials: true
 }));
+
+// Stripe webhook signature verification needs the raw, unparsed request
+// body, so this route must be registered before express.json() runs.
+app.post('/api/payments/webhook', express.raw({ type: 'application/json' }), paymentController.handleWebhook);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -57,6 +63,7 @@ app.use('/api/forecast', forecastRoutes);
 app.use('/api/admin/reports', reportRoutes);
 app.use('/api/promo-codes', promoCodeRoutes);
 app.use('/api/admin/finance', financeRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

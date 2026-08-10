@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const socketService = require('./socketService');
 const promoService = require('./promoService');
+const paymentService = require('./paymentService');
 
 // Product configuration
 const PRODUCT_CONFIG = {
@@ -159,10 +160,30 @@ const orderService = {
       // Emit real-time event to admin room
       socketService.emitNewOrder(orderResponse);
 
+      // Non-cash orders need a payment intent before they can be paid; the
+      // customer app confirms it client-side, and the order is only marked
+      // paid once Stripe's webhook confirms it server-side (SRS §21).
+      let payment = null;
+      if (order.paymentMethod !== 'cash') {
+        try {
+          const intentResult = await paymentService.createPaymentIntent(order);
+          payment = intentResult.alreadyPaid
+            ? { status: 'succeeded' }
+            : { clientSecret: intentResult.clientSecret, paymentId: intentResult.paymentId };
+        } catch (paymentError) {
+          // Don't fail order creation over a payment-gateway hiccup -- the
+          // order already exists and stays paymentStatus 'pending'; the
+          // customer app can retry via POST /api/payments/:orderId/create-intent.
+          console.error('Payment intent creation failed for order', order._id.toString(), paymentError.message);
+          payment = { error: 'Could not start payment. Please retry payment for this order.' };
+        }
+      }
+
       return {
         success: true,
         message: 'Order created successfully',
-        order: orderResponse
+        order: orderResponse,
+        payment
       };
 
     } catch (error) {
