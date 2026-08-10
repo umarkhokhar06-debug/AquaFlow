@@ -331,54 +331,6 @@ const orderService = {
     }
   },
 
-  // Assign driver to order
-  assignDriver: async (orderId, driverId, adminId) => {
-    try {
-      const order = await Order.findById(orderId);
-      if (!order) {
-        throw new Error('Order not found');
-      }
-
-      const driver = await User.findById(driverId);
-      if (!driver || driver.userType !== 'driver') {
-        throw new Error('Invalid driver');
-      }
-
-      order.driver = driverId;
-      await order.save();
-
-      // Emit real-time event
-      socketService.emitOrderAssignment(order._id, driverId, driver.name);
-
-      // Emit update to customer
-      socketService.emitOrderUpdateToCustomer(order.customer, order._id, 'driver-assigned', {
-        driver: {
-          id: driver._id,
-          name: driver.name,
-          email: driver.email
-        }
-      });
-
-      return {
-        success: true,
-        message: 'Driver assigned successfully',
-        order: {
-          id: order._id,
-          orderNumber: order.orderNumber,
-          driver: {
-            id: driver._id,
-            name: driver.name,
-            email: driver.email
-          }
-        }
-      };
-
-    } catch (error) {
-      console.error('Assign driver error:', error);
-      throw error;
-    }
-  },
-
   // Get available products with prices
   getAvailableProducts: async () => {
     try {

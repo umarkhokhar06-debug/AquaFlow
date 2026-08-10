@@ -116,6 +116,12 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  // When the current driver was assigned — used for dispatch metrics
+  // (allocation time = assignedAt - createdAt) and to detect reassignment.
+  assignedAt: {
+    type: Date,
+    default: null
+  },
   
   // Timestamps
   orderDate: {

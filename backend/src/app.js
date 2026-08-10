@@ -13,6 +13,7 @@ const calibrationRoutes = require('./routes/calibration');
 const driverAppRoutes = require('./routes/driverApp');
 const deviceRoutes = require('./routes/devices');
 const truckRoutes = require('./routes/trucks');
+const dispatchRoutes = require('./routes/dispatch');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/calibration', calibrationRoutes);
 app.use('/api/driver', driverAppRoutes); // Driver mobile app routes
 app.use('/api/devices', deviceRoutes);
 app.use('/api/admin/trucks', truckRoutes);
+app.use('/api/dispatch', dispatchRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

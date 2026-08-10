@@ -224,18 +224,26 @@ const driverService = {
         throw new Error('Driver is offline and cannot be assigned orders');
       }
 
-      // Check if driver's queue is full
-      if (driver.orderQueue.length >= driver.maxQueueSize) {
-        throw new Error('Driver queue is full');
-      }
-
       // Check if order is already assigned
       if (order.driver && order.driver.toString() === driverId) {
         throw new Error('Order is already assigned to this driver');
       }
 
+      // Reassignment: free the order from whichever driver currently has it
+      // first, so their queue/currentOrder stay in sync (this used to be
+      // skipped, silently desyncing the old driver's queue).
+      if (order.driver) {
+        await driverService.removeOrderFromQueue(orderId, order.driver.toString(), adminId);
+      }
+
+      // Check if driver's queue is full
+      if (driver.orderQueue.length >= driver.maxQueueSize) {
+        throw new Error('Driver queue is full');
+      }
+
       // Assign order to driver
       order.driver = driverId;
+      order.assignedAt = new Date();
       await order.save();
 
       // Add to driver's queue

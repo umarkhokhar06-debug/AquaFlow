@@ -101,6 +101,18 @@ const userSchema = new mongoose.Schema({
     },
     default: 'offline'
   },
+  // Every driverStatus transition, for computing utilization/idle time over
+  // any date range (mirrors Truck.statusHistory) — dispatch metrics only.
+  driverStatusHistory: [{
+    status: {
+      type: String,
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   currentOrder: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
@@ -237,6 +249,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Track driverStatus transitions for utilization/idle-time metrics
+userSchema.pre('save', function(next) {
+  if (this.userType === 'driver' && (this.isNew || this.isModified('driverStatus'))) {
+    this.driverStatusHistory.push({ status: this.driverStatus, changedAt: new Date() });
+  }
+  next();
 });
 
 // Hash password before saving

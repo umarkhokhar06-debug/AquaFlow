@@ -152,6 +152,8 @@ const requireDriver = requireRole('driver');
 const requireCustomer = requireRole('customer');
 const requireAdminOrDriver = requireAnyRole(['admin', 'super_admin', 'driver']);
 const requireAdminOrCustomer = requireAnyRole(['admin', 'super_admin', 'customer']);
+// Dispatch/live-operations routes: admin-tier plus the dispatcher role
+const requireAdminOrDispatcher = requireAnyRole(['admin', 'super_admin', 'dispatcher']);
 
 module.exports = {
   requireRole,
@@ -164,6 +166,7 @@ module.exports = {
   requireDriver,
   requireCustomer,
   requireAdminOrDriver,
-  requireAdminOrCustomer
+  requireAdminOrCustomer,
+  requireAdminOrDispatcher
 };
 

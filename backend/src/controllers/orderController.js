@@ -1,4 +1,5 @@
 const orderService = require('../services/orderService');
+const driverService = require('../services/driverService');
 
 const orderController = {
   // Create new order
@@ -150,7 +151,10 @@ const orderController = {
         });
       }
 
-      const result = await orderService.assignDriver(orderId, driverId, req.user.id);
+      // Delegates to driverService so the driver's queue/currentOrder stay
+      // in sync (this used to call a separate, simpler path that only set
+      // order.driver directly, silently desyncing driver queues).
+      const result = await driverService.assignOrderToDriver(orderId, driverId, req.user.id);
       res.status(200).json(result);
 
     } catch (error) {
@@ -163,7 +167,12 @@ const orderController = {
         });
       }
 
-      if (error.message === 'Invalid driver') {
+      if ([
+        'Driver not found',
+        'Driver is offline and cannot be assigned orders',
+        'Driver queue is full',
+        'Order is already assigned to this driver'
+      ].includes(error.message)) {
         return res.status(400).json({
           success: false,
           message: error.message

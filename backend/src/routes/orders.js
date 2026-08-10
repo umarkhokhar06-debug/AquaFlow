@@ -1,7 +1,7 @@
 const express = require('express');
 const orderController = require('../controllers/orderController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const { requireAdmin, requireDriver, requireCustomer, requireAdminOrDriver, requireAdminOrCustomer } = require('../middlewares/authorizationMiddleware');
+const { requireAdmin, requireDriver, requireCustomer, requireAdminOrDriver, requireAdminOrCustomer, requireAdminOrDispatcher, requireAnyRole } = require('../middlewares/authorizationMiddleware');
 
 const router = express.Router();
 
@@ -17,12 +17,14 @@ router.get('/my-orders', requireCustomer, orderController.getCustomerOrders);
 router.get('/:orderId', orderController.getOrderById);
 router.put('/:orderId/cancel', orderController.cancelOrder);
 
-// Driver and Admin routes
-router.get('/', requireAdminOrDriver, orderController.getAllOrders);
+// Driver, Dispatcher and Admin routes
+router.get('/', requireAnyRole(['admin', 'super_admin', 'driver', 'dispatcher']), orderController.getAllOrders);
 router.put('/:orderId/status', requireAdminOrDriver, orderController.updateOrderStatus);
 
+// Dispatcher and Admin routes
+router.put('/:orderId/assign-driver', requireAdminOrDispatcher, orderController.assignDriver);
+
 // Admin only routes
-router.put('/:orderId/assign-driver', requireAdmin, orderController.assignDriver);
 router.get('/admin/statistics', requireAdmin, orderController.getOrderStatistics);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 const express = require('express');
 const driverController = require('../controllers/driverController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const { requireAdmin, requireDriver, requireAdminOrDriver } = require('../middlewares/authorizationMiddleware');
+const { requireAdmin, requireDriver, requireAdminOrDriver, requireAdminOrDispatcher } = require('../middlewares/authorizationMiddleware');
 
 const router = express.Router();
 
@@ -15,11 +15,11 @@ router.put('/vehicle', requireDriver, driverController.updateVehicleInfo);
 router.put('/settings', requireDriver, driverController.updateSettings);
 
 // ============ ADMIN ROUTES ============
-// Admin only routes
-router.get('/', requireAdmin, driverController.getAllDrivers);
-router.get('/search', requireAdmin, driverController.searchDrivers);
+// Admin and Dispatcher: viewing drivers is part of live dispatch operations
+router.get('/', requireAdminOrDispatcher, driverController.getAllDrivers);
+router.get('/search', requireAdminOrDispatcher, driverController.searchDrivers);
 router.get('/statistics', requireAdmin, driverController.getDriverStatistics);
-router.get('/:driverId', requireAdmin, driverController.getDriverById);
+router.get('/:driverId', requireAdminOrDispatcher, driverController.getDriverById);
 router.put('/:driverId/status', requireAdmin, driverController.updateDriverStatus);
 router.put('/:driverId/queue/reorder', requireAdmin, driverController.reorderDriverQueue);
 router.delete('/:driverId/queue/:orderId', requireAdmin, driverController.removeOrderFromQueue);
