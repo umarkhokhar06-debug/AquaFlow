@@ -50,6 +50,17 @@ const orderSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Tax must be positive']
   },
+  promoCode: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    default: null
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Discount cannot be negative']
+  },
   totalAmount: {
     type: Number,
     required: true,
@@ -230,9 +241,11 @@ orderSchema.pre('save', function(next) {
 
 // Calculate totals before saving
 orderSchema.pre('save', function(next) {
-  if (this.isModified('items')) {
-    this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    this.totalAmount = this.subtotal + this.tax;
+  if (this.isModified('items') || this.isModified('discountAmount')) {
+    if (this.isModified('items')) {
+      this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    }
+    this.totalAmount = Math.max(0, this.subtotal + this.tax - (this.discountAmount || 0));
   }
   next();
 });

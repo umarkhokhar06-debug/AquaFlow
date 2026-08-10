@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const User = require('../models/User');
 const socketService = require('./socketService');
+const promoService = require('./promoService');
 
 // Product configuration
 const PRODUCT_CONFIG = {
@@ -31,7 +32,7 @@ const orderService = {
   // Create a new order
   createOrder: async (customerId, orderData) => {
     try {
-      const { items, deliveryAddress, paymentMethod, notes, deliveryType, scheduledFor } = orderData;
+      const { items, deliveryAddress, paymentMethod, notes, deliveryType, scheduledFor, promoCode } = orderData;
 
       if (deliveryType === 'scheduled' && !scheduledFor) {
         throw new Error('scheduledFor is required when deliveryType is scheduled');
@@ -78,7 +79,19 @@ const orderService = {
       // Calculate totals
       const subtotal = processedItems.reduce((sum, item) => sum + item.totalPrice, 0);
       const tax = subtotal * 0.1; // 10% tax
-      const totalAmount = subtotal + tax;
+
+      // Validate promo code eligibility at checkout (SRS §14) -- rejects
+      // the order rather than silently ignoring an invalid/expired code.
+      let promoResult = null;
+      if (promoCode) {
+        promoResult = await promoService.validateForCheckout(promoCode, {
+          customerId,
+          orderAmount: subtotal + tax,
+          itemTypes: processedItems.map(i => i.type)
+        });
+      }
+      const discountAmount = promoResult ? promoResult.discountAmount : 0;
+      const totalAmount = Math.max(0, subtotal + tax - discountAmount);
 
       // Generate order number
       const timestamp = Date.now();
@@ -92,6 +105,8 @@ const orderService = {
         items: processedItems,
         subtotal,
         tax,
+        promoCode: promoResult ? promoResult.code : null,
+        discountAmount,
         totalAmount,
         deliveryAddress: {
           fullName: deliveryAddress.fullName || customer.fullName,
@@ -112,6 +127,15 @@ const orderService = {
       // Populate customer information
       await order.populate('customer', 'name email fullName houseNumber portion address');
 
+      // Record the redemption only after the order actually saved
+      if (promoResult) {
+        await promoService.recordRedemption(promoResult.promoCodeId, {
+          orderId: order._id,
+          customerId,
+          discountAmount
+        });
+      }
+
       const orderResponse = {
         id: order._id,
         orderNumber: order.orderNumber,
@@ -119,6 +143,8 @@ const orderService = {
         items: order.items,
         subtotal: order.subtotal,
         tax: order.tax,
+        promoCode: order.promoCode,
+        discountAmount: order.discountAmount,
         totalAmount: order.totalAmount,
         deliveryAddress: order.deliveryAddress,
         status: order.status,
