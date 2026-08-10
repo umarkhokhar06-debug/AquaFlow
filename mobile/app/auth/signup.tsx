@@ -20,14 +20,13 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Truck,
 } from 'lucide-react-native';
 import { authAPI } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
-    userType: 'customer' as 'customer' | 'driver',
+    userType: 'customer' as const,
     name: '',
     email: '',
     password: '',
@@ -60,18 +59,15 @@ export default function SignupScreen() {
       return;
     }
 
-    // Customer-specific validation
-    if (formData.userType === 'customer') {
-      if (
-        !formData.fullName.trim() ||
-        !formData.houseNumber.trim() ||
-        !formData.address.trim()
-      ) {
-        setAlertTitle('Error');
-        setAlertMessage('Please fill in all customer fields');
-        setShowAlert(true);
-        return;
-      }
+    if (
+      !formData.fullName.trim() ||
+      !formData.houseNumber.trim() ||
+      !formData.address.trim()
+    ) {
+      setAlertTitle('Error');
+      setAlertMessage('Please fill in all fields');
+      setShowAlert(true);
+      return;
     }
 
     if (!formData.email.includes('@')) {
@@ -98,18 +94,15 @@ export default function SignupScreen() {
     setIsLoading(true);
 
     try {
-      // Prepare request data based on user type
       const requestData = {
         userType: formData.userType,
         name: formData.name.trim(),
         email: formData.email.toLowerCase().trim(),
         password: formData.password,
-        ...(formData.userType === 'customer' && {
-          fullName: formData.fullName.trim(),
-          houseNumber: formData.houseNumber.trim(),
-          portion: formData.portion,
-          address: formData.address.trim(),
-        }),
+        fullName: formData.fullName.trim(),
+        houseNumber: formData.houseNumber.trim(),
+        portion: formData.portion,
+        address: formData.address.trim(),
       };
 
       const response = await authAPI.register(requestData);
@@ -196,53 +189,6 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.form}>
-            {/* User Type Selection */}
-            <View style={styles.userTypeContainer}>
-              <Text style={styles.userTypeLabel}>Account Type</Text>
-              <View style={styles.userTypeButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    formData.userType === 'customer' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => updateFormData('userType', 'customer')}
-                >
-                  <User
-                    size={20}
-                    color={formData.userType === 'customer' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      formData.userType === 'customer' && styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Customer
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    formData.userType === 'driver' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => updateFormData('userType', 'driver')}
-                >
-                  <Truck
-                    size={20}
-                    color={formData.userType === 'driver' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      formData.userType === 'driver' && styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Driver
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
             <View style={styles.inputContainer}>
               <User size={20} color="#666666" style={styles.inputIcon} />
               <TextInput
@@ -255,19 +201,17 @@ export default function SignupScreen() {
               />
             </View>
 
-            {formData.userType === 'customer' && (
-              <View style={styles.inputContainer}>
-                <User size={20} color="#666666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name"
-                  placeholderTextColor="#999999"
-                  value={formData.fullName}
-                  onChangeText={(value) => updateFormData('fullName', value)}
-                  autoCapitalize="words"
-                />
-              </View>
-            )}
+            <View style={styles.inputContainer}>
+              <User size={20} color="#666666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                placeholderTextColor="#999999"
+                value={formData.fullName}
+                onChangeText={(value) => updateFormData('fullName', value)}
+                autoCapitalize="words"
+              />
+            </View>
 
             <View style={styles.inputContainer}>
               <Mail size={20} color="#666666" style={styles.inputIcon} />
@@ -333,72 +277,68 @@ export default function SignupScreen() {
               </TouchableOpacity>
             </View>
 
-            {formData.userType === 'customer' && (
-              <>
-                <View style={styles.inputContainer}>
-                  <Home size={20} color="#666666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="House Number"
-                    placeholderTextColor="#999999"
-                    value={formData.houseNumber}
-                    onChangeText={(value) => updateFormData('houseNumber', value)}
-                  />
-                </View>
+            <View style={styles.inputContainer}>
+              <Home size={20} color="#666666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="House Number"
+                placeholderTextColor="#999999"
+                value={formData.houseNumber}
+                onChangeText={(value) => updateFormData('houseNumber', value)}
+              />
+            </View>
 
-                <View style={styles.portionContainer}>
-                  <Text style={styles.portionLabel}>Portion Type</Text>
-                  <View style={styles.portionButtons}>
-                    <TouchableOpacity
-                      style={[
-                        styles.portionButton,
-                        formData.portion === 'upper' && styles.portionButtonActive,
-                      ]}
-                      onPress={() => updateFormData('portion', 'upper')}
-                    >
-                      <Text
-                        style={[
-                          styles.portionButtonText,
-                          formData.portion === 'upper' &&
-                            styles.portionButtonTextActive,
-                        ]}
-                      >
-                        Upper Portion
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.portionButton,
-                        formData.portion === 'lower' && styles.portionButtonActive,
-                      ]}
-                      onPress={() => updateFormData('portion', 'lower')}
-                    >
-                      <Text
-                        style={[
-                          styles.portionButtonText,
-                          formData.portion === 'lower' &&
-                            styles.portionButtonTextActive,
-                        ]}
-                      >
-                        Lower Portion
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+            <View style={styles.portionContainer}>
+              <Text style={styles.portionLabel}>Portion Type</Text>
+              <View style={styles.portionButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.portionButton,
+                    formData.portion === 'upper' && styles.portionButtonActive,
+                  ]}
+                  onPress={() => updateFormData('portion', 'upper')}
+                >
+                  <Text
+                    style={[
+                      styles.portionButtonText,
+                      formData.portion === 'upper' &&
+                        styles.portionButtonTextActive,
+                    ]}
+                  >
+                    Upper Portion
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.portionButton,
+                    formData.portion === 'lower' && styles.portionButtonActive,
+                  ]}
+                  onPress={() => updateFormData('portion', 'lower')}
+                >
+                  <Text
+                    style={[
+                      styles.portionButtonText,
+                      formData.portion === 'lower' &&
+                        styles.portionButtonTextActive,
+                    ]}
+                  >
+                    Lower Portion
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-                <View style={styles.inputContainer}>
-                  <MapPin size={20} color="#666666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Address"
-                    placeholderTextColor="#999999"
-                    value={formData.address}
-                    onChangeText={(value) => updateFormData('address', value)}
-                    autoCapitalize="words"
-                  />
-                </View>
-              </>
-            )}
+            <View style={styles.inputContainer}>
+              <MapPin size={20} color="#666666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Address"
+                placeholderTextColor="#999999"
+                value={formData.address}
+                onChangeText={(value) => updateFormData('address', value)}
+                autoCapitalize="words"
+              />
+            </View>
 
             <TouchableOpacity
               style={[
@@ -475,44 +415,6 @@ const styles = StyleSheet.create({
   form: {
     paddingHorizontal: 24,
     paddingBottom: 40,
-  },
-  userTypeContainer: {
-    marginBottom: 24,
-  },
-  userTypeLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  userTypeButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  userTypeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  userTypeButtonActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  userTypeButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  userTypeButtonTextActive: {
-    color: '#007AFF',
   },
   inputContainer: {
     flexDirection: 'row',
