@@ -178,13 +178,36 @@ const driverService = {
         };
       }
 
-      // If setting to offline, clear current order and queue
+      // If setting to offline, free every order this driver was holding --
+      // not just clearing the driver's own queue. This used to leave
+      // orders still pointing at driver: <this offline driver>, invisible
+      // to the dispatch queue (isUnassignedPending requires !order.driver)
+      // and never reassigned or escalated (SRS §22: "Truck becomes
+      // unavailable after assignment: dispatcher/engine automatically
+      // reassigns or escalates").
+      let orphanedOrderIds = [];
       if (status === 'offline') {
+        orphanedOrderIds = [
+          ...(driver.currentOrder ? [driver.currentOrder] : []),
+          ...driver.orderQueue.map(q => q.order)
+        ];
         driver.currentOrder = null;
         driver.orderQueue = [];
       }
 
       await driver.save();
+
+      if (orphanedOrderIds.length > 0) {
+        await Order.updateMany(
+          { _id: { $in: orphanedOrderIds } },
+          { $set: { driver: null, driverResponseStatus: null }, $unset: { assignedAt: '' } }
+        );
+        socketService.emitSystemNotification(
+          `${driver.name} went offline with ${orphanedOrderIds.length} order(s) still assigned -- returned to the dispatch queue and needs reassignment.`,
+          'warning',
+          'admin-room'
+        );
+      }
 
       // Emit real-time event
       socketService.emitDriverStatusUpdate(driverId, status, location);

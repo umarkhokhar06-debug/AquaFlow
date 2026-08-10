@@ -43,7 +43,7 @@ class FinanceController {
 
   async addExpense(req, res) {
     try {
-      const expense = await financeService.addExpense(req.body, req.user.id);
+      const expense = await financeService.addExpense(req.body, req.user);
       res.status(201).json({ success: true, expense });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to add expense' });
@@ -64,7 +64,7 @@ class FinanceController {
 
   async deleteExpense(req, res) {
     try {
-      await financeService.deleteExpense(req.params.id);
+      await financeService.deleteExpense(req.params.id, req.user);
       res.status(200).json({ success: true, message: 'Expense deleted' });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to delete expense' });

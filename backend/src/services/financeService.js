@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Expense = require('../models/Expense');
 const EarningsRecord = require('../models/EarningsRecord');
+const auditLogService = require('./auditLogService');
 
 function dateRange(from, to) {
   return {
@@ -10,14 +11,23 @@ function dateRange(from, to) {
 }
 
 class FinanceService {
-  async addExpense(payload, recordedBy) {
+  async addExpense(payload, actorUser) {
     const { category, amount, description, date } = payload;
     if (!category || amount === undefined) {
       const err = new Error('category and amount are required');
       err.status = 400;
       throw err;
     }
-    return Expense.create({ category, amount, description, date, recordedBy });
+    const expense = await Expense.create({ category, amount, description, date, recordedBy: actorUser.id });
+
+    await auditLogService.record({
+      action: 'EXPENSE_ADDED',
+      actorUser,
+      targetUser: null,
+      changes: { category, amount, description: description || '' }
+    });
+
+    return expense;
   }
 
   async getAllExpenses({ from, to, category, page = 1, limit = 50 } = {}) {
@@ -36,13 +46,21 @@ class FinanceService {
     return { expenses, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
   }
 
-  async deleteExpense(id) {
+  async deleteExpense(id, actorUser) {
     const expense = await Expense.findByIdAndDelete(id);
     if (!expense) {
       const err = new Error('Expense not found');
       err.status = 404;
       throw err;
     }
+
+    await auditLogService.record({
+      action: 'EXPENSE_DELETED',
+      actorUser,
+      targetUser: null,
+      changes: { category: expense.category, amount: expense.amount }
+    });
+
     return expense;
   }
 

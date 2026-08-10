@@ -833,12 +833,17 @@ const driverAppController = {
     }
   },
 
-  // Update driver status (online/offline/busy)
+  // Update driver status (online/offline/busy). Delegates to
+  // driverService.updateDriverStatus -- this used to hand-roll a raw
+  // findByIdAndUpdate that (a) never freed orders if the driver went
+  // offline (SRS §22 edge case, fixed there) and (b) called a
+  // socketService.emitToAdmins that never existed, meaning this endpoint
+  // -- the driver app's own status toggle -- has always thrown a 500.
   updateDriverStatus: async (req, res) => {
     try {
       const driverId = req.user.id;
-      const { status } = req.body;
-      
+      const { status, location } = req.body;
+
       const validStatuses = ['free', 'busy', 'offline'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
@@ -846,23 +851,13 @@ const driverAppController = {
           message: 'Invalid driver status'
         });
       }
-      
-      const driver = await User.findByIdAndUpdate(
-        driverId,
-        { driverStatus: status },
-        { new: true }
-      ).select('driverStatus');
-      
-      // Emit status update to admin dashboard
-      socketService.emitToAdmins('driverStatusUpdate', {
-        driverId,
-        status: driver.driverStatus
-      });
-      
+
+      const result = await driverService.updateDriverStatus(driverId, status, location);
+
       res.status(200).json({
         success: true,
         message: 'Driver status updated successfully',
-        data: { status: driver.driverStatus }
+        data: { status: result.driver.driverStatus }
       });
     } catch (error) {
       console.error('Update driver status error:', error);

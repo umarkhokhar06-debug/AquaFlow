@@ -3,7 +3,7 @@ const promoService = require('../services/promoService');
 class PromoController {
   async createPromoCode(req, res) {
     try {
-      const promo = await promoService.createPromoCode(req.body, req.user.id);
+      const promo = await promoService.createPromoCode(req.body, req.user);
       res.status(201).json({ success: true, promo });
     } catch (error) {
       res.status(error.status || 500).json({
@@ -44,7 +44,7 @@ class PromoController {
 
   async updatePromoCode(req, res) {
     try {
-      const promo = await promoService.updatePromoCode(req.params.id, req.body);
+      const promo = await promoService.updatePromoCode(req.params.id, req.body, req.user);
       res.status(200).json({ success: true, promo });
     } catch (error) {
       res.status(error.status || 500).json({
@@ -56,7 +56,7 @@ class PromoController {
 
   async deletePromoCode(req, res) {
     try {
-      await promoService.deletePromoCode(req.params.id);
+      await promoService.deletePromoCode(req.params.id, req.user);
       res.status(200).json({ success: true, message: 'Promo code deleted' });
     } catch (error) {
       res.status(error.status || 500).json({

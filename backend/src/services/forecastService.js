@@ -56,12 +56,20 @@ class ForecastService {
 
     let consumedLiters = null;
     let wasRefill = false;
+    // Not a sensor error per se, but not a trustworthy reading either --
+    // both get excluded from the consumption-rate average the same way.
+    let flaggedForReview = Number.isNaN(levelPercent) || levelPercent < 0 || levelPercent > 100;
 
-    if (previous && !stale) {
+    if (previous && !stale && !flaggedForReview) {
       const delta = previous.estimatedLitersRemaining - estimatedLitersRemaining;
       const percentDelta = levelPercent - previous.levelPercent;
       if (percentDelta >= REFILL_JUMP_PERCENT) {
         wasRefill = true;
+      } else if (delta > device.tankCapacityLiters) {
+        // Implausible: this device supposedly "lost" more water in one day
+        // than its tank could ever hold -- almost certainly a sensor
+        // glitch (miscalibration, echo error, etc.), not real usage.
+        flaggedForReview = true;
       } else {
         consumedLiters = Math.max(0, delta);
       }
@@ -69,7 +77,7 @@ class ForecastService {
 
     return DailyConsumption.findOneAndUpdate(
       { device: device._id, date: today },
-      { levelPercent, estimatedLitersRemaining, consumedLiters, wasRefill, stale },
+      { levelPercent, estimatedLitersRemaining, consumedLiters, wasRefill, stale, flaggedForReview },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
   }
@@ -87,7 +95,7 @@ class ForecastService {
     const since = startOfDay(new Date(Date.now() - TREND_WINDOW_DAYS * 24 * 60 * 60 * 1000));
     const history = await DailyConsumption.find({ device: device._id, date: { $gte: since } }).sort({ date: 1 });
 
-    const usageDays = history.filter(h => !h.wasRefill && !h.stale && typeof h.consumedLiters === 'number');
+    const usageDays = history.filter(h => !h.wasRefill && !h.stale && !h.flaggedForReview && typeof h.consumedLiters === 'number');
     const avgDailyConsumptionLiters = usageDays.length
       ? usageDays.reduce((sum, h) => sum + h.consumedLiters, 0) / usageDays.length
       : null;

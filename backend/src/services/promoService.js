@@ -1,7 +1,8 @@
 const PromoCode = require('../models/PromoCode');
+const auditLogService = require('./auditLogService');
 
 class PromoService {
-  async createPromoCode(payload, createdBy) {
+  async createPromoCode(payload, actorUser) {
     const { code, discountPercent, validFrom, validUntil, usageLimit, perCustomerLimit, minOrderAmount, applicableProductTypes } = payload;
 
     if (!code || !discountPercent) {
@@ -26,7 +27,14 @@ class PromoService {
       perCustomerLimit,
       minOrderAmount,
       applicableProductTypes,
-      createdBy
+      createdBy: actorUser.id
+    });
+
+    await auditLogService.record({
+      action: 'PROMO_CODE_CREATED',
+      actorUser,
+      targetUser: null,
+      changes: { code: promo.code, discountPercent }
     });
 
     return promo;
@@ -55,23 +63,39 @@ class PromoService {
     return promo;
   }
 
-  async updatePromoCode(id, updates) {
+  async updatePromoCode(id, updates, actorUser) {
     const promo = await this.getPromoCodeById(id);
     const fields = ['discountPercent', 'isActive', 'validFrom', 'validUntil', 'usageLimit', 'perCustomerLimit', 'minOrderAmount', 'applicableProductTypes'];
     for (const field of fields) {
       if (updates[field] !== undefined) promo[field] = updates[field];
     }
     await promo.save();
+
+    await auditLogService.record({
+      action: 'PROMO_CODE_UPDATED',
+      actorUser,
+      targetUser: null,
+      changes: { code: promo.code, updates }
+    });
+
     return promo;
   }
 
-  async deletePromoCode(id) {
+  async deletePromoCode(id, actorUser) {
     const promo = await PromoCode.findByIdAndDelete(id);
     if (!promo) {
       const err = new Error('Promo code not found');
       err.status = 404;
       throw err;
     }
+
+    await auditLogService.record({
+      action: 'PROMO_CODE_DELETED',
+      actorUser,
+      targetUser: null,
+      changes: { code: promo.code }
+    });
+
     return promo;
   }
 

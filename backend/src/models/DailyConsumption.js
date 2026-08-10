@@ -40,6 +40,15 @@ const dailyConsumptionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // True when the computed day-over-day change is physically implausible
+  // (e.g. "lost" more water than the tank could ever hold) -- almost
+  // certainly a sensor glitch, not real usage. SRS §22: "Unexpected sensor
+  // reading: flag for validation rather than generating a confident
+  // forecast." Excluded from consumption-rate math, same as stale days.
+  flaggedForReview: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
