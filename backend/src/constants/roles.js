@@ -12,10 +12,12 @@ const ALL_ROLES = [
 ];
 
 // Roles that must NOT be reachable via public self-registration.
-const STAFF_ROLES = ['admin', 'super_admin', 'dispatcher', 'call_center_agent', 'technician'];
+// Drivers are admin-created (assigned a truck as part of onboarding), not
+// self-registered.
+const STAFF_ROLES = ['admin', 'super_admin', 'dispatcher', 'call_center_agent', 'technician', 'driver'];
 
 // Roles allowed to publicly self-register via POST /api/auth/register.
-const PUBLIC_SELF_REGISTERABLE_ROLES = ['customer', 'driver'];
+const PUBLIC_SELF_REGISTERABLE_ROLES = ['customer'];
 
 // Roles with admin-level route access (super_admin inherits everything admin has).
 const ADMIN_TIER_ROLES = ['admin', 'super_admin'];

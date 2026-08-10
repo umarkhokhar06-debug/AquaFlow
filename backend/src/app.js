@@ -12,6 +12,7 @@ const iotRoutes = require('./routes/iot');
 const calibrationRoutes = require('./routes/calibration');
 const driverAppRoutes = require('./routes/driverApp');
 const deviceRoutes = require('./routes/devices');
+const truckRoutes = require('./routes/trucks');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/iot', iotRoutes);
 app.use('/api/calibration', calibrationRoutes);
 app.use('/api/driver', driverAppRoutes); // Driver mobile app routes
 app.use('/api/devices', deviceRoutes);
+app.use('/api/admin/trucks', truckRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
