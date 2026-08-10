@@ -41,6 +41,13 @@ const notificationSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // SRS §18: "delivery status should be stored." Push always attempted for
+  // every notification; SMS only for CRITICAL_SMS_TYPES and only if the
+  // recipient has a phone number, SMS preference on, and Twilio configured.
+  deliveryStatus: {
+    push: { type: String, enum: ['not_attempted', 'sent', 'failed'], default: 'not_attempted' },
+    sms: { type: String, enum: ['not_attempted', 'sent', 'failed', 'skipped'], default: 'not_attempted' }
+  },
   createdAt: {
     type: Date,
     default: Date.now

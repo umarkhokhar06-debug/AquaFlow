@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const socketService = require('./socketService');
+const notificationDeliveryService = require('./notificationDeliveryService');
 
 const notificationService = {
   // Create a new notification
@@ -26,6 +27,13 @@ const notificationService = {
         data: notification.data,
         createdAt: notification.createdAt
       });
+
+      // Push/SMS delivery is best-effort and must never block or fail the
+      // caller's flow (order creation, payment webhook, etc.) -- it runs
+      // fire-and-forget and swallows its own errors internally.
+      notificationDeliveryService.deliver(notification).catch(err =>
+        console.error('Notification delivery error:', err.message)
+      );
 
       return notification;
     } catch (error) {
@@ -143,6 +151,9 @@ const notificationService = {
           data: notification.data,
           createdAt: notification.createdAt
         });
+        notificationDeliveryService.deliver(notification).catch(err =>
+          console.error('Notification delivery error:', err.message)
+        );
       }
 
       return savedNotifications;

@@ -43,6 +43,19 @@ const userSchema = new mongoose.Schema({
       'Please provide a valid phone number'
     ]
   },
+  // Expo push token for the mobile app, registered on login/app-open.
+  // Null until the mobile app has registered one for this device.
+  expoPushToken: {
+    type: String,
+    default: null
+  },
+  // SRS §18: "Notification preferences ... should be stored." SMS only
+  // applies to critical notification types even when enabled -- see
+  // CRITICAL_SMS_TYPES in notificationDeliveryService.
+  notificationPreferences: {
+    push: { type: Boolean, default: true },
+    sms: { type: Boolean, default: true }
+  },
   // Customer-specific fields
   fullName: {
     type: String,
