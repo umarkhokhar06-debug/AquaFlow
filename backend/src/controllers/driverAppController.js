@@ -5,6 +5,8 @@ const SupportTicket = require('../models/SupportTicket');
 const EarningsRecord = require('../models/EarningsRecord');
 const authService = require('../services/authService');
 const socketService = require('../services/socketService');
+const driverService = require('../services/driverService');
+const earningsService = require('../services/earningsService');
 const mongoose = require('mongoose');
 
 const driverAppController = {
@@ -246,8 +248,8 @@ const driverAppController = {
     try {
       const driverId = req.user.id;
       const { orderId } = req.params;
-      const { status, notes } = req.body;
-      
+      const { status, notes, otp } = req.body;
+
       const validStatuses = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
@@ -255,105 +257,82 @@ const driverAppController = {
           message: 'Invalid status'
         });
       }
-      
-      const order = await Order.findOne({
-        _id: orderId,
-        driver: driverId
-      });
-      
+
+      const order = await Order.findOne({ _id: orderId, driver: driverId });
       if (!order) {
         return res.status(404).json({
           success: false,
           message: 'Order not found'
         });
       }
-      
-      order.status = status;
-      if (notes) order.notes = notes;
-      
+
       if (status === 'delivered') {
-        order.deliveredAt = new Date();
-        
-        // Update driver status to free
-        await User.findByIdAndUpdate(driverId, {
-          driverStatus: 'free',
-          currentOrder: null
+        // Verify the OTP the customer read out, and go through the same
+        // queue-cycling path admin/dispatcher assignment uses (this used to
+        // hand-roll driverStatus/currentOrder resets here, which skipped
+        // promoting the driver's next queued order -- see driverService.completeCurrentOrder).
+        const withOtp = await Order.findById(orderId).select('+deliveryOtp');
+        if (!withOtp.deliveryOtp) {
+          return res.status(400).json({
+            success: false,
+            message: 'No delivery OTP was issued for this order'
+          });
+        }
+        if (!otp || otp !== withOtp.deliveryOtp) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid or missing delivery OTP'
+          });
+        }
+
+        const driver = await User.findById(driverId).select('currentOrder');
+        if (!driver.currentOrder || driver.currentOrder.toString() !== orderId) {
+          return res.status(400).json({
+            success: false,
+            message: 'This is not your current active order'
+          });
+        }
+
+        if (notes) {
+          order.notes = notes;
+          await order.save();
+        }
+
+        const completion = await driverService.completeCurrentOrder(driverId);
+        const earningsRecord = await earningsService.createEarningsRecord(orderId, driverId).catch(err => {
+          console.error('Earnings record creation failed (non-fatal):', err.message);
+          return null;
         });
-        
-        // Create earnings record with all required fields
-        const deliveredAt = new Date();
-        const baseAmount = order.totalAmount * 0.8;
-        const commissionRate = 20;
-        const commissionAmount = order.totalAmount * 0.2;
-        const tip = 0;
-        const bonus = 0;
-        const deductions = 0;
-        const totalEarned = baseAmount + tip + bonus - deductions;
-        // Calculate period fields
-        const year = deliveredAt.getFullYear();
-        const month = deliveredAt.getMonth() + 1;
-        const firstDayOfYear = new Date(year, 0, 1);
-        const daysDiff = Math.floor((deliveredAt - firstDayOfYear) / (24 * 60 * 60 * 1000));
-        const week = Math.ceil((daysDiff + firstDayOfYear.getDay() + 1) / 7);
-        const earningsRecord = new EarningsRecord({
-          driver: driverId,
-          order: orderId,
-          orderNumber: order.orderNumber,
-          baseAmount,
-          tip,
-          bonus,
-          deductions,
-          totalEarned,
-          commission: {
-            rate: commissionRate,
-            amount: commissionAmount
-          },
-          paymentStatus: 'pending',
-          deliveredAt,
-          period: {
-            year,
-            month,
-            week
-          }
-        });
-        await earningsRecord.save();
-        
-        // Update driver earnings
-        await User.findByIdAndUpdate(driverId, {
-          $inc: {
-            'earnings.totalEarned': earningsRecord.totalEarned,
-            'earnings.currentMonthEarnings': earningsRecord.totalEarned
-          }
+
+        const updatedOrder = await Order.findById(orderId).populate('driver', 'name email');
+
+        return res.status(200).json({
+          success: true,
+          message: 'Order delivered successfully',
+          data: updatedOrder,
+          driver: completion.driver,
+          earnings: earningsRecord ? { totalEarned: earningsRecord.totalEarned } : null
         });
       }
-      
+
+      // Non-delivery transitions: simple direct status update, no queue implications
+      order.status = status;
+      if (notes) order.notes = notes;
       await order.save();
-      
-      // Populate driver info for the response
+
       const driver = await User.findById(driverId).select('name email');
-      
-      // Send real-time updates to customer
+
       socketService.emitOrderUpdateToCustomer(
         order.customer,
         order._id,
         'status-update',
         {
           status: order.status,
-          driver: driver ? {
-            id: driver._id,
-            name: driver.name,
-            email: driver.email
-          } : null
+          driver: driver ? { id: driver._id, name: driver.name, email: driver.email } : null
         }
       );
+      socketService.emitOrderStatusUpdate(order._id, order.status, driverId);
 
-      // Send real-time updates to admin
-      socketService.emitOrderStatusUpdate(
-        order._id,
-        order.status,
-        driverId
-      );
-      
       res.status(200).json({
         success: true,
         message: 'Order status updated successfully',
@@ -364,6 +343,33 @@ const driverAppController = {
       res.status(500).json({
         success: false,
         message: 'Server error updating order status'
+      });
+    }
+  },
+
+  // Driver accepts an assigned order
+  acceptOrder: async (req, res) => {
+    try {
+      const result = await driverService.acceptOrder(req.params.orderId, req.user.id);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(error.status || 400).json({
+        success: false,
+        message: error.message || 'Failed to accept order'
+      });
+    }
+  },
+
+  // Driver rejects an assigned order -- goes back to the dispatch pool
+  rejectOrder: async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const result = await driverService.rejectOrder(req.params.orderId, req.user.id, reason);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(error.status || 400).json({
+        success: false,
+        message: error.message || 'Failed to reject order'
       });
     }
   },

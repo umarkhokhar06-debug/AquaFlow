@@ -16,6 +16,10 @@ router.post('/', requireCustomer, orderController.createOrder);
 router.get('/my-orders', requireCustomer, orderController.getCustomerOrders);
 router.get('/:orderId', orderController.getOrderById);
 router.put('/:orderId/cancel', orderController.cancelOrder);
+router.get('/:orderId/delivery-otp', requireCustomer, orderController.getDeliveryOtp);
+router.post('/:orderId/rating', requireCustomer, orderController.rateOrder);
+router.get('/:orderId/invoice', orderController.getInvoice);
+router.post('/:orderId/reorder', requireCustomer, orderController.reorder);
 
 // Driver, Dispatcher and Admin routes
 router.get('/', requireAnyRole(['admin', 'super_admin', 'driver', 'dispatcher']), orderController.getAllOrders);

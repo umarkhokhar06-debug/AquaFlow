@@ -31,7 +31,11 @@ const orderService = {
   // Create a new order
   createOrder: async (customerId, orderData) => {
     try {
-      const { items, deliveryAddress, paymentMethod, notes } = orderData;
+      const { items, deliveryAddress, paymentMethod, notes, deliveryType, scheduledFor } = orderData;
+
+      if (deliveryType === 'scheduled' && !scheduledFor) {
+        throw new Error('scheduledFor is required when deliveryType is scheduled');
+      }
 
       // Validate customer exists and is a customer
       const customer = await User.findById(customerId);
@@ -100,7 +104,9 @@ const orderService = {
           longitude: deliveryAddress.longitude
         },
         paymentMethod: paymentMethod || 'cash',
-        notes
+        notes,
+        deliveryType: deliveryType || 'immediate',
+        scheduledFor: deliveryType === 'scheduled' ? new Date(scheduledFor) : null
       });
 
       // Populate customer information
@@ -119,7 +125,9 @@ const orderService = {
         paymentStatus: order.paymentStatus,
         paymentMethod: order.paymentMethod,
         orderDate: order.orderDate,
-        notes: order.notes
+        notes: order.notes,
+        deliveryType: order.deliveryType,
+        scheduledFor: order.scheduledFor
       };
 
       // Emit real-time event to admin room
@@ -147,7 +155,7 @@ const orderService = {
       }
 
       // Check access permissions
-      if (userType === 'customer' && order.customer._id.toString() !== userId) {
+      if (userType === 'customer' && order.customer._id.toString() !== userId.toString()) {
         throw new Error('Access denied. You can only view your own orders');
       }
 
@@ -274,7 +282,7 @@ const orderService = {
       }
 
       // Check permissions
-      if (userType === 'customer' && order.customer.toString() !== userId) {
+      if (userType === 'customer' && order.customer.toString() !== userId.toString()) {
         throw new Error('Access denied. You can only update your own orders');
       }
 
@@ -364,7 +372,7 @@ const orderService = {
       }
 
       // Check permissions
-      if (userType === 'customer' && order.customer.toString() !== userId) {
+      if (userType === 'customer' && order.customer.toString() !== userId.toString()) {
         throw new Error('Access denied. You can only cancel your own orders');
       }
 
@@ -388,6 +396,129 @@ const orderService = {
 
     } catch (error) {
       console.error('Cancel order error:', error);
+      throw error;
+    }
+  },
+
+  // The code the customer reads out to the driver to confirm delivery.
+  // Owner-only -- deliveryOtp is select:false on the schema, never leaked
+  // through any other order-serialization path (including to the driver).
+  getDeliveryOtp: async (orderId, userId) => {
+    try {
+      const order = await Order.findById(orderId).select('+deliveryOtp customer status');
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (order.customer.toString() !== userId.toString()) {
+        throw new Error('Access denied. You can only view your own order\'s OTP');
+      }
+      if (!order.deliveryOtp) {
+        throw new Error('No delivery OTP has been issued yet -- a driver must be assigned first');
+      }
+
+      return { success: true, otp: order.deliveryOtp, status: order.status };
+    } catch (error) {
+      console.error('Get delivery OTP error:', error);
+      throw error;
+    }
+  },
+
+  // Customer rates the driver for a completed order.
+  rateOrder: async (orderId, userId, { score, comment }) => {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (order.customer.toString() !== userId.toString()) {
+        throw new Error('Access denied. You can only rate your own orders');
+      }
+      if (order.status !== 'delivered') {
+        throw new Error('Only delivered orders can be rated');
+      }
+      if (order.rating && order.rating.score) {
+        throw new Error('This order has already been rated');
+      }
+      if (!score || score < 1 || score > 5) {
+        throw new Error('score must be between 1 and 5');
+      }
+
+      order.rating = { score, comment, ratedAt: new Date() };
+      await order.save();
+
+      if (order.driver) {
+        const driver = await User.findById(order.driver);
+        if (driver) {
+          const newTotal = (driver.rating.totalRatings || 0) + 1;
+          const newAverage = ((driver.rating.average || 5) * (driver.rating.totalRatings || 0) + score) / newTotal;
+          driver.rating.average = Math.round(newAverage * 100) / 100;
+          driver.rating.totalRatings = newTotal;
+          await driver.save();
+        }
+      }
+
+      return { success: true, message: 'Rating submitted successfully', rating: order.rating };
+    } catch (error) {
+      console.error('Rate order error:', error);
+      throw error;
+    }
+  },
+
+  // Structured invoice/receipt data for a completed (or in-progress) order.
+  getInvoice: async (orderId, userId, userType) => {
+    try {
+      const order = await Order.findById(orderId)
+        .populate('customer', 'name email fullName houseNumber portion address')
+        .populate('driver', 'name email');
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (userType === 'customer' && order.customer._id.toString() !== userId.toString()) {
+        throw new Error('Access denied. You can only view your own invoices');
+      }
+
+      return {
+        success: true,
+        invoice: {
+          orderNumber: order.orderNumber,
+          issuedAt: order.deliveredAt || order.orderDate,
+          customer: order.customer,
+          deliveryAddress: order.deliveryAddress,
+          items: order.items,
+          subtotal: order.subtotal,
+          tax: order.tax,
+          totalAmount: order.totalAmount,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          driver: order.driver,
+          status: order.status,
+          deliveredAt: order.deliveredAt
+        }
+      };
+    } catch (error) {
+      console.error('Get invoice error:', error);
+      throw error;
+    }
+  },
+
+  // Clone a previous order's items/address into a fresh order.
+  reorder: async (orderId, userId) => {
+    try {
+      const previous = await Order.findById(orderId);
+      if (!previous) {
+        throw new Error('Order not found');
+      }
+      if (previous.customer.toString() !== userId.toString()) {
+        throw new Error('Access denied. You can only reorder your own orders');
+      }
+
+      return orderService.createOrder(userId, {
+        items: previous.items.map(i => ({ type: i.type, quantity: i.quantity })),
+        deliveryAddress: previous.deliveryAddress,
+        paymentMethod: previous.paymentMethod
+      });
+    } catch (error) {
+      console.error('Reorder error:', error);
       throw error;
     }
   }

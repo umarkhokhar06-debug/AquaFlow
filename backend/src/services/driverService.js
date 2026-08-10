@@ -241,9 +241,15 @@ const driverService = {
         throw new Error('Driver queue is full');
       }
 
-      // Assign order to driver
+      // Assign order to driver, resetting acceptance state and issuing a
+      // fresh delivery OTP (customer reads it to the driver on completion)
       order.driver = driverId;
       order.assignedAt = new Date();
+      order.driverResponseStatus = 'pending';
+      order.driverResponseAt = null;
+      order.driverRejectionReason = undefined;
+      order.deliveryOtp = String(Math.floor(1000 + Math.random() * 9000));
+      order.deliveryOtpGeneratedAt = new Date();
       await order.save();
 
       // Add to driver's queue
@@ -287,6 +293,65 @@ const driverService = {
 
     } catch (error) {
       console.error('Assign order to driver error:', error);
+      throw error;
+    }
+  },
+
+  // Driver accepts an assigned order (SRS §5: "accept/reject with reason")
+  acceptOrder: async (orderId, driverId) => {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (!order.driver || order.driver.toString() !== driverId.toString()) {
+        throw new Error('This order is not assigned to you');
+      }
+      if (order.driverResponseStatus === 'accepted') {
+        throw new Error('Order already accepted');
+      }
+
+      order.driverResponseStatus = 'accepted';
+      order.driverResponseAt = new Date();
+      await order.save();
+
+      socketService.emitOrderStatusUpdate(order._id, order.status, driverId);
+
+      return { success: true, message: 'Order accepted', order: { id: order._id, orderNumber: order.orderNumber } };
+    } catch (error) {
+      console.error('Accept order error:', error);
+      throw error;
+    }
+  },
+
+  // Driver rejects an assigned order -- it goes back to the unassigned
+  // dispatch pool (reusing removeOrderFromQueue, same cleanup as reassignment).
+  rejectOrder: async (orderId, driverId, reason) => {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (!order.driver || order.driver.toString() !== driverId.toString()) {
+        throw new Error('This order is not assigned to you');
+      }
+
+      order.driverResponseStatus = 'rejected';
+      order.driverResponseAt = new Date();
+      order.driverRejectionReason = reason;
+      await order.save();
+
+      const result = await driverService.removeOrderFromQueue(orderId, driverId);
+
+      socketService.emitSystemNotification(
+        `Order ${order.orderNumber} was rejected by the driver${reason ? `: ${reason}` : ''} and needs reassignment.`,
+        'warning',
+        'admin-room'
+      );
+
+      return { success: true, message: 'Order rejected and returned to the dispatch queue', driver: result.driver };
+    } catch (error) {
+      console.error('Reject order error:', error);
       throw error;
     }
   },

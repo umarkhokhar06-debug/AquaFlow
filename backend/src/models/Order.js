@@ -122,7 +122,60 @@ const orderSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  
+  // Driver's response to an assignment. Reset to 'pending' on every new
+  // assignment/reassignment. A rejection kicks the order back to the
+  // unassigned dispatch pool.
+  driverResponseStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'rejected']
+    // No default -- stays unset until the order is first assigned to a driver.
+  },
+  driverResponseAt: {
+    type: Date,
+    default: null
+  },
+  driverRejectionReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Rejection reason cannot exceed 500 characters']
+  },
+  // Customer reads this to the driver to confirm delivery. select: false
+  // like User.password -- never included in normal order queries, only
+  // fetched explicitly by the dedicated owner-only endpoint.
+  deliveryOtp: {
+    type: String,
+    select: false
+  },
+  deliveryOtpGeneratedAt: {
+    type: Date,
+    select: false
+  },
+  deliveryType: {
+    type: String,
+    enum: ['immediate', 'scheduled', 'recurring'],
+    default: 'immediate'
+  },
+  scheduledFor: {
+    type: Date,
+    default: null
+  },
+  rating: {
+    score: {
+      type: Number,
+      min: [1, 'Rating must be at least 1'],
+      max: [5, 'Rating cannot exceed 5']
+    },
+    comment: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Comment cannot exceed 500 characters']
+    },
+    ratedAt: {
+      type: Date,
+      default: null
+    }
+  },
+
   // Timestamps
   orderDate: {
     type: Date,

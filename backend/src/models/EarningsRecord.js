@@ -100,21 +100,21 @@ const earningsRecordSchema = new mongoose.Schema({
   }
 });
 
-// Calculate total before saving
-earningsRecordSchema.pre('save', function(next) {
+// Calculate total and period fields before validation runs -- these are
+// required fields, and Mongoose validates before pre('save') hooks fire,
+// so a pre('save') hook here is always too late (it silently never ran
+// before required-field validation, meaning this record could never
+// actually be created until now).
+earningsRecordSchema.pre('validate', function(next) {
   if (this.isModified('baseAmount') || this.isModified('tip') || this.isModified('bonus') || this.isModified('deductions')) {
     this.totalEarned = this.baseAmount + this.tip + this.bonus - this.deductions;
   }
-  next();
-});
 
-// Calculate period fields before saving
-earningsRecordSchema.pre('save', function(next) {
   if (this.isNew) {
     const date = this.deliveredAt || new Date();
     this.period.year = date.getFullYear();
     this.period.month = date.getMonth() + 1;
-    
+
     // Calculate week number
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
     const daysDiff = Math.floor((date - firstDayOfYear) / (24 * 60 * 60 * 1000));

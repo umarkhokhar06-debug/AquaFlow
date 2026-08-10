@@ -276,6 +276,50 @@ const orderController = {
         message: 'Server error retrieving statistics'
       });
     }
+  },
+
+  // Shared error-status mapping for the simpler new endpoints below,
+  // matching this file's existing pattern of no error.status on service errors.
+  _statusFor: (error) => {
+    if (error.message === 'Order not found') return 404;
+    if (error.message.startsWith('Access denied')) return 403;
+    return 400;
+  },
+
+  getDeliveryOtp: async (req, res) => {
+    try {
+      const result = await orderService.getDeliveryOtp(req.params.orderId, req.user.id);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
+    }
+  },
+
+  rateOrder: async (req, res) => {
+    try {
+      const result = await orderService.rateOrder(req.params.orderId, req.user.id, req.body);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
+    }
+  },
+
+  getInvoice: async (req, res) => {
+    try {
+      const result = await orderService.getInvoice(req.params.orderId, req.user.id, req.user.userType);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
+    }
+  },
+
+  reorder: async (req, res) => {
+    try {
+      const result = await orderService.reorder(req.params.orderId, req.user.id);
+      res.status(201).json(result);
+    } catch (error) {
+      res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
+    }
   }
 };
 

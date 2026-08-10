@@ -24,9 +24,7 @@ function haversineKm(a, b) {
 }
 
 class DispatchService {
-  // Live queue, categorized per SRS §6. "Scheduled" isn't included yet --
-  // that needs the booking flow's immediate/scheduled/recurring delivery
-  // type (a later phase) to have any orders that actually qualify.
+  // Live queue, categorized per SRS §6.
   async getQueue() {
     const now = Date.now();
     const orders = await Order.find({ status: { $nin: ['delivered', 'cancelled'] } })
@@ -34,13 +32,17 @@ class DispatchService {
       .populate('driver', 'name email driverStatus')
       .sort({ orderDate: -1 });
 
-    const queue = { exception: [], new: [], delayed: [], active: [] };
+    const queue = { exception: [], new: [], scheduled: [], delayed: [], active: [] };
 
     for (const order of orders) {
       const ageMs = now - new Date(order.orderDate).getTime();
       const isUnassignedPending = order.status === 'pending' && !order.driver;
+      const isScheduledFuture = order.deliveryType === 'scheduled' &&
+        order.scheduledFor && new Date(order.scheduledFor).getTime() > now;
 
-      if (isUnassignedPending && ageMs > EXCEPTION_THRESHOLD_MS) {
+      if (isScheduledFuture && !order.driver) {
+        queue.scheduled.push(order);
+      } else if (isUnassignedPending && ageMs > EXCEPTION_THRESHOLD_MS) {
         queue.exception.push(order);
       } else if (isUnassignedPending) {
         queue.new.push(order);

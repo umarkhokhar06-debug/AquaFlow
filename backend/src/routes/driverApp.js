@@ -28,6 +28,8 @@ router.put('/profile', driverAppController.updateProfile);
 router.get('/orders', driverAppController.getOrders);
 router.get('/orders/:orderId', driverAppController.getOrderDetails);
 router.put('/orders/:orderId/status', driverAppController.updateOrderStatus);
+router.put('/orders/:orderId/accept', driverAppController.acceptOrder);
+router.put('/orders/:orderId/reject', driverAppController.rejectOrder);
 
 // Dashboard
 router.get('/dashboard/stats', driverAppController.getDashboardStats);

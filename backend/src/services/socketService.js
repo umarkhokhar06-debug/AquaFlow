@@ -379,6 +379,16 @@ const socketService = {
     }
   },
 
+  // Emit directly to one user's personal room, regardless of role. Sockets
+  // join role-specific per-user rooms (driver-<id>, customer-<id>) on
+  // connect; this targets both since a generic notification's recipient
+  // could be either. A socket not in either room simply doesn't receive it.
+  emitToUser(userId, event, data) {
+    if (this.io) {
+      this.io.to(`driver-${userId}`).to(`customer-${userId}`).emit(event, data);
+    }
+  },
+
   // Emit system notification
   emitSystemNotification(message, type = 'info', targetRoom = 'admin-room') {
     if (this.io) {
