@@ -90,6 +90,49 @@ class TruckController {
       });
     }
   }
+
+  async addMaintenanceRecord(req, res) {
+    try {
+      const truck = await truckService.addMaintenanceRecord(req.params.id, req.body, req.user.id);
+      res.status(201).json({ success: true, truck });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to add maintenance record'
+      });
+    }
+  }
+
+  async getUtilization(req, res) {
+    try {
+      const { from, to } = req.query;
+      const utilization = await truckService.getUtilization(req.params.id, { from, to });
+      res.status(200).json({ success: true, utilization });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to compute utilization'
+      });
+    }
+  }
+
+  async getFleetUtilizationReport(req, res) {
+    try {
+      const { from, to, underThreshold, overThreshold } = req.query;
+      const report = await truckService.getFleetUtilizationReport({
+        from,
+        to,
+        underThreshold: underThreshold !== undefined ? Number(underThreshold) : undefined,
+        overThreshold: overThreshold !== undefined ? Number(overThreshold) : undefined
+      });
+      res.status(200).json({ success: true, ...report });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to build fleet utilization report'
+      });
+    }
+  }
 }
 
 module.exports = new TruckController();
