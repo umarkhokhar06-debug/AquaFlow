@@ -73,24 +73,25 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const login = async (email, password) => {
+  // allowedRoles lets each portal login page (superadmin/admin/employee/
+  // driver) restrict who's allowed through it -- the backend authenticates
+  // anyone with valid credentials, this is purely "wrong door" UX so e.g. a
+  // driver can't accidentally land in the admin portal via its login link.
+  const login = async (email, password, allowedRoles = null) => {
     try {
       setLoading(true)
       const response = await authAPI.login({ email, password })
-      
+
       if (response.data.success) {
         const { token: newToken, user: newUser } = response.data
-        if(newUser.userType === 'admin'){
-            setToken(newToken)
-            setUser(newUser)
-            localStorage.setItem('token', newToken)
-            localStorage.setItem('user', JSON.stringify(newUser))
-            return { success: true, user: newUser }
+        if (allowedRoles && !allowedRoles.includes(newUser.userType)) {
+          return { success: false, error: `This login is not for ${newUser.userType.replace(/_/g, ' ')} accounts. Use the correct portal link.` }
         }
-        else
-        {
-            return { success: false, error: 'Only Admin Can Login' }
-        }
+        setToken(newToken)
+        setUser(newUser)
+        localStorage.setItem('token', newToken)
+        localStorage.setItem('user', JSON.stringify(newUser))
+        return { success: true, user: newUser }
       } else {
         return { success: false, error: response.data.message || 'Login failed' }
       }
@@ -151,16 +152,23 @@ export const AuthProvider = ({ children }) => {
   }
 
   const isAuthenticated = !!token && !!user
-  const isAdmin = user?.userType === 'admin'
-  const isDriver = user?.userType === 'driver'
+  const isSuperAdmin = user?.userType === 'super_admin'
+  const isAdmin = user?.userType === 'admin' || user?.userType === 'super_admin'
+  const isEmployee = ['dispatcher', 'call_center_agent', 'technician'].includes(user?.userType)
   const isCustomer = user?.userType === 'customer'
+  // Anyone who logs in through the admin portal's sidebar/dashboard shell
+  // (admin, super_admin, and operational staff) vs. the customer mobile
+  // app. Drivers have no web login at all -- mobile app only.
+  const isPortalUser = isAdmin || isEmployee
 
   const value = {
     user,
     token,
     isAuthenticated,
+    isSuperAdmin,
     isAdmin,
-    isDriver,
+    isEmployee,
+    isPortalUser,
     isCustomer,
     loading,
     register,

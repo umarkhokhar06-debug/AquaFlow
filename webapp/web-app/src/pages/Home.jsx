@@ -1,98 +1,64 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import Button from '../components/Button'
+import { FiShield, FiUsers, FiDroplet } from 'react-icons/fi'
+
+const PORTALS = [
+  { key: 'admin', title: 'Admin', desc: 'Super Admin & Admin -- operations, fleet, finance & reports', icon: FiShield, color: 'bg-blue-600 hover:bg-blue-700' },
+  { key: 'employee', title: 'Employee', desc: 'Dispatcher, call center & technician', icon: FiUsers, color: 'bg-purple-600 hover:bg-purple-700' }
+]
 
 const Home = () => {
-  const { isAuthenticated, isAdmin } = useAuth()
+  const { isAuthenticated, isPortalUser } = useAuth()
+
+  const dashboardPath = isPortalUser ? '/admin-dashboard' : '/dashboard'
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Hero Section */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
-            Welcome to Tanker Web App
-          </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-            A modern React application built with the latest technologies including React 19, Vite, and React Router.
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 mb-4">
+            <FiDroplet className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">Aqua Flow</h1>
+          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg">
+            Water tanker delivery, dispatch & operations platform
           </p>
-          <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8 space-y-4 sm:space-y-0 sm:space-x-4">
-            {isAuthenticated ? (
-              <Link to={isAdmin ? "/admin-dashboard" : "/dashboard"}>
-                <Button size="large">
-                  Go to Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link to="/register">
-                  <Button size="large" variant="outline">
-                    Register
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button size="large">
-                    Login
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
         </div>
 
-        {/* Features Section */}
-        <div className="mt-20">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div className="inline-flex items-center justify-center p-3 bg-blue-500 rounded-md shadow-lg">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Fast Development</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    Built with Vite for lightning-fast development and hot module replacement.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div className="inline-flex items-center justify-center p-3 bg-green-500 rounded-md shadow-lg">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Modern React</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    Using React 19.1.1 with the latest features and best practices.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div className="inline-flex items-center justify-center p-3 bg-purple-500 rounded-md shadow-lg">
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Secure Authentication</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    JWT-based authentication with protected routes and context management.
-                  </p>
-                </div>
-              </div>
-            </div>
+        {isAuthenticated ? (
+          <div className="mt-10 text-center">
+            <Link to={dashboardPath} className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+              Go to Dashboard
+            </Link>
           </div>
-        </div>
+        ) : (
+          <div className="mt-12">
+            <h2 className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6">Sign in as</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              {PORTALS.map(p => {
+                const Icon = p.icon
+                return (
+                  <Link
+                    key={p.key}
+                    to={`/login/${p.key}`}
+                    className="bg-white rounded-lg shadow p-6 text-center hover:shadow-md transition-shadow"
+                  >
+                    <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center text-white mb-3 ${p.color}`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-medium text-gray-900">{p.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1">{p.desc}</p>
+                  </Link>
+                )
+              })}
+            </div>
+            <p className="mt-8 text-center text-sm text-gray-500">
+              Drivers: use the Aqua Flow mobile app to log in.<br />
+              New customer? <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium">Register here</Link>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

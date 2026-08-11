@@ -3,16 +3,18 @@ import { userManagementAPI } from '../services/api'
 import { useSocket } from '../hooks/useSocket'
 import { useAuth } from '../hooks/useAuth'
 import RealtimeIndicator from './RealtimeIndicator'
-import { 
-  FiSearch, 
-  FiEdit2, 
-  FiTrash2, 
-  FiUserX, 
-  FiUserCheck, 
-  FiEye, 
+import CreateEmployeeModal from './CreateEmployeeModal'
+import {
+  FiSearch,
+  FiEdit2,
+  FiTrash2,
+  FiUserX,
+  FiUserCheck,
+  FiEye,
   FiChevronLeft,
   FiChevronRight,
-  FiRefreshCw
+  FiRefreshCw,
+  FiUserPlus
 } from 'react-icons/fi'
 
 const UserManagement = () => {
@@ -43,6 +45,7 @@ const UserManagement = () => {
   const [showBlockModal, setShowBlockModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showTypeModal, setShowTypeModal] = useState(false)
+  const [showCreateEmployeeModal, setShowCreateEmployeeModal] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [statistics, setStatistics] = useState(null)
 
@@ -89,7 +92,7 @@ const UserManagement = () => {
 
   // Socket event listeners
   useEffect(() => {
-    if (socket && connected && user?.userType === 'admin') {
+    if (socket && connected && (user?.userType === 'admin' || user?.userType === 'super_admin')) {
       // Join admin room for user updates
       socket.emit('join-admin-room')
 
@@ -766,7 +769,11 @@ const UserManagement = () => {
               <option value="">All Types</option>
               <option value="customer">Customer</option>
               <option value="driver">Driver</option>
+              <option value="dispatcher">Dispatcher</option>
+              <option value="call_center_agent">Call Center Agent</option>
+              <option value="technician">Technician</option>
               <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
             </select>
             
             <select
@@ -795,6 +802,14 @@ const UserManagement = () => {
             >
               <FiRefreshCw className="h-4 w-4 mr-2" />
               Refresh
+            </button>
+
+            <button
+              onClick={() => setShowCreateEmployeeModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <FiUserPlus className="h-4 w-4 mr-2" />
+              Create User
             </button>
           </div>
         </div>
@@ -999,6 +1014,12 @@ const UserManagement = () => {
       {showBlockModal && renderBlockModal()}
       {showDeleteModal && renderDeleteModal()}
       {showTypeModal && renderTypeModal()}
+      {showCreateEmployeeModal && (
+        <CreateEmployeeModal
+          onClose={() => setShowCreateEmployeeModal(false)}
+          onCreated={() => fetchUsers()}
+        />
+      )}
     </div>
   )
 }

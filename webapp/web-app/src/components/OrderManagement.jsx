@@ -93,7 +93,7 @@ const OrderManagement = () => {
 
   // Socket event listeners
   useEffect(() => {
-    if (socket && connected && (user?.userType === 'admin' || user?.userType === 'driver')) {
+    if (socket && connected && (user?.userType === 'admin' || user?.userType === 'super_admin' || user?.userType === 'driver')) {
       // Join admin room for order updates
       socket.emit('join-admin-room')
       

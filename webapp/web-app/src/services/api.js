@@ -229,6 +229,141 @@ export const deviceManagementAPI = {
   getLatestReading: (deviceId) => api.get(`/iot/${deviceId}/latest`)
 }
 
+// Employee/driver creation (Admin only) -- separate from userManagementAPI
+// since it's a create-only concern with its own onboarding fields.
+export const employeeAPI = {
+  createEmployee: (data) => api.post('/admin/users', data)
+}
+
+// Fleet & Truck Management (Admin only)
+export const truckAPI = {
+  getTrucks: (params = {}) => {
+    const q = new URLSearchParams()
+    Object.keys(params).forEach(k => params[k] !== undefined && params[k] !== '' && q.append(k, params[k]))
+    return api.get(`/admin/trucks?${q.toString()}`)
+  },
+  getTruck: (id) => api.get(`/admin/trucks/${id}`),
+  createTruck: (data) => api.post('/admin/trucks', data),
+  updateTruck: (id, data) => api.put(`/admin/trucks/${id}`, data),
+  deleteTruck: (id) => api.delete(`/admin/trucks/${id}`),
+  assignDriver: (id, driverId) => api.put(`/admin/trucks/${id}/assign-driver`, { driverId }),
+  unassignDriver: (id) => api.put(`/admin/trucks/${id}/unassign-driver`),
+  addMaintenanceRecord: (id, data) => api.post(`/admin/trucks/${id}/maintenance`, data),
+  getUtilization: (id, params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/trucks/${id}/utilization?${q.toString()}`)
+  },
+  getUtilizationReport: () => api.get('/admin/trucks/utilization-report')
+}
+
+// Dispatch console (Admin/Dispatcher)
+export const dispatchAPI = {
+  getQueue: () => api.get('/dispatch/queue'),
+  getLiveMap: () => api.get('/dispatch/map'),
+  getMetrics: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/dispatch/metrics?${q.toString()}`)
+  },
+  recommendDrivers: (orderId) => api.get(`/dispatch/orders/${orderId}/recommend`),
+  assignOrder: (orderId, driverId) => api.put(`/dispatch/orders/${orderId}/assign`, { driverId })
+}
+
+// Forecast & consumption trends (Admin/Dispatcher)
+export const forecastAPI = {
+  getDeviceForecast: (deviceId) => api.get(`/forecast/devices/${deviceId}`),
+  getConsumptionTrends: () => api.get('/forecast/trends'),
+  getFleetForecast: () => api.get('/forecast/fleet'),
+  runNightlyScan: () => api.post('/forecast/run-nightly-scan')
+}
+
+// Finance & Revenue (Admin only)
+export const financeAPI = {
+  getDashboard: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/finance/dashboard?${q.toString()}`)
+  },
+  getRevenue: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/finance/revenue?${q.toString()}`)
+  },
+  getSalaries: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/finance/salaries?${q.toString()}`)
+  },
+  getProfitLoss: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/finance/profit-loss?${q.toString()}`)
+  },
+  addExpense: (data) => api.post('/admin/finance/expenses', data),
+  getExpenses: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/finance/expenses?${q.toString()}`)
+  },
+  deleteExpense: (id) => api.delete(`/admin/finance/expenses/${id}`)
+}
+
+// Promo Codes (Admin only)
+export const promoAPI = {
+  getPromoCodes: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/promo-codes?${q.toString()}`)
+  },
+  getPromoCode: (id) => api.get(`/promo-codes/${id}`),
+  createPromoCode: (data) => api.post('/promo-codes', data),
+  updatePromoCode: (id, data) => api.put(`/promo-codes/${id}`, data),
+  deletePromoCode: (id) => api.delete(`/promo-codes/${id}`),
+  getUsageReport: (id) => api.get(`/promo-codes/${id}/usage`)
+}
+
+// Support / Complaints & AI (Admin, super_admin, call_center_agent, technician)
+export const supportAPI = {
+  getTickets: (params = {}) => {
+    const q = new URLSearchParams()
+    Object.keys(params).forEach(k => params[k] !== undefined && params[k] !== '' && q.append(k, params[k]))
+    return api.get(`/support/tickets?${q.toString()}`)
+  },
+  getMyTickets: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/support/tickets/my?${q.toString()}`)
+  },
+  getTicket: (id) => api.get(`/support/tickets/${id}`),
+  createTicket: (data) => api.post('/support/tickets', data),
+  addMessage: (id, message, isInternal = false) => api.post(`/support/tickets/${id}/messages`, { message, isInternal }),
+  updateStatus: (id, status) => api.put(`/support/tickets/${id}/status`, { status }),
+  resolveTicket: (id, resolution) => api.put(`/support/tickets/${id}/resolve`, { resolution }),
+  assignTicket: (id, assignedTo) => api.put(`/support/tickets/${id}/assign`, { assignedTo }),
+  assignTechnician: (id) => api.put(`/support/tickets/${id}/assign-technician`),
+  getStats: () => api.get('/support/stats'),
+  getFAQs: () => api.get('/support/faqs'),
+  search: (q) => api.get(`/support/search?q=${encodeURIComponent(q)}`),
+  troubleshoot: (context) => api.post('/support/ai/troubleshoot', { context }),
+  parseOrderIntent: (description) => api.post('/support/ai/order-intent', { description }),
+  placeOrderForCustomer: (data) => api.post('/support/ai/place-order', data)
+}
+
+// Payments (Admin only -- transaction ledger view)
+export const paymentAPI = {
+  getTransactions: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/payments/transactions?${q.toString()}`)
+  },
+  getPaymentStatus: (orderId) => api.get(`/payments/${orderId}`)
+}
+
+// Reports (Admin/Dispatcher -- payment-methods & driver-performance are
+// admin-only server-side, SRS §17)
+export const reportAPI = {
+  getDashboard: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/reports/dashboard?${q.toString()}`)
+  },
+  getDeviceCapacityInsights: () => api.get('/admin/reports/device-capacity'),
+  getReport: (type, params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/admin/reports/${type}?${q.toString()}`)
+  }
+}
+
 // Generic API calls
 export const apiCall = {
   get: (url, config) => api.get(url, config),

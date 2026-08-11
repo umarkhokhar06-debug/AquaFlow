@@ -94,7 +94,7 @@ const DriverManagement = () => {
 
   // Socket event listeners
   useEffect(() => {
-    if (socket && connected && user?.userType === 'admin') {
+    if (socket && connected && (user?.userType === 'admin' || user?.userType === 'super_admin')) {
       // Join admin room for driver updates
       socket.emit('join-admin-room')
 

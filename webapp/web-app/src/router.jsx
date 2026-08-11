@@ -2,37 +2,34 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Home from './pages/Home';
-import Login from './pages/Login';
+import RoleLogin from './pages/RoleLogin';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
-// Protected Route Component
+// Any authenticated user
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <Navigate to="/" replace />;
 };
 
-// Admin Only Route Component
-const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
+// Admin + super_admin + operational staff (dispatcher/call_center_agent/technician)
+// share the same sidebar dashboard shell, gated per-tab inside it. Drivers
+// have no web portal at all -- mobile app only.
+const PortalRoute = ({ children }) => {
+  const { isAuthenticated, isPortalUser } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isPortalUser) return <Navigate to="/" replace />;
   return children;
 };
 
-// Public Route Component (redirect to appropriate dashboard if already logged in)
+// Redirect an already-logged-in user away from login/register to wherever
+// their role actually lands.
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) {
-    return children;
-  }
-  // Redirect to appropriate dashboard based on user type
-  return <Navigate to={isAdmin ? "/admin-dashboard" : "/dashboard"} replace />;
+  const { isAuthenticated, isPortalUser } = useAuth();
+  if (!isAuthenticated) return children;
+  if (isPortalUser) return <Navigate to="/admin-dashboard" replace />;
+  return <Navigate to="/dashboard" replace />;
 };
 
 function AppRouter() {
@@ -40,37 +37,38 @@ function AppRouter() {
     <div className="app">
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login/:portal"
           element={
             <PublicRoute>
-              <Login />
+              <RoleLogin />
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/register" 
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route
+          path="/register"
           element={
             <PublicRoute>
               <Register />
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/admin-dashboard" 
+        <Route
+          path="/admin-dashboard"
           element={
-            <AdminRoute>
+            <PortalRoute>
               <AdminDashboard />
-            </AdminRoute>
-          } 
+            </PortalRoute>
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
