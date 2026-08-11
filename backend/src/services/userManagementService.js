@@ -353,7 +353,10 @@ const userManagementService = {
   // Admin/super_admin creates a staff account directly (matches SRS: "Admin
   // creates employees according to operational role"). Only super_admin may
   // create admin/super_admin accounts.
-  createEmployee: async (actorUser, { name, email, password, userType }) => {
+  createEmployee: async (actorUser, {
+    name, email, password, userType, phoneNumber,
+    cnic, licenseNumber, dateOfBirth, emergencyContact, vehicleInfo
+  }) => {
     try {
       if (!EMPLOYEE_CREATABLE_ROLES.includes(userType)) {
         throw new Error(`userType must be one of: ${EMPLOYEE_CREATABLE_ROLES.join(', ')}`);
@@ -368,7 +371,13 @@ const userManagementService = {
         throw new Error('User already exists with this email');
       }
 
-      const user = await User.create({ name, email, password, userType });
+      // Onboarding detail fields only apply to drivers today -- harmless to
+      // accept them for other roles too rather than silently dropping data
+      // an admin typed in, but nothing currently reads them off non-drivers.
+      const user = await User.create({
+        name, email, password, userType, phoneNumber,
+        cnic, licenseNumber, dateOfBirth, emergencyContact, vehicleInfo
+      });
 
       await auditLogService.record({
         action: 'USER_CREATED',
@@ -384,6 +393,7 @@ const userManagementService = {
           userType: user.userType,
           name: user.name,
           email: user.email,
+          phoneNumber: user.phoneNumber,
           status: user.status,
           createdAt: user.createdAt
         }

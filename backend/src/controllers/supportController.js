@@ -28,7 +28,13 @@ class SupportController {
 
   async getAllTickets(req, res) {
     try {
-      const result = await supportService.getAllTickets(req.query);
+      // A technician only ever sees their own assigned tickets, regardless
+      // of what filters they pass -- they have no business browsing the
+      // full complaint queue, unlike call-center/admin staff.
+      const filters = req.user.userType === 'technician'
+        ? { ...req.query, assignedTo: req.user.id }
+        : req.query;
+      const result = await supportService.getAllTickets(filters);
       res.status(200).json({ success: true, ...result });
     } catch (error) {
       res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to fetch tickets' });

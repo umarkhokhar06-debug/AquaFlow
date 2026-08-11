@@ -264,7 +264,10 @@ const userManagementController = {
   // Admin/super_admin creates a staff account directly
   createEmployee: async (req, res) => {
     try {
-      const { name, email, password, userType } = req.body;
+      const {
+        name, email, password, userType, phoneNumber,
+        cnic, licenseNumber, dateOfBirth, emergencyContact, vehicleInfo
+      } = req.body;
 
       if (!name || !email || !password || !userType) {
         return res.status(400).json({
@@ -273,7 +276,10 @@ const userManagementController = {
         });
       }
 
-      const result = await userManagementService.createEmployee(req.user, { name, email, password, userType });
+      const result = await userManagementService.createEmployee(req.user, {
+        name, email, password, userType, phoneNumber,
+        cnic, licenseNumber, dateOfBirth, emergencyContact, vehicleInfo
+      });
       res.status(201).json(result);
 
     } catch (error) {

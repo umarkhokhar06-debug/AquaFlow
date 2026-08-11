@@ -16,8 +16,9 @@ router.get('/faqs', supportController.getFAQs);
 router.get('/tickets/:id', supportController.getTicketById);
 router.post('/tickets/:id/messages', supportController.addMessage);
 
-// Call-center / admin only
-router.get('/tickets', requireAnyRole(STAFF), supportController.getAllTickets);
+// Call-center / admin / technician (technician is auto-scoped to their own
+// assigned tickets in the controller -- see getAllTickets)
+router.get('/tickets', requireAnyRole([...STAFF, 'technician']), supportController.getAllTickets);
 router.get('/stats', requireAnyRole(STAFF), supportController.getStats);
 router.get('/search', requireAnyRole(STAFF), supportController.search);
 router.put('/tickets/:id/status', requireAnyRole(STAFF), supportController.updateStatus);

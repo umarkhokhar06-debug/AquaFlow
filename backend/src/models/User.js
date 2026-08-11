@@ -168,6 +168,26 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   },
+  // Driver onboarding details, captured by admin at hire time.
+  cnic: {
+    type: String,
+    trim: true,
+    maxlength: [20, 'CNIC cannot exceed 20 characters']
+  },
+  licenseNumber: {
+    type: String,
+    trim: true,
+    maxlength: [30, 'License number cannot exceed 30 characters']
+  },
+  dateOfBirth: {
+    type: Date,
+    default: null
+  },
+  emergencyContact: {
+    name: { type: String, trim: true, maxlength: 100 },
+    phone: { type: String, trim: true, maxlength: 15 },
+    relation: { type: String, trim: true, maxlength: 50 }
+  },
   vehicleInfo: {
     vehicleType: {
       type: String,
