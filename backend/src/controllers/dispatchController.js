@@ -33,7 +33,8 @@ class DispatchController {
       }
       const result = await dispatchService.assignOrder(req.params.orderId, driverId, req.user, {
         recommendedDriverId,
-        reason
+        reason,
+        ip: req.ip
       });
       res.status(200).json({ success: true, ...result });
     } catch (error) {

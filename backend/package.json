@@ -5,7 +5,15 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 20000,
+    "moduleNameMapper": {
+      "^expo-server-sdk$": "<rootDir>/tests/mocks/expo-server-sdk.js"
+    }
   },
   "keywords": [
     "nodejs",
@@ -23,15 +31,20 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
     "expo-server-sdk": "^7.1.0",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
+    "pdfkit": "^0.19.1",
     "socket.io": "^4.8.1",
     "stripe": "^22.5.0",
     "twilio": "^6.0.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "jest": "^30.4.2",
+    "mongodb-memory-server": "^11.2.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.2.2"
   }
 }

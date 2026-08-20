@@ -10,10 +10,21 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aquaflow.tankerapp"
     },
     "android": {
-      "package": "com.aquaflow.tankerapp"
+      "package": "com.aquaflow.tankerapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#007AFF"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f9a94d0b-f9e2-40d8-b936-f48add4cbf65"
     },
     "web": {
       "bundler": "metro",
@@ -23,7 +34,19 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "AquaFlow uses your camera to scan QR invite codes for shared device access."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AquaFlow uses your location to set accurate delivery addresses and, for drivers, to share live location during deliveries."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,4 +1,5 @@
 const reportService = require('../services/reportService');
+const reportExportService = require('../services/reportExportService');
 
 class ReportController {
   async getDashboard(req, res) {
@@ -36,6 +37,20 @@ class ReportController {
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename="${type}-report.csv"`);
         return res.status(200).send(result.csv);
+      }
+
+      if (format === 'xlsx') {
+        const buffer = await reportExportService.toXlsx(result.rows, type);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${type}-report.xlsx"`);
+        return res.status(200).send(buffer);
+      }
+
+      if (format === 'pdf') {
+        const buffer = await reportExportService.toPdf(result.rows, `${type} report`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${type}-report.pdf"`);
+        return res.status(200).send(buffer);
       }
 
       res.status(200).json({ success: true, ...result });

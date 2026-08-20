@@ -1,7 +1,7 @@
 
 // Configuration for Tanker App
 export const config = {
-    backendUrl: 'https://aquaflow-backend-jnip.onrender.com',
-    apiUrl: 'https://aquaflow-backend-jnip.onrender.com/api',
-    authUrl: 'https://aquaflow-backend-jnip.onrender.com/api/auth',
+    backendUrl: 'https://d27yn7i7dixdgk.cloudfront.net',
+    apiUrl: 'https://d27yn7i7dixdgk.cloudfront.net/api',
+    authUrl: 'https://d27yn7i7dixdgk.cloudfront.net/api/auth',
 }

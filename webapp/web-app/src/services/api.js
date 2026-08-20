@@ -361,6 +361,10 @@ export const reportAPI = {
   getReport: (type, params = {}) => {
     const q = new URLSearchParams(params)
     return api.get(`/admin/reports/${type}?${q.toString()}`)
+  },
+  downloadReport: (type, format, params = {}) => {
+    const q = new URLSearchParams({ ...params, format })
+    return api.get(`/admin/reports/${type}?${q.toString()}`, { responseType: 'blob' })
   }
 }
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const socketService = require('./socketService');
 const promoService = require('./promoService');
 const paymentService = require('./paymentService');
+const notificationService = require('./notificationService');
 
 // Product configuration
 const PRODUCT_CONFIG = {
@@ -159,6 +160,14 @@ const orderService = {
 
       // Emit real-time event to admin room
       socketService.emitNewOrder(orderResponse);
+
+      notificationService.createNotification(
+        customerId,
+        'Order placed',
+        `Your order ${order.orderNumber} has been placed and is awaiting dispatch.`,
+        'order_placed',
+        { orderId: order._id }
+      ).catch(() => {});
 
       // Non-cash orders need a payment intent before they can be paid; the
       // customer app confirms it client-side, and the order is only marked

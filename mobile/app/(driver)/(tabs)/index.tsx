@@ -8,6 +8,7 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,8 @@ export default function DriverDashboardScreen() {
     totalRatings: 0,
   });
   const [todayOrders, setTodayOrders] = useState<DriverOrder[]>([]);
+  const [driverStatus, setDriverStatus] = useState<'free' | 'busy' | 'offline'>('offline');
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const { connect, onNewOrder, onOrderStatusUpdate, onOrderUpdate } = useSocket();
 
@@ -70,18 +73,34 @@ export default function DriverDashboardScreen() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [stats, ordersRes] = await Promise.all([
+      const [stats, ordersRes, profile] = await Promise.all([
         driverAPI.getDashboardStats(),
         driverAPI.getOrders({ limit: 5 }),
+        driverAPI.getProfile(),
       ]);
       setDriverStats(stats);
       // Orders are already mapped in driverAPI.getOrders
       setTodayOrders(ordersRes.orders);
+      setDriverStatus(profile.status);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleOnline = async (goOnline: boolean) => {
+    const nextStatus = goOnline ? 'free' : 'offline';
+    setStatusUpdating(true);
+    try {
+      await driverAPI.updateDriverStatus(nextStatus);
+      setDriverStatus(nextStatus);
+    } catch (error) {
+      console.error('Error updating driver status:', error);
+      Alert.alert('Error', 'Failed to update your status. Please try again.');
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -222,6 +241,44 @@ export default function DriverDashboardScreen() {
             <Text style={styles.welcomeSubtitle}>You have {driverStats.pendingOrders} pending deliveries today</Text>
           </View>
 
+          {/* Availability toggle */}
+          <View style={styles.statusCard}>
+            <View style={styles.statusInfo}>
+              <View
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor:
+                      driverStatus === 'free' ? '#28A745' : driverStatus === 'busy' ? '#F59E0B' : '#9CA3AF',
+                  },
+                ]}
+              />
+              <View>
+                <Text style={styles.statusTitle}>
+                  {driverStatus === 'free' ? 'Online' : driverStatus === 'busy' ? 'On delivery' : 'Offline'}
+                </Text>
+                <Text style={styles.statusSubtitle}>
+                  {driverStatus === 'busy'
+                    ? 'You have an active order'
+                    : driverStatus === 'free'
+                    ? 'Ready to receive new orders'
+                    : "You won't receive new orders"}
+                </Text>
+              </View>
+            </View>
+            {statusUpdating ? (
+              <ActivityIndicator size="small" color="#007AFF" />
+            ) : (
+              <Switch
+                value={driverStatus !== 'offline'}
+                onValueChange={toggleOnline}
+                disabled={driverStatus === 'busy'}
+                trackColor={{ false: '#E5E7EB', true: '#BBF7D0' }}
+                thumbColor={driverStatus === 'free' ? '#28A745' : '#9CA3AF'}
+              />
+            )}
+          </View>
+
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <StatCard
@@ -283,22 +340,6 @@ export default function DriverDashboardScreen() {
           ))}
         </View>
 
-        {/* Vehicle Status */}
-        {/* <View style={styles.vehicleSection}>
-          <View style={styles.vehicleCard}>
-            <View style={styles.vehicleIcon}>
-              <Truck size={24} color="#007AFF" />
-            </View>
-            <View style={styles.vehicleInfo}>
-              <Text style={styles.vehicleTitle}>Vehicle Status</Text>
-              <Text style={styles.vehicleSubtitle}>TK-001 • Suzuki Carry</Text>
-              <Text style={styles.vehicleStatus}>✅ Online • Fuel: 85%</Text>
-            </View>
-            <TouchableOpacity style={styles.vehicleButton}>
-              <Text style={styles.vehicleButtonText}>Details</Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
         </ScrollView>
       )}
     </View>
@@ -578,56 +619,42 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: '#28A745',
   },
-  vehicleSection: {
-    marginBottom: 24,
-  },
-  vehicleCard: {
+  statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  vehicleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F0F8FF',
-    justifyContent: 'center',
+  statusInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
-  },
-  vehicleInfo: {
+    gap: 12,
     flex: 1,
   },
-  vehicleTitle: {
-    fontSize: 16,
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusTitle: {
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  vehicleSubtitle: {
+  statusSubtitle: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#6B7280',
-    marginBottom: 4,
-  },
-  vehicleStatus: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#10B981',
-  },
-  vehicleButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  vehicleButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
   },
 });

@@ -9,16 +9,20 @@ const snapshot = (user) => user && ({
 const auditLogService = {
   // Fail-open by design: a logging hiccup must never block the admin
   // action it's recording (this app is live, no room for that surface).
-  record: async ({ action, actorUser, targetUser, changes, reason }) => {
+  // actorUser may be a real User document, or -- for actions with no
+  // authenticated account yet, e.g. a failed login against an unknown
+  // email -- a plain object carrying only what's known (e.g. { email }).
+  record: async ({ action, actorUser, targetUser, changes, reason, ip }) => {
     try {
       await AuditLog.create({
         action,
-        actor: actorUser.id || actorUser._id,
+        actor: actorUser?.id || actorUser?._id || null,
         actorSnapshot: snapshot(actorUser),
         target: targetUser ? (targetUser.id || targetUser._id) : null,
         targetSnapshot: snapshot(targetUser),
         changes: changes || {},
-        reason
+        reason,
+        ip: ip || null
       });
     } catch (error) {
       console.error('Audit log write failed (non-fatal):', error.message);

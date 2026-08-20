@@ -16,13 +16,16 @@ const auditLogSchema = new mongoose.Schema({
       'ROLE_CHANGED', 'USER_CREATED', 'USER_BLOCKED', 'USER_UNBLOCKED', 'USER_DELETED',
       'EXPENSE_ADDED', 'EXPENSE_DELETED',
       'PROMO_CODE_CREATED', 'PROMO_CODE_UPDATED', 'PROMO_CODE_DELETED',
-      'SUPPORT_TICKET_RESOLVED', 'TECHNICIAN_ASSIGNED', 'AI_ASSISTED_ORDER_PLACED'
+      'SUPPORT_TICKET_RESOLVED', 'TECHNICIAN_ASSIGNED', 'AI_ASSISTED_ORDER_PLACED',
+      'LOGIN_FAILED', 'DISPATCH_OVERRIDE', 'DEVICE_CALIBRATION_CHANGED', 'DEVICE_REMOVED'
     ]
   },
+  // Not required: a failed login against a nonexistent email has no real
+  // user to reference, only the actorSnapshot's captured email.
   actor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
   },
   actorSnapshot: userSnapshotSchema,
   target: {
@@ -40,6 +43,13 @@ const auditLogSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [500, 'Reason cannot exceed 500 characters']
+  },
+  // SRS §20: "IP address may be stored where legally and technically
+  // appropriate." Populated when the caller has a request context (login,
+  // dispatch overrides); left null for internal/system-triggered actions.
+  ip: {
+    type: String,
+    default: null
   },
   createdAt: {
     type: Date,

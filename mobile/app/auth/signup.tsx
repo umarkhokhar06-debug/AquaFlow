@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -11,18 +10,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  Mail,
-  Home,
-  MapPin,
-  User,
-  Lock,
-  Eye,
-  EyeOff,
-} from 'lucide-react-native';
+import { ArrowLeft, Mail, Home, MapPin, User, Lock } from 'lucide-react-native';
 import { authAPI } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
+import { Button, TextField } from '../components/ui';
+import { colors, radius, spacing, typography } from '@/theme';
 
 export default function SignupScreen() {
   const [formData, setFormData] = useState({
@@ -36,8 +28,6 @@ export default function SignupScreen() {
     portion: 'upper' as 'upper' | 'lower',
     address: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -45,49 +35,35 @@ export default function SignupScreen() {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
 
+  const showError = (message: string) => {
+    setAlertTitle('Error');
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
+
   const handleSignup = async () => {
-    // Basic validation
-    if (
-      !formData.name.trim() ||
-      !formData.email.trim() ||
-      !formData.password.trim() ||
-      !formData.confirmPassword.trim()
-    ) {
-      setAlertTitle('Error');
-      setAlertMessage('Please fill in all required fields');
-      setShowAlert(true);
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim() || !formData.confirmPassword.trim()) {
+      showError('Please fill in all required fields');
       return;
     }
 
-    if (
-      !formData.fullName.trim() ||
-      !formData.houseNumber.trim() ||
-      !formData.address.trim()
-    ) {
-      setAlertTitle('Error');
-      setAlertMessage('Please fill in all fields');
-      setShowAlert(true);
+    if (!formData.fullName.trim() || !formData.houseNumber.trim() || !formData.address.trim()) {
+      showError('Please fill in all fields');
       return;
     }
 
     if (!formData.email.includes('@')) {
-      setAlertTitle('Error');
-      setAlertMessage('Please enter a valid email address');
-      setShowAlert(true);
+      showError('Please enter a valid email address');
       return;
     }
 
     if (formData.password.length < 6) {
-      setAlertTitle('Error');
-      setAlertMessage('Password must be at least 6 characters');
-      setShowAlert(true);
+      showError('Password must be at least 6 characters');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setAlertTitle('Error');
-      setAlertMessage('Passwords do not match');
-      setShowAlert(true);
+      showError('Passwords do not match');
       return;
     }
 
@@ -111,8 +87,7 @@ export default function SignupScreen() {
         setAlertTitle('Success');
         setAlertMessage('Account created successfully! Please sign in.');
         setShowAlert(true);
-        
-        // Reset form data
+
         setFormData({
           userType: 'customer',
           name: '',
@@ -124,43 +99,19 @@ export default function SignupScreen() {
           portion: 'upper',
           address: '',
         });
-        setShowPassword(false);
-        setShowConfirmPassword(false);
-        
-        // Navigate to login after a short delay
+
         setTimeout(() => {
           router.replace('/auth/login');
         }, 2000);
       } else {
-        setAlertTitle('Error');
-        setAlertMessage(response.message || 'Failed to create account');
-        setShowAlert(true);
+        showError(response.message || 'Failed to create account');
       }
     } catch (error) {
-      let message = 'An error occurred while creating account';
-      if (error instanceof Error) {
-        message = error.message;
-      }
-      setAlertTitle('Error');
-      setAlertMessage(message);
-      setShowAlert(true);
+      const message = error instanceof Error ? error.message : 'An error occurred while creating account';
+      showError(message);
     } finally {
       setIsLoading(false);
     }
-
-    // TODO: Reset form data after successful signup
-    // setFormData({
-    //   fullName: '',
-    //   email: '',
-    //   password: '',
-    //   confirmPassword: '',
-    //   houseNumber: '',
-    //   portion: 'upper',
-    //   area: '',
-    // });
-    // setShowPassword(false);
-    // setShowConfirmPassword(false);
-    // setIsLoading(false);
   };
 
   const updateFormData = (field: string, value: string) => {
@@ -168,198 +119,124 @@ export default function SignupScreen() {
   };
 
   return (
-    <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.background}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-        >
+    <LinearGradient colors={[colors.primary[500], colors.primary[700]]} style={styles.background}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <ArrowLeft size={24} color="#FFFFFF" />
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <ArrowLeft size={24} color={colors.neutral[0]} />
             </TouchableOpacity>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join AquaDispatch today</Text>
+            <Text style={styles.subtitle}>Join AquaFlow today</Text>
           </View>
 
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <User size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Name"
-                placeholderTextColor="#999999"
-                value={formData.name}
-                onChangeText={(value) => updateFormData('name', value)}
-                autoCapitalize="words"
-              />
-            </View>
+            <TextField
+              icon={User}
+              label="Display Name"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              placeholder="What should we call you?"
+              value={formData.name}
+              onChangeText={(value) => updateFormData('name', value)}
+              autoCapitalize="words"
+            />
 
-            <View style={styles.inputContainer}>
-              <User size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Full Name"
-                placeholderTextColor="#999999"
-                value={formData.fullName}
-                onChangeText={(value) => updateFormData('fullName', value)}
-                autoCapitalize="words"
-              />
-            </View>
+            <TextField
+              icon={User}
+              label="Full Name"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              placeholder="As it should appear on deliveries"
+              value={formData.fullName}
+              onChangeText={(value) => updateFormData('fullName', value)}
+              autoCapitalize="words"
+            />
 
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#999999"
-                value={formData.email}
-                onChangeText={(value) => updateFormData('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
+            <TextField
+              icon={Mail}
+              label="Email Address"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChangeText={(value) => updateFormData('email', value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#999999"
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666666" />
-                ) : (
-                  <Eye size={20} color="#666666" />
-                )}
-              </TouchableOpacity>
-            </View>
+            <TextField
+              icon={Lock}
+              label="Password"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              placeholder="At least 6 characters"
+              value={formData.password}
+              onChangeText={(value) => updateFormData('password', value)}
+              secureToggle
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#999999"
-                value={formData.confirmPassword}
-                onChangeText={(value) =>
-                  updateFormData('confirmPassword', value)
-                }
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#666666" />
-                ) : (
-                  <Eye size={20} color="#666666" />
-                )}
-              </TouchableOpacity>
-            </View>
+            <TextField
+              icon={Lock}
+              label="Confirm Password"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              placeholder="Re-enter your password"
+              value={formData.confirmPassword}
+              onChangeText={(value) => updateFormData('confirmPassword', value)}
+              secureToggle
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-            <View style={styles.inputContainer}>
-              <Home size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="House Number"
-                placeholderTextColor="#999999"
-                value={formData.houseNumber}
-                onChangeText={(value) => updateFormData('houseNumber', value)}
-              />
-            </View>
+            <TextField
+              icon={Home}
+              label="House Number"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              value={formData.houseNumber}
+              onChangeText={(value) => updateFormData('houseNumber', value)}
+            />
 
             <View style={styles.portionContainer}>
               <Text style={styles.portionLabel}>Portion Type</Text>
               <View style={styles.portionButtons}>
                 <TouchableOpacity
-                  style={[
-                    styles.portionButton,
-                    formData.portion === 'upper' && styles.portionButtonActive,
-                  ]}
+                  style={[styles.portionButton, formData.portion === 'upper' && styles.portionButtonActive]}
                   onPress={() => updateFormData('portion', 'upper')}
                 >
-                  <Text
-                    style={[
-                      styles.portionButtonText,
-                      formData.portion === 'upper' &&
-                        styles.portionButtonTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.portionButtonText, formData.portion === 'upper' && styles.portionButtonTextActive]}>
                     Upper Portion
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[
-                    styles.portionButton,
-                    formData.portion === 'lower' && styles.portionButtonActive,
-                  ]}
+                  style={[styles.portionButton, formData.portion === 'lower' && styles.portionButtonActive]}
                   onPress={() => updateFormData('portion', 'lower')}
                 >
-                  <Text
-                    style={[
-                      styles.portionButtonText,
-                      formData.portion === 'lower' &&
-                        styles.portionButtonTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.portionButtonText, formData.portion === 'lower' && styles.portionButtonTextActive]}>
                     Lower Portion
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.inputContainer}>
-              <MapPin size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Address"
-                placeholderTextColor="#999999"
-                value={formData.address}
-                onChangeText={(value) => updateFormData('address', value)}
-                autoCapitalize="words"
-              />
-            </View>
+            <TextField
+              icon={MapPin}
+              label="Address"
+              labelColor="rgba(255, 255, 255, 0.85)"
+              value={formData.address}
+              onChangeText={(value) => updateFormData('address', value)}
+              autoCapitalize="words"
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.signupButton,
-                isLoading && styles.signupButtonDisabled,
-              ]}
+            <Button
+              label={isLoading ? 'Creating Account...' : 'Create Account'}
               onPress={handleSignup}
-              disabled={isLoading}
-            >
-              <Text style={styles.signupButtonText}>
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </Text>
-            </TouchableOpacity>
+              loading={isLoading}
+              variant="secondary"
+              size="lg"
+              style={styles.signupButton}
+            />
 
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={() => router.push('/auth/login')}
-            >
-              <Text style={styles.loginButtonText}>
-                Already have an account? Sign In
-              </Text>
+            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
+              <Text style={styles.loginButtonText}>Already have an account? Sign In</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -386,122 +263,81 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 60,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxl + spacing.sm,
   },
   backButton: {
     position: 'absolute',
-    left: 24,
+    left: spacing.xxl,
     top: 65,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontFamily: typography.h1.fontFamily,
+    fontSize: typography.h1.fontSize,
+    color: colors.neutral[0],
+    marginBottom: spacing.sm,
   },
   subtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   form: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#333333',
-  },
-  eyeIcon: {
-    padding: 4,
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.xxxl + spacing.sm,
   },
   portionContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   portionLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-    marginBottom: 12,
+    fontFamily: typography.label.fontFamily,
+    fontSize: 14,
+    color: colors.neutral[0],
+    marginBottom: spacing.md,
   },
   portionButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   portionButton: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   portionButtonActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
   },
   portionButtonText: {
+    fontFamily: typography.label.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
+    color: colors.neutral[0],
   },
   portionButtonTextActive: {
-    color: '#007AFF',
+    color: colors.primary[600],
   },
   signupButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  signupButtonDisabled: {
-    opacity: 0.7,
-  },
-  signupButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    backgroundColor: colors.neutral[0],
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
   loginButton: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: spacing.md,
   },
   loginButtonText: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
 });

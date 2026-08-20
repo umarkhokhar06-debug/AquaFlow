@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const Device = require('../models/Device');
 const User = require('../models/User');
+const auditLogService = require('./auditLogService');
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -56,7 +57,12 @@ class DeviceService {
       tankCapacityLiters: tankCapacityLiters || 1000,
       lowWaterThreshold: typeof lowWaterThreshold === 'number' ? lowWaterThreshold : 20,
       isSimulated: !!isSimulated,
-      createdBy
+      createdBy,
+      history: [{
+        event: 'installed',
+        by: createdBy,
+        details: { houseLabel, calibration: { tank_depth, tank_full_distance } }
+      }]
     });
 
     await device.save();
@@ -119,7 +125,7 @@ class DeviceService {
     return devices;
   }
 
-  async updateDevice(id, updates) {
+  async updateDevice(id, updates, actorUser, ip) {
     const device = await Device.findById(id);
     if (!device) {
       const err = new Error('Device not found');
@@ -133,9 +139,17 @@ class DeviceService {
     if (houseLabel !== undefined) device.houseLabel = houseLabel;
     if (tankCapacityLiters !== undefined) device.tankCapacityLiters = tankCapacityLiters;
     if (lowWaterThreshold !== undefined) device.lowWaterThreshold = lowWaterThreshold;
+
+    const previousStatus = device.status;
+    const statusChanging = status !== undefined && status !== previousStatus;
     if (status !== undefined) device.status = status;
 
-    if (tank_depth !== undefined || tank_full_distance !== undefined) {
+    const calibrationChanging = tank_depth !== undefined || tank_full_distance !== undefined;
+    const previousCalibration = calibrationChanging
+      ? { tank_depth: device.calibration.tank_depth, tank_full_distance: device.calibration.tank_full_distance }
+      : null;
+
+    if (calibrationChanging) {
       device.calibration = {
         tank_depth: tank_depth !== undefined ? tank_depth : device.calibration.tank_depth,
         tank_full_distance: tank_full_distance !== undefined ? tank_full_distance : device.calibration.tank_full_distance
@@ -152,17 +166,74 @@ class DeviceService {
       device.owner = owner._id;
     }
 
+    const actorId = actorUser?.id || actorUser?._id || null;
+    if (calibrationChanging) {
+      device.history.push({
+        event: 'calibrated',
+        by: actorId,
+        details: { before: previousCalibration, after: device.calibration }
+      });
+    }
+    if (statusChanging) {
+      device.history.push({
+        event: 'status_changed',
+        by: actorId,
+        details: { before: previousStatus, after: status }
+      });
+    }
+
     await device.save();
+
+    // Calibration overwrites the tank's remaining-water math for every
+    // future reading -- worth a permanent record of who changed it and
+    // from/to what, unlike the other plain-field edits above.
+    if (calibrationChanging && actorUser) {
+      await auditLogService.record({
+        action: 'DEVICE_CALIBRATION_CHANGED',
+        actorUser,
+        targetUser: null,
+        changes: {
+          deviceId: device._id,
+          deviceIdentifier: device.deviceId,
+          before: previousCalibration,
+          after: { tank_depth: device.calibration.tank_depth, tank_full_distance: device.calibration.tank_full_distance }
+        },
+        ip
+      });
+    }
+
     return this.getDeviceById(device._id);
   }
 
-  async deleteDevice(id) {
+  async deleteDevice(id, actorUser, ip) {
     const device = await Device.findByIdAndDelete(id);
     if (!device) {
       const err = new Error('Device not found');
       err.status = 404;
       throw err;
     }
+
+    // The device document (and its embedded install/calibration history)
+    // is gone after this -- AuditLog is the only place that record survives,
+    // so capture a full snapshot rather than just the id (SRS §8:
+    // "replacement ... history must be retained").
+    if (actorUser) {
+      await auditLogService.record({
+        action: 'DEVICE_REMOVED',
+        actorUser,
+        targetUser: null,
+        changes: {
+          deviceId: device._id,
+          deviceIdentifier: device.deviceId,
+          houseLabel: device.houseLabel,
+          owner: device.owner,
+          calibration: device.calibration,
+          history: device.history
+        },
+        ip
+      });
+    }
+
     return device;
   }
 

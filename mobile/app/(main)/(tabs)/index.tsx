@@ -6,35 +6,33 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Alert,
-  Image,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DrawerActions } from '@react-navigation/native';
 import { useNavigation } from '@react-navigation/native';
-import { 
-  Menu, 
-  Bell, 
-  Droplets, 
-  Truck, 
-  Clock, 
-  TrendingUp, 
-  Zap, 
-  CircleCheck as CheckCircle, 
+import {
+  Droplets,
+  Truck,
+  Clock,
+  TrendingUp,
+  Zap,
   ArrowRight,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react-native';
-import { globalstyles } from '@/app/commans/style';
 import HeaderComponent from '@/app/components/Header';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
+import CustomAlert from '@/app/components/CustomAlert';
+import { Card, Badge, Button } from '@/app/components/ui';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
 import { Product } from '@/types/order';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
+import { colors, radius, spacing, typography } from '@/theme';
 
 interface SelectedAddress {
   id: string;
@@ -50,6 +48,34 @@ interface SelectedAddress {
   longitude?: number;
 }
 
+interface DeliverySlot {
+  label: string;
+  date: Date | null; // null = as soon as possible
+}
+
+function getDeliverySlots(): DeliverySlot[] {
+  const now = new Date();
+  const slots: DeliverySlot[] = [{ label: 'As soon as possible', date: null }];
+
+  const todayEvening = new Date(now);
+  todayEvening.setHours(18, 0, 0, 0);
+  if (todayEvening.getTime() - now.getTime() > 60 * 60 * 1000) {
+    slots.push({ label: 'Today, 6–8 PM', date: todayEvening });
+  }
+
+  const tomorrowMorning = new Date(now);
+  tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);
+  tomorrowMorning.setHours(9, 0, 0, 0);
+  slots.push({ label: 'Tomorrow, 9–11 AM', date: tomorrowMorning });
+
+  const tomorrowEvening = new Date(now);
+  tomorrowEvening.setDate(tomorrowEvening.getDate() + 1);
+  tomorrowEvening.setHours(18, 0, 0, 0);
+  slots.push({ label: 'Tomorrow, 6–8 PM', date: tomorrowEvening });
+
+  return slots;
+}
+
 export default function DashboardScreen() {
   const [tankLevel, setTankLevel] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -57,8 +83,11 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [ordering, setOrdering] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showTimingModal, setShowTimingModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<DeliverySlot | null>(null);
+  const [resultAlert, setResultAlert] = useState<{ title: string; message: string; onClose?: () => void } | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -66,50 +95,40 @@ export default function DashboardScreen() {
 
   const handleServiceSelect = async (product: Product) => {
     if (!user) {
-      Alert.alert('Error', 'Please login to place an order');
+      setResultAlert({ title: 'Please log in', message: 'You need to be logged in to place an order.' });
       return;
     }
 
     if (!product.availability) {
-      Alert.alert('Unavailable', 'This service is currently unavailable');
+      setResultAlert({ title: 'Unavailable', message: 'This service is currently unavailable.' });
       return;
     }
 
-    const price = `Rs. ${product.unitPrice.toLocaleString()}`;
-    
-    Alert.alert(
-      'Order Confirmation',
-      `You selected ${product.name} (${product.size}) for ${price}. Would you like to proceed?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Order Now', 
-          onPress: () => {
-            setSelectedProduct(product);
-            setShowAddressModal(true);
-          } 
-        }
-      ]
-    );
+    setSelectedProduct(product);
+    setShowTimingModal(true);
+  };
+
+  const handleSlotSelected = (slot: DeliverySlot) => {
+    setSelectedSlot(slot);
+    setShowTimingModal(false);
+    setShowAddressModal(true);
   };
 
   const handleAddressSelected = (address: SelectedAddress) => {
     setSelectedAddress(address);
     setShowAddressModal(false);
-    
-    // Proceed with order after address is selected
+
     if (selectedProduct) {
-      handleDirectOrder(selectedProduct, address);
+      handleDirectOrder(selectedProduct, address, selectedSlot);
     }
   };
 
-  const handleDirectOrder = async (product: Product, address: SelectedAddress) => {
+  const handleDirectOrder = async (product: Product, address: SelectedAddress, slot: DeliverySlot | null) => {
     if (!user) return;
 
     setOrdering(product.type);
-    
+
     try {
-      // Create order with selected address
       const orderData = {
         items: [{ type: product.type, quantity: 1 }],
         deliveryAddress: {
@@ -120,47 +139,47 @@ export default function DashboardScreen() {
           phoneNumber: address.phoneNumber,
           specialInstructions: address.landmark ? `Landmark: ${address.landmark}` : 'Please deliver to the address provided',
           latitude: address.latitude,
-          longitude: address.longitude
+          longitude: address.longitude,
         },
         paymentMethod: 'cash' as const,
-        notes: `Direct order for ${product.name}`
+        notes: `Direct order for ${product.name}`,
+        ...(slot?.date
+          ? { deliveryType: 'scheduled' as const, scheduledFor: slot.date.toISOString() }
+          : { deliveryType: 'immediate' as const }),
       };
 
       const order = await orderAPI.createOrder(orderData);
-      
-      Alert.alert(
-        'Order Placed Successfully!',
-        `Your order #${order.orderNumber} has been placed. Total: Rs. ${order.totalAmount.toLocaleString()}`,
-        [
-          { text: 'View Orders', onPress: () => router.push('/(main)/(tabs)/orders') },
-          { text: 'Continue Shopping', style: 'cancel' }
-        ]
-      );
+      const whenText = slot?.date ? ` for ${slot.label}` : '';
+
+      setResultAlert({
+        title: 'Order placed',
+        message: `Your order #${order.orderNumber} has been placed${whenText}. Total: Rs. ${order.totalAmount.toLocaleString()}`,
+        onClose: () => router.push('/(main)/(tabs)/orders'),
+      });
     } catch (error) {
       console.error('Order error:', error);
-      Alert.alert(
-        'Order Failed',
-        error instanceof Error ? error.message : 'Failed to place order. Please try again.'
-      );
+      setResultAlert({
+        title: 'Order failed',
+        message: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
+      });
     } finally {
       setOrdering(null);
       setSelectedProduct(null);
+      setSelectedSlot(null);
     }
   };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        // Fetch user data
+
         const userData = await storage.getUserData();
         setUser(userData?.user || null);
-        
-        // Fetch products
+
         const productsData = await orderAPI.getProducts();
         setProducts(productsData);
-        
-        // Fetch tank level for the user's first accessible device
+
         try {
           const devicesRes = await getMyDevices();
           const firstDevice = devicesRes.success ? devicesRes.devices[0] : null;
@@ -175,37 +194,31 @@ export default function DashboardScreen() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Failed to load data. Please try again.');
+        setResultAlert({ title: 'Something went wrong', message: 'Failed to load data. Please try again.' });
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
-    
-    // Connect to socket
-    connect().catch(error => {
+
+    connect().catch((error) => {
       console.error('Failed to connect to socket:', error);
     });
   }, []);
 
-  // Set up real-time listeners
   useEffect(() => {
     if (!isConnected) return;
 
-    // Handle system notifications
     const handleSystemNotification = (data: any) => {
-      console.log('System notification received:', data);
       notificationService.handleSocketNotification(data);
     };
 
-    // Register listener
     onSystemNotification(handleSystemNotification);
 
-    // Cleanup listener on unmount
     return () => {
-      // Note: We don't have removeSystemNotificationListener in the current hook
-      // This would need to be added to the hook if we want proper cleanup
+      // Note: the useSocket hook doesn't expose a remove-listener for
+      // system notifications yet -- unchanged from prior behavior.
     };
   }, [isConnected, onSystemNotification]);
 
@@ -217,13 +230,13 @@ export default function DashboardScreen() {
     router.push('/(main)/notifications');
   };
 
-  const ServiceCard = ({ 
+  const ServiceCard = ({
     product,
-    time, 
-    icon, 
+    time,
+    icon,
     color,
-    onPress 
-  }: { 
+    onPress,
+  }: {
     product: Product;
     time: string;
     icon: React.ReactNode;
@@ -232,131 +245,113 @@ export default function DashboardScreen() {
   }) => {
     const isOrdering = ordering === product.type;
     const price = `Rs. ${product.unitPrice.toLocaleString()}`;
-    
+
     return (
-      <TouchableOpacity 
-        style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]} 
+      <TouchableOpacity
         onPress={product.availability ? () => onPress(product) : undefined}
         disabled={!product.availability || isOrdering}
+        activeOpacity={0.8}
       >
-        <View style={styles.serviceContent}>
-          <View style={[styles.serviceIcon, { backgroundColor: color + '20' }]}>
-            {icon}
-          </View>
-          <View style={styles.serviceInfo}>
-            <Text style={styles.serviceTitle}>{product.name}</Text>
-            <Text style={styles.serviceVolume}>{product.size}</Text>
-            <View style={styles.serviceDetails}>
-              <Text style={styles.servicePrice}>{price}</Text>
-              <Text style={styles.serviceTime}>• {time}</Text>
+        <Card style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]}>
+          <View style={styles.serviceContent}>
+            <View style={[styles.serviceIcon, { backgroundColor: color + '1A' }]}>{icon}</View>
+            <View style={styles.serviceInfo}>
+              <Text style={styles.serviceTitle}>{product.name}</Text>
+              <Text style={styles.serviceVolume}>{product.size}</Text>
+              <View style={styles.serviceDetails}>
+                <Text style={styles.servicePrice}>{price}</Text>
+                <Text style={styles.serviceTime}>• {time}</Text>
+              </View>
+            </View>
+            <View style={styles.serviceRight}>
+              <Badge
+                label={isOrdering ? 'Ordering...' : product.availability ? 'Available' : 'Unavailable'}
+                tone={product.availability ? 'success' : 'danger'}
+              />
+              {product.availability && !isOrdering && <ArrowRight size={20} color={colors.neutral[500]} />}
+              {isOrdering && <ActivityIndicator size="small" color={colors.primary[500]} />}
             </View>
           </View>
-          <View style={styles.serviceRight}>
-            <View style={[
-              styles.availabilityBadge, 
-              { backgroundColor: product.availability ? '#10B981' : '#EF4444' }
-            ]}>
-              <Text style={styles.availabilityText}>
-                {isOrdering ? 'Ordering...' : product.availability ? 'Available' : 'Unavailable'}
-              </Text>
-            </View>
-            {product.availability && !isOrdering && <ArrowRight size={20} color="#6B7280" />}
-            {isOrdering && <ActivityIndicator size="small" color="#007AFF" />}
-          </View>
-        </View>
+        </Card>
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={[globalstyles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Header */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.neutral[0]} />
+
       <HeaderComponent openDrawer={openDrawer} openNotifications={openNotifications} />
 
-      <ScrollView 
-        style={styles.content} 
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Welcome Section */}
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>Welcome back, {user?.name || 'Guest'}!</Text>
-          <Text style={styles.welcomeSubtitle}>Your water tank is at {tankLevel !== null ? tankLevel : 'N/A'}% capacity</Text>
+          <Text style={styles.welcomeSubtitle}>
+            Your water tank is at{' '}
+            <Text style={styles.welcomeNumeric}>{tankLevel !== null ? `${tankLevel}%` : 'N/A'}</Text> capacity
+          </Text>
         </View>
 
-        {/* Low Water Alert */}
         {tankLevel !== null && tankLevel <= 30 && (
-          <View style={styles.alertCard}>
-            <View style={styles.alertIcon}>
-              <AlertTriangle size={20} color="#F59E0B" />
+          <Card style={styles.alertCard}>
+            <View style={styles.alertRow}>
+              <View style={styles.alertIconCircle}>
+                <AlertTriangle size={20} color={colors.warning[700]} />
+              </View>
+              <View style={styles.alertContent}>
+                <Text style={styles.alertTitle}>Low Water Level</Text>
+                <Text style={styles.alertText}>Your tank is running low. Consider ordering a refill.</Text>
+              </View>
+              <Button
+                label="Order Now"
+                variant="warning"
+                size="sm"
+                onPress={() => {
+                  if (products.length > 0) {
+                    const smallTanker = products.find((p) => p.type === 'small_tanker') || products[0];
+                    handleServiceSelect(smallTanker);
+                  }
+                }}
+              />
             </View>
-            <View style={styles.alertContent}>
-              <Text style={styles.alertTitle}>Low Water Level</Text>
-              <Text style={styles.alertText}>
-                Your tank is running low. Consider ordering a refill.
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.orderNowButton}
-              onPress={() => {
-                // Trigger auto-order flow
-                if (products.length > 0) {
-                  const smallTanker = products.find(p => p.type === 'small_tanker') || products[0];
-                  handleServiceSelect(smallTanker);
-                }
-              }}
-            >
-              <Text style={styles.orderNowButtonText}>Order Now</Text>
-            </TouchableOpacity>
-          </View>
+          </Card>
         )}
 
-        {/* Choose Your Service */}
         <View style={styles.servicesSection}>
           <Text style={styles.sectionTitle}>Choose Your Service</Text>
-          
+
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#007AFF" />
+              <ActivityIndicator size="large" color={colors.primary[500]} />
               <Text style={styles.loadingText}>Loading services...</Text>
             </View>
           ) : (
             products.map((product) => {
               let time = '15-30 min';
-              let icon = <Droplets size={20} color="#8B5CF6" />;
-              let color = '#8B5CF6';
-              
+              let icon = <Droplets size={20} color={colors.info[500]} />;
+              let color: string = colors.info[500];
+
               if (product.type === 'large_tanker') {
                 time = '45-60 min';
-                icon = <Truck size={24} color="#007AFF" />;
-                color = '#007AFF';
+                icon = <Truck size={24} color={colors.primary[500]} />;
+                color = colors.primary[500];
               } else if (product.type === 'small_tanker') {
                 time = '30-45 min';
-                icon = <Truck size={20} color="#10B981" />;
-                color = '#10B981';
+                icon = <Truck size={20} color={colors.success[500]} />;
+                color = colors.success[500];
               }
-              
+
               return (
-                <ServiceCard
-                  key={product.type}
-                  product={product}
-                  time={time}
-                  icon={icon}
-                  color={color}
-                  onPress={handleServiceSelect}
-                />
+                <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} onPress={handleServiceSelect} />
               );
             })
           )}
         </View>
 
-        {/* Express Delivery */}
-        <View style={styles.expressSection}>
-          <TouchableOpacity style={styles.expressCard}>
+        <Card style={styles.expressCard}>
+          <View style={styles.expressRow}>
             <View style={styles.expressIcon}>
-              <Zap size={24} color="#F59E0B" />
+              <Zap size={24} color={colors.warning[500]} />
             </View>
             <View style={styles.expressContent}>
               <Text style={styles.expressTitle}>Express Delivery</Text>
@@ -364,55 +359,99 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.expressPricing}>
               <Text style={styles.expressPriceText}>+Rs. 300</Text>
-              <Text style={styles.expressBadge}>Premium</Text>
+              <Badge label="Coming soon" tone="warning" />
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </Card>
 
-        {/* Auto-Order Schedule */}
-        <View style={styles.scheduleSection}>
-          <TouchableOpacity 
-            style={styles.scheduleCard}
-            onPress={() => router.push('/(main)/schedule')}
-          >
-            <View style={styles.scheduleIcon}>
-              <Clock size={24} color="#10B981" />
+        <TouchableOpacity onPress={() => router.push('/(main)/schedule')} activeOpacity={0.8}>
+          <Card style={styles.scheduleCard}>
+            <View style={styles.scheduleRow}>
+              <View style={styles.scheduleIcon}>
+                <Clock size={24} color={colors.success[500]} />
+              </View>
+              <View style={styles.scheduleContent}>
+                <Text style={styles.scheduleTitle}>Auto-Order Schedule</Text>
+                <Text style={styles.scheduleSubtitle}>Automatically order when tank level drops</Text>
+              </View>
+              <ArrowRight size={20} color={colors.success[500]} />
             </View>
-            <View style={styles.scheduleContent}>
-              <Text style={styles.scheduleTitle}>Auto-Order Schedule</Text>
-              <Text style={styles.scheduleSubtitle}>Automatically order when tank level drops</Text>
-            </View>
-            <ArrowRight size={20} color="#6B7280" />
-          </TouchableOpacity>
-        </View>
+          </Card>
+        </TouchableOpacity>
 
-        {/* Recommended for You */}
         <View style={styles.recommendedSection}>
           <View style={styles.recommendedHeader}>
             <Text style={styles.sectionTitle}>Recommended for You</Text>
-            <TrendingUp size={20} color="#007AFF" />
+            <TrendingUp size={20} color={colors.primary[500]} />
           </View>
-          
-          <View style={styles.recommendedCard}>
-            <View style={styles.recommendedContent}>
-              <Text style={styles.recommendedTitle}>Weekly Large Tanker</Text>
-              <Text style={styles.recommendedSubtitle}>Based on your usage pattern</Text>
+
+          <Card style={styles.recommendedCard}>
+            <View style={styles.recommendedRow}>
+              <View style={styles.recommendedContent}>
+                <Text style={styles.recommendedTitle}>Weekly Large Tanker</Text>
+                <Text style={styles.recommendedSubtitle}>Based on your usage pattern</Text>
+              </View>
+              <Button label="Schedule" variant="primary" size="sm" onPress={() => router.push('/(main)/schedule')} />
             </View>
-            <TouchableOpacity style={styles.scheduleButton}>
-              <Text style={styles.scheduleButtonText}>Schedule</Text>
-            </TouchableOpacity>
-          </View>
+          </Card>
         </View>
       </ScrollView>
 
-      {/* Address Selection Modal */}
-      <AddressSelectionModal 
+      <AddressSelectionModal
         visible={showAddressModal}
         onClose={() => {
           setShowAddressModal(false);
           setSelectedProduct(null);
+          setSelectedSlot(null);
         }}
         onSelectAddress={handleAddressSelected}
+      />
+
+      <Modal
+        visible={showTimingModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowTimingModal(false);
+          setSelectedProduct(null);
+        }}
+      >
+        <View style={styles.timingModalOverlay}>
+          <View style={styles.timingModalCard}>
+            <Text style={styles.timingModalTitle}>When should we deliver?</Text>
+            {selectedProduct && (
+              <Text style={styles.timingModalSubtitle}>
+                {selectedProduct.name} ({selectedProduct.size})
+              </Text>
+            )}
+            {getDeliverySlots().map((slot) => (
+              <TouchableOpacity key={slot.label} style={styles.timingSlot} onPress={() => handleSlotSelected(slot)}>
+                <Clock size={18} color={colors.success[500]} />
+                <Text style={styles.timingSlotText}>{slot.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.timingCancelButton}
+              onPress={() => {
+                setShowTimingModal(false);
+                setSelectedProduct(null);
+              }}
+            >
+              <Text style={styles.timingCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomAlert
+        visible={!!resultAlert}
+        title={resultAlert?.title || ''}
+        message={resultAlert?.message || ''}
+        onClose={() => {
+          const onClose = resultAlert?.onClose;
+          setResultAlert(null);
+          onClose?.();
+        }}
       />
     </View>
   );
@@ -421,136 +460,78 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxxl - spacing.sm,
   },
   welcomeSection: {
-    paddingVertical: 24,
+    paddingVertical: spacing.xxl,
   },
   welcomeTitle: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: '#1F2937',
-    marginBottom: 8,
+    fontFamily: typography.h1.fontFamily,
+    fontSize: typography.h1.fontSize,
+    color: colors.neutral[900],
+    marginBottom: spacing.sm,
   },
   welcomeSubtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
+    color: colors.neutral[500],
+  },
+  welcomeNumeric: {
+    fontFamily: typography.h3.fontFamily,
+    color: colors.primary[600],
   },
   alertCard: {
+    backgroundColor: colors.warning[50],
+    borderColor: colors.warning[100],
+    borderLeftWidth: 4,
+    borderLeftColor: colors.warning[500],
+    marginBottom: spacing.xxl,
+  },
+  alertRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
   },
-  alertIcon: {
-    marginRight: 12,
+  alertIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.xl,
+    backgroundColor: colors.warning[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
   },
   alertContent: {
     flex: 1,
   },
   alertTitle: {
+    fontFamily: typography.h3.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#92400E',
+    color: colors.warning[700],
     marginBottom: 2,
   },
   alertText: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#92400E',
-  },
-  orderNowButton: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  orderNowButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    color: colors.warning[700],
   },
   servicesSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
-    marginBottom: 16,
+    fontFamily: typography.h2.fontFamily,
+    fontSize: typography.h2.fontSize,
+    color: colors.neutral[900],
+    marginBottom: spacing.lg,
   },
   serviceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: spacing.md,
   },
   serviceCardDisabled: {
     opacity: 0.6,
@@ -562,195 +543,209 @@ const styles = StyleSheet.create({
   serviceIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: radius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   serviceInfo: {
     flex: 1,
   },
   serviceTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   serviceVolume: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginBottom: 8,
+    color: colors.neutral[500],
+    marginBottom: spacing.sm,
   },
   serviceDetails: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   servicePrice: {
+    fontFamily: typography.numeric.fontFamily,
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: '#007AFF',
+    color: colors.primary[600],
   },
   serviceTime: {
+    fontFamily: typography.caption.fontFamily,
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginLeft: 8,
+    color: colors.neutral[500],
+    marginLeft: spacing.sm,
   },
   serviceRight: {
     alignItems: 'flex-end',
-    gap: 8,
-  },
-  availabilityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  availabilityText: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-  },
-  expressSection: {
-    marginBottom: 24,
+    gap: spacing.sm,
   },
   expressCard: {
+    backgroundColor: colors.warning[50],
+    borderColor: colors.warning[100],
+    marginBottom: spacing.xxl,
+  },
+  expressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
   },
   expressIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FEF3C7',
+    borderRadius: radius.xl,
+    backgroundColor: colors.warning[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   expressContent: {
     flex: 1,
   },
   expressTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#92400E',
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    color: colors.warning[700],
     marginBottom: 4,
   },
   expressSubtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#92400E',
+    color: colors.warning[700],
   },
-  scheduleSection: {
-    marginBottom: 24,
+  expressPricing: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  expressPriceText: {
+    fontFamily: typography.numeric.fontFamily,
+    fontSize: 14,
+    color: colors.warning[700],
   },
   scheduleCard: {
+    backgroundColor: colors.success[50],
+    borderColor: colors.success[100],
+    marginBottom: spacing.xxl,
+  },
+  scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
   },
   scheduleIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E0F2FE',
+    borderRadius: radius.xl,
+    backgroundColor: colors.neutral[0],
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: spacing.lg,
   },
   scheduleContent: {
     flex: 1,
   },
   scheduleTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#10B981',
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    color: colors.success[700],
     marginBottom: 4,
   },
   scheduleSubtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#10B981',
-  },
-  expressPricing: {
-    alignItems: 'flex-end',
-  },
-  expressPriceText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
-    color: '#92400E',
-    marginBottom: 4,
-  },
-  expressBadge: {
-    fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    color: colors.success[700],
   },
   recommendedSection: {
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   recommendedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   recommendedCard: {
+    backgroundColor: colors.neutral[50],
+    borderColor: colors.neutral[200],
+  },
+  recommendedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   recommendedContent: {
     flex: 1,
   },
   recommendedTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   recommendedSubtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-  },
-  scheduleButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  scheduleButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    color: colors.neutral[500],
   },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: spacing.xxxl + spacing.sm,
   },
   loadingText: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#6B7280',
-    marginTop: 12,
+    color: colors.neutral[500],
+    marginTop: spacing.md,
+  },
+  timingModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  timingModalCard: {
+    backgroundColor: colors.neutral[0],
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xxl,
+    paddingBottom: spacing.xxxl + spacing.sm,
+  },
+  timingModalTitle: {
+    fontFamily: typography.h2.fontFamily,
+    fontSize: typography.h2.fontSize,
+    color: colors.neutral[900],
+    marginBottom: 4,
+  },
+  timingModalSubtitle: {
+    fontFamily: typography.body.fontFamily,
+    fontSize: 14,
+    color: colors.neutral[500],
+    marginBottom: spacing.xl,
+  },
+  timingSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.success[50],
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg - 2,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm + 2,
+  },
+  timingSlotText: {
+    fontFamily: typography.body.fontFamily,
+    fontSize: 15,
+    color: colors.neutral[900],
+  },
+  timingCancelButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.xs,
+  },
+  timingCancelText: {
+    fontFamily: typography.h3.fontFamily,
+    fontSize: 15,
+    color: colors.neutral[500],
   },
 });

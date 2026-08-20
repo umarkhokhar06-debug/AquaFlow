@@ -7,6 +7,7 @@ const authService = require('../services/authService');
 const socketService = require('../services/socketService');
 const driverService = require('../services/driverService');
 const earningsService = require('../services/earningsService');
+const attendanceService = require('../services/attendanceService');
 const mongoose = require('mongoose');
 
 const driverAppController = {
@@ -865,6 +866,53 @@ const driverAppController = {
         success: false,
         message: 'Server error updating driver status'
       });
+    }
+  },
+
+  // ============ ATTENDANCE (SRS §5: "attendance/operational records") ============
+
+  clockIn: async (req, res) => {
+    try {
+      const { latitude, longitude } = req.body;
+      const location = (typeof latitude === 'number' && typeof longitude === 'number')
+        ? { latitude, longitude }
+        : undefined;
+      const record = await attendanceService.clockIn(req.user.id, location);
+      res.status(201).json({ success: true, message: 'Clocked in', attendance: record });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to clock in' });
+    }
+  },
+
+  clockOut: async (req, res) => {
+    try {
+      const { latitude, longitude } = req.body;
+      const location = (typeof latitude === 'number' && typeof longitude === 'number')
+        ? { latitude, longitude }
+        : undefined;
+      const record = await attendanceService.clockOut(req.user.id, location);
+      res.status(200).json({ success: true, message: 'Clocked out', attendance: record });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to clock out' });
+    }
+  },
+
+  getAttendanceStatus: async (req, res) => {
+    try {
+      const status = await attendanceService.getStatus(req.user.id);
+      res.status(200).json({ success: true, ...status });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch attendance status' });
+    }
+  },
+
+  getMyAttendance: async (req, res) => {
+    try {
+      const { from, to } = req.query;
+      const records = await attendanceService.getMyAttendance(req.user.id, { from, to });
+      res.status(200).json({ success: true, attendance: records });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch attendance history' });
     }
   }
 };

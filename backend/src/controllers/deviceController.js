@@ -75,7 +75,7 @@ class DeviceController {
   // Admin: update device details / reassign owner / recalibrate
   async updateDevice(req, res) {
     try {
-      const device = await deviceService.updateDevice(req.params.id, req.body);
+      const device = await deviceService.updateDevice(req.params.id, req.body, req.user, req.ip);
       res.status(200).json({ success: true, device });
     } catch (error) {
       res.status(error.status || 500).json({
@@ -88,7 +88,7 @@ class DeviceController {
   // Admin: remove a device
   async deleteDevice(req, res) {
     try {
-      await deviceService.deleteDevice(req.params.id);
+      await deviceService.deleteDevice(req.params.id, req.user, req.ip);
       res.status(200).json({ success: true, message: 'Device deleted' });
     } catch (error) {
       res.status(error.status || 500).json({

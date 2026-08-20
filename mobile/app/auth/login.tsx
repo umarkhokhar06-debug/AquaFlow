@@ -2,52 +2,48 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Droplets,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  User,
-  Truck,
-} from 'lucide-react-native';
+import { Droplets, Mail, Lock } from 'lucide-react-native';
 import { authAPI, storage } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
+import { Button, TextField } from '../components/ui';
+import { colors, radius, spacing, typography } from '@/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [userType, setUserType] = useState<'user' | 'driver'>('user');
   const router = useRouter();
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
 
+  const showError = (title: string, message: string) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+      showError('Missing information', 'Please enter both email and password');
       return;
     }
 
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showError('Invalid email', 'Please enter a valid email address');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      showError('Invalid password', 'Password must be at least 6 characters');
       return;
     }
 
@@ -57,48 +53,27 @@ export default function LoginScreen() {
         email: email.toLowerCase().trim(),
         password,
       });
-      
-      console.log('Login response:', response);
 
       if (response.success && response.token && response.user) {
         await storage.saveUserData(response.token, response.user);
-        
-        console.log('Login successful:', { token: response.token, user: response.user });
-        
-        // Reset form fields
+
         setEmail('');
         setPassword('');
-        setShowPassword(false);
         setIsLoading(false);
 
-        // Navigate based on user type
         if (response.user.userType === 'driver') {
           router.replace('/(driver)/(tabs)');
-        } 
-        else if (response.user.userType === 'customer') {
-          router.replace('/(main)/(tabs)');
-        }
-        // todos navigate to admin
-        else {
+        } else {
           router.replace('/(main)/(tabs)');
         }
       } else {
-        setAlertTitle('Error');
-        setAlertMessage(response.message || 'Login failed. Please try again.');
-        setShowAlert(true);
+        showError('Sign in failed', response.message || 'Please check your details and try again.');
         setIsLoading(false);
-        return;
       }
     } catch (error) {
-      let message = 'An error occurred while signing in';
-      if (error instanceof Error) {
-        message = error.message;
-      }
-      setAlertTitle('Error');
-      setAlertMessage(message);
-      setShowAlert(true);
+      const message = error instanceof Error ? error.message : 'An error occurred while signing in';
+      showError('Sign in failed', message);
       setIsLoading(false);
-      return;
     }
   };
 
@@ -106,197 +81,50 @@ export default function LoginScreen() {
     router.push('/auth/forgot-password');
   };
 
-  function loginAsCustomer(): void {
-    setEmail('customer@example.com');
-    setPassword('password123');
-    setUserType('user');
-    // TODO: Login Using hardcoded credentials for testing
-    // router.push('/(main)/(tabs)');
-    // handleLogin();
-  }
-
-  function loginAsDriver(): void {
-    setEmail('driver@example.com');
-    setPassword('password123');
-    setUserType('driver');
-    // TODO: Login Using hardcoded credentials for testing
-    // router.push('/(driver)/(tabs)');
-    // handleLogin();
-  }
-
   return (
-    <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.background}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+    <LinearGradient colors={[colors.primary[500], colors.primary[700]]} style={styles.background}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Droplets size={40} color="#FFFFFF" />
+              <Droplets size={40} color={colors.neutral[0]} />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to your account</Text>
           </View>
 
           <View style={styles.form}>
-            {/* User Type Selection For Testing */}
-            <View style={styles.userTypeContainer}>
-              <Text style={styles.userTypeLabel}>Login as Test User</Text>
-              <View style={styles.userTypeButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    userType === 'user' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => loginAsCustomer()}
-                >
-                  <User
-                    size={20}
-                    color={userType === 'user' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      userType === 'user' &&
-                        styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Customer
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    userType === 'driver' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => loginAsDriver()}
-                >
-                  <Truck
-                    size={20}
-                    color={userType === 'driver' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      userType === 'driver' && styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Driver
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            <TextField
+              icon={Mail}
+              placeholder="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextField
+              icon={Lock}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureToggle
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-            {/* User Type Selection */}
-            {/* <View style={styles.userTypeContainer}>
-              <Text style={styles.userTypeLabel}>Login as:</Text>
-              <View style={styles.userTypeButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    userType === 'user' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => setUserType('user')}
-                >
-                  <User
-                    size={20}
-                    color={userType === 'user' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      userType === 'user' &&
-                        styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Customer
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    userType === 'driver' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => setUserType('driver')}
-                >
-                  <Truck
-                    size={20}
-                    color={userType === 'driver' ? '#007AFF' : '#FFFFFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.userTypeButtonText,
-                      userType === 'driver' && styles.userTypeButtonTextActive,
-                    ]}
-                  >
-                    Driver
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View> */}
-
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#999999"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#999999"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666666" />
-                ) : (
-                  <Eye size={20} color="#666666" />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={handleForgotPassword}
-            >
+            <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.loginButton,
-                isLoading && styles.loginButtonDisabled,
-              ]}
+            <Button
+              label={isLoading ? 'Signing In...' : 'Sign In'}
               onPress={handleLogin}
-              disabled={isLoading}
-            >
-              <Text style={styles.loginButtonText}>
-                {isLoading
-                  ? 'Signing In...'
-                  : `Sign In as ${
-                      userType === 'user' ? 'user' : 'Driver'
-                    }`}
-              </Text>
-            </TouchableOpacity>
+              loading={isLoading}
+              variant="secondary"
+              size="lg"
+              style={styles.loginButton}
+            />
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
@@ -304,12 +132,14 @@ export default function LoginScreen() {
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity
-              style={styles.signupButton}
+            <Button
+              label="Create New Account"
+              variant="outline"
+              onDark
+              size="lg"
               onPress={() => router.push('/auth/signup')}
-            >
-              <Text style={styles.signupButtonText}>Create New Account</Text>
-            </TouchableOpacity>
+              style={styles.signupButton}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -333,133 +163,54 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: spacing.xxxl + spacing.sm,
   },
   logoContainer: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: radius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontFamily: typography.h1.fontFamily,
+    fontSize: typography.h1.fontSize,
+    color: colors.neutral[0],
+    marginBottom: spacing.sm,
   },
   subtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   form: {
     width: '100%',
   },
-  userTypeContainer: {
-    marginBottom: 24,
-  },
-  userTypeLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  userTypeButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  userTypeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  userTypeButtonActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  userTypeButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  userTypeButtonTextActive: {
-    color: '#007AFF',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#333333',
-  },
-  eyeIcon: {
-    padding: 4,
-  },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
+    marginTop: -spacing.sm,
   },
   forgotPasswordText: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     textDecorationLine: 'underline',
   },
   loginButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    backgroundColor: colors.neutral[0],
+    marginBottom: spacing.xxl,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   dividerLine: {
     flex: 1,
@@ -467,21 +218,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginHorizontal: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginHorizontal: spacing.lg,
   },
   signupButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  signupButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
 });

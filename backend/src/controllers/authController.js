@@ -47,7 +47,7 @@ const authController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
-      const result = await authService.loginUser(email, password);
+      const result = await authService.loginUser(email, password, req.ip);
       res.status(200).json(result);
 
     } catch (error) {
@@ -121,7 +121,7 @@ const authController = {
       res.status(200).json(result);
     } catch (error) {
       console.error('Change password error:', error);
-      
+
       if (error.message) {
         return res.status(400).json({
           success: false,
@@ -132,6 +132,35 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Server error changing password'
+      });
+    }
+  },
+
+  // Self-service account deletion
+  deleteAccount: async (req, res) => {
+    try {
+      const { password } = req.body;
+      if (!password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please provide your password to confirm account deletion'
+        });
+      }
+      const result = await authService.deleteAccount(req.user.id, password);
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('Delete account error:', error);
+
+      if (error.message) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Server error deleting account'
       });
     }
   }

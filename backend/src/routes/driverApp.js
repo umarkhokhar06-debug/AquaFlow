@@ -74,6 +74,12 @@ router.get('/earnings', driverAppController.getEarnings);
 // Driver status
 router.put('/status', driverAppController.updateDriverStatus);
 
+// Attendance
+router.post('/attendance/clock-in', driverAppController.clockIn);
+router.post('/attendance/clock-out', driverAppController.clockOut);
+router.get('/attendance/status', driverAppController.getAttendanceStatus);
+router.get('/attendance', driverAppController.getMyAttendance);
+
 // Enhanced error handler for driver routes
 router.use((err, req, res, next) => {
   console.error(`[DRIVER ROUTE ERROR] ${req.method} ${req.originalUrl}`);

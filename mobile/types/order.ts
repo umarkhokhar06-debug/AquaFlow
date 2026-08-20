@@ -61,6 +61,8 @@ export interface Order {
   status: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed';
   paymentMethod: 'cash' | 'card' | 'online';
+  deliveryType?: 'immediate' | 'scheduled' | 'recurring';
+  scheduledFor?: string | { $date: string } | null;
   orderDate: string | { $date: string };
   deliveryDate?: string | { $date: string } | null;
   deliveredAt?: string | { $date: string } | null;
@@ -79,6 +81,8 @@ export interface CreateOrderRequest {
   deliveryAddress: DeliveryAddress;
   paymentMethod: 'cash' | 'card' | 'online';
   notes?: string;
+  deliveryType?: 'immediate' | 'scheduled';
+  scheduledFor?: string;
 }
 
 export interface OrderResponse {

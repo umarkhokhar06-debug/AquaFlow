@@ -99,15 +99,17 @@ const orderSchema = new mongoose.Schema({
       trim: true,
       maxlength: [500, 'Special instructions cannot exceed 500 characters']
     },
+    // Optional: the mobile app's address picker doesn't guarantee GPS
+    // capture (manual address entry, denied location permission). Useful
+    // for driver navigation when present, but not required to place an
+    // order -- the text address/houseNumber/portion fields above are.
     latitude: {
       type: Number,
-      required: true,
       min: [-90, 'Latitude must be between -90 and 90'],
       max: [90, 'Latitude must be between -90 and 90']
     },
     longitude: {
       type: Number,
-      required: true,
       min: [-180, 'Longitude must be between -180 and 180'],
       max: [180, 'Longitude must be between -180 and 180']
     }

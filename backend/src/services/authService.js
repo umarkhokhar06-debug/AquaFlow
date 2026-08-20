@@ -2,6 +2,7 @@ const User = require('../models/User');
 const tokenService = require('./tokenService');
 const bcrypt = require('bcryptjs');
 const { STAFF_ROLES } = require('../constants/roles');
+const auditLogService = require('./auditLogService');
 
 const authService = {
   // Register user with user type support
@@ -74,22 +75,39 @@ const authService = {
   },
 
   // Login user with user type support
-  loginUser: async (email, password) => {
+  loginUser: async (email, password, ip) => {
+    const logFailure = (actorUser, reasonCode) =>
+      auditLogService.record({
+        action: 'LOGIN_FAILED',
+        actorUser,
+        targetUser: null,
+        changes: { email, reason: reasonCode },
+        ip
+      });
+
     try {
       // Validate input
       if (!email || !password) {
+        await logFailure({ email }, 'missing_credentials');
         throw new Error('Please provide email and password');
       }
 
       // Find user and include password for comparison
       const user = await User.findOne({ email }).select('+password');
       if (!user) {
+        await logFailure({ email }, 'unknown_email');
         throw new Error('Invalid credentials');
+      }
+
+      if (user.status === 'blocked') {
+        await logFailure(user, 'account_blocked');
+        throw new Error('Your account has been blocked. Contact support.');
       }
 
       // Check password
       const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) {
+        await logFailure(user, 'invalid_password');
         throw new Error('Invalid credentials');
       }
 
@@ -212,6 +230,45 @@ const authService = {
       };
     } catch (error) {
       console.error('Change password error:', error);
+      throw error;
+    }
+  },
+
+  // Self-service account deletion (App Store Guideline 5.1.1(v): apps that
+  // support account creation must also support in-app account deletion).
+  // Scoped to customer accounts, since customer is the only self-registerable
+  // role -- drivers/staff are admin-created and admin-deleted.
+  deleteAccount: async (userId, password) => {
+    try {
+      const user = await User.findById(userId).select('+password');
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (user.userType !== 'customer') {
+        throw new Error('This account type cannot be self-deleted. Contact an administrator.');
+      }
+
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        throw new Error('Incorrect password');
+      }
+
+      await auditLogService.record({
+        action: 'USER_DELETED',
+        actorUser: user,
+        targetUser: user,
+        changes: { reason: 'Self-deleted via account settings' }
+      });
+
+      await User.findByIdAndDelete(userId);
+
+      return {
+        success: true,
+        message: 'Account deleted successfully'
+      };
+    } catch (error) {
+      console.error('Delete account error:', error);
       throw error;
     }
   },

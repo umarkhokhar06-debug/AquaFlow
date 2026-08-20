@@ -19,6 +19,7 @@ router.put('/settings', requireDriver, driverController.updateSettings);
 router.get('/', requireAdminOrDispatcher, driverController.getAllDrivers);
 router.get('/search', requireAdminOrDispatcher, driverController.searchDrivers);
 router.get('/statistics', requireAdmin, driverController.getDriverStatistics);
+router.get('/attendance', requireAdminOrDispatcher, driverController.getAttendance);
 router.get('/:driverId', requireAdminOrDispatcher, driverController.getDriverById);
 router.put('/:driverId/status', requireAdmin, driverController.updateDriverStatus);
 router.put('/:driverId/queue/reorder', requireAdmin, driverController.reorderDriverQueue);

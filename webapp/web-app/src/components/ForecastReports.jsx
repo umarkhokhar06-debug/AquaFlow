@@ -56,6 +56,8 @@ const ForecastReports = () => {
 
   useEffect(() => { fetchReport() }, [fetchReport])
 
+  const [exporting, setExporting] = useState(false)
+
   const downloadCsv = () => {
     if (!report) return
     const blob = new Blob([report.csv], { type: 'text/csv' })
@@ -65,6 +67,25 @@ const ForecastReports = () => {
     a.download = `${report.type}-report.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const downloadAs = async (format) => {
+    if (!report) return
+    setExporting(true)
+    try {
+      const res = await reportAPI.downloadReport(report.type, format)
+      const blob = new Blob([res.data])
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${report.type}-report.${format}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(err.response?.data?.message || `Failed to export ${format.toUpperCase()}`)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const runNightlyScan = async () => {
@@ -177,9 +198,17 @@ const ForecastReports = () => {
           <select value={reportType} onChange={e => setReportType(e.target.value)} className="border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             {REPORT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <button onClick={downloadCsv} disabled={!report} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
-            <FiDownload className="h-4 w-4 mr-2" /> Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={downloadCsv} disabled={!report} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+              <FiDownload className="h-4 w-4 mr-2" /> CSV
+            </button>
+            <button onClick={() => downloadAs('xlsx')} disabled={!report || exporting} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+              <FiDownload className="h-4 w-4 mr-2" /> Excel
+            </button>
+            <button onClick={() => downloadAs('pdf')} disabled={!report || exporting} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+              <FiDownload className="h-4 w-4 mr-2" /> PDF
+            </button>
+          </div>
         </div>
         {reportLoading ? (
           <div className="py-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div></div>

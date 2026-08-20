@@ -121,6 +121,23 @@ export const authAPI = {
       throw new Error('Network error');
     }
   },
+
+  async deleteAccount(token: string, password: string): Promise<AuthResponse> {
+    try {
+      const response = await axios.delete(`${config.authUrl}/account`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: { password },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to delete account');
+      }
+      throw new Error('Network error');
+    }
+  },
 };
 
 // Storage functions

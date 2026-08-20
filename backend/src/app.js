@@ -24,6 +24,10 @@ const supportRoutes = require('./routes/support');
 
 const app = express();
 
+// The app sits behind a single CloudFront distribution -- trust its
+// X-Forwarded-For so req.ip resolves to the real client, not CloudFront.
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',

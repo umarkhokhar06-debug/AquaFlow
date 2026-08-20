@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Droplets } from 'lucide-react-native';
+import { colors, radius, spacing, typography } from '@/theme';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -16,15 +17,12 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <LinearGradient
-      colors={['#007AFF', '#0056CC']}
-      style={styles.container}
-    >
+    <LinearGradient colors={[colors.primary[500], colors.primary[700]]} style={styles.container}>
       <View style={styles.logoContainer}>
         <View style={styles.iconContainer}>
-          <Droplets size={60} color="#FFFFFF" />
+          <Droplets size={60} color={colors.neutral[0]} />
         </View>
-        <Text style={styles.title}>AquaDispatch</Text>
+        <Text style={styles.title}>AquaFlow</Text>
         <Text style={styles.subtitle}>Smart Water Delivery</Text>
       </View>
       <Text style={styles.version}>Version 1.0.0</Text>
@@ -45,28 +43,28 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 120,
     height: 120,
-    borderRadius: 60,
+    borderRadius: radius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xxl,
   },
   title: {
-    fontSize: 32,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
+    fontFamily: typography.display.fontFamily,
+    fontSize: typography.display.fontSize,
+    color: colors.neutral[0],
+    marginBottom: spacing.sm,
   },
   subtitle: {
+    fontFamily: typography.body.fontFamily,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
   version: {
     position: 'absolute',
     bottom: 50,
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: typography.caption.fontFamily,
+    fontSize: typography.caption.fontSize,
     color: 'rgba(255, 255, 255, 0.6)',
   },
 });

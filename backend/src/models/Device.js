@@ -117,7 +117,32 @@ const deviceSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  // SRS §8: "Device installation, calibration, replacement and service
+  // history must be retained." Append-only; entries are never edited or
+  // removed. Replacement/removal itself is additionally mirrored into
+  // AuditLog (action DEVICE_REMOVED) since that history must survive even
+  // after this document is deleted.
+  history: [{
+    event: {
+      type: String,
+      enum: ['installed', 'calibrated', 'status_changed'],
+      required: true
+    },
+    by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    at: {
+      type: Date,
+      default: Date.now
+    },
+    details: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    }
+  }]
 });
 
 deviceSchema.index({ owner: 1 });

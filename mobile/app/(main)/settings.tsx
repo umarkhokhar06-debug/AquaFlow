@@ -8,10 +8,11 @@ import {
   StatusBar,
   Switch,
   Alert,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
+import {
   ArrowLeft,
   Bell,
   Shield,
@@ -26,6 +27,9 @@ import {
   Lock,
   Settings as SettingsIcon
 } from 'lucide-react-native';
+import { authAPI, storage } from '@/utils/auth';
+import { Button, TextField } from '@/app/components/ui';
+import { colors, spacing, typography } from '@/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -33,6 +37,9 @@ export default function SettingsScreen() {
   const [pushNotifications, setPushNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handleChangePassword = () => {
     Alert.alert(
@@ -46,14 +53,31 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Delete account') }
-      ]
-    );
+    setDeletePassword('');
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!deletePassword) {
+      Alert.alert('Password required', 'Enter your password to confirm account deletion.');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const userData = await storage.getUserData();
+      if (!userData?.token) {
+        throw new Error('You are not logged in');
+      }
+      await authAPI.deleteAccount(userData.token, deletePassword);
+      setShowDeleteModal(false);
+      await storage.clearUserData();
+      router.replace('/auth/login');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete account';
+      Alert.alert('Could not delete account', message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const SettingItem = ({ 
@@ -241,13 +265,84 @@ export default function SettingsScreen() {
 
         {/* App Version */}
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>AquaDispatch v1.0.0</Text>
-          <Text style={styles.versionSubtext}>© 2024 AquaDispatch. All rights reserved.</Text>
+          <Text style={styles.versionText}>AquaFlow v1.0.0</Text>
+          <Text style={styles.versionSubtext}>© 2026 AquaFlow. All rights reserved.</Text>
         </View>
       </ScrollView>
+
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <Text style={modalStyles.title}>Delete your account?</Text>
+            <Text style={modalStyles.subtitle}>
+              This permanently deletes your AquaFlow account and profile data. This cannot be undone. Enter your
+              password to confirm.
+            </Text>
+            <TextField
+              placeholder="Password"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureToggle
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={modalStyles.actions}>
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setShowDeleteModal(false)}
+                style={modalStyles.actionButton}
+                disabled={deleting}
+              />
+              <Button
+                label={deleting ? 'Deleting...' : 'Delete Account'}
+                variant="danger"
+                loading={deleting}
+                onPress={confirmDeleteAccount}
+                style={modalStyles.actionButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  card: {
+    backgroundColor: colors.neutral[0],
+    borderRadius: 20,
+    padding: spacing.xl,
+  },
+  title: {
+    fontFamily: typography.h2.fontFamily,
+    fontSize: typography.h2.fontSize,
+    color: colors.neutral[900],
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    fontFamily: typography.body.fontFamily,
+    fontSize: 13,
+    color: colors.neutral[500],
+    marginBottom: spacing.lg,
+    lineHeight: 19,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

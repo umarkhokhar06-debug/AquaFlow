@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Truck = require('../models/Truck');
 const DispatchLog = require('../models/DispatchLog');
 const driverService = require('./driverService');
+const auditLogService = require('./auditLogService');
 
 const DELAYED_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours out for delivery = delayed
 const EXCEPTION_THRESHOLD_MS = 30 * 60 * 1000; // 30 min unassigned = exception
@@ -112,7 +113,7 @@ class DispatchService {
   // dispatcher followed or overrode the top recommendation (SRS §6: "every
   // override is logged"). Pass recommendedDriverId if the caller already
   // fetched a recommendation, so we don't recompute it here.
-  async assignOrder(orderId, driverId, dispatcherUser, { recommendedDriverId, reason } = {}) {
+  async assignOrder(orderId, driverId, dispatcherUser, { recommendedDriverId, reason, ip } = {}) {
     const order = await Order.findById(orderId);
     if (!order) {
       const err = new Error('Order not found');
@@ -134,6 +135,28 @@ class DispatchService {
       overrode,
       reason
     }).catch(err => console.error('DispatchLog write failed (non-fatal):', err.message));
+
+    // Overrides of the AI recommendation are the one dispatch event the SRS
+    // calls out specifically ("every override is logged") -- mirror just
+    // those into the main, cross-domain audit trail alongside role changes,
+    // promo edits, etc. Routine (non-override) assignments stay in
+    // DispatchLog only; that's a high-volume operational log, not an
+    // administrative-action trail.
+    if (overrode) {
+      await auditLogService.record({
+        action: 'DISPATCH_OVERRIDE',
+        actorUser: dispatcherUser,
+        targetUser: null,
+        changes: {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          recommendedDriverId,
+          assignedDriverId: driverId
+        },
+        reason,
+        ip
+      });
+    }
 
     return { ...result, overrode };
   }

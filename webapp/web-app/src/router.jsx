@@ -6,6 +6,7 @@ import RoleLogin from './pages/RoleLogin';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Any authenticated user
 const ProtectedRoute = ({ children }) => {
@@ -37,6 +38,7 @@ function AppRouter() {
     <div className="app">
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route
           path="/login/:portal"
           element={

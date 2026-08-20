@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Order = require('../models/Order');
 const socketService = require('./socketService');
+const notificationService = require('./notificationService');
 
 const driverService = {
   // ============ PROFILE MANAGEMENT ============
@@ -294,6 +295,14 @@ const driverService = {
       socketService.emitOrderAssignment(orderId, driverId, driver.name);
       socketService.emitDriverQueueUpdate(driverId, driver.orderQueue);
 
+      notificationService.createNotification(
+        order.customer,
+        'Driver assigned',
+        `${driver.name} has been assigned to deliver your order ${order.orderNumber}.`,
+        'driver_assigned',
+        { orderId: order._id, driverId: driver._id }
+      ).catch(() => {});
+
       return {
         success: true,
         message: 'Order assigned to driver successfully',
@@ -406,6 +415,14 @@ const driverService = {
 
         // Emit order completion event
         socketService.emitOrderStatusUpdate(order._id, 'delivered', driverId);
+
+        notificationService.createNotification(
+          order.customer,
+          'Order delivered',
+          `Your order ${order.orderNumber} has been delivered. Thank you for choosing AquaFlow.`,
+          'order_delivered',
+          { orderId: order._id }
+        ).catch(() => {});
       }
 
       // Remove current order

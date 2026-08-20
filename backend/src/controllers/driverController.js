@@ -1,4 +1,5 @@
 const driverService = require('../services/driverService');
+const attendanceService = require('../services/attendanceService');
 
 const driverController = {
   // ============ PROFILE MANAGEMENT ============
@@ -472,6 +473,21 @@ const driverController = {
       res.status(500).json({
         success: false,
         message: 'Server error searching drivers'
+      });
+    }
+  },
+
+  // Admin/dispatcher: attendance across all drivers (SRS §5)
+  getAttendance: async (req, res) => {
+    try {
+      const { from, to, driverId } = req.query;
+      const records = await attendanceService.getAllAttendance({ from, to, driverId });
+      res.status(200).json({ success: true, attendance: records });
+    } catch (error) {
+      console.error('Get attendance error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error retrieving attendance'
       });
     }
   }

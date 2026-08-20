@@ -8,12 +8,12 @@ import {
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
+  Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {config} from '../config';
 import { scheduleService } from '@/utils/scheduleService';
+import { authAPI } from '@/utils/auth';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +24,7 @@ export default function RootLayout() {
     'Inter-Medium': Inter_500Medium,
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
+    'Inter-ExtraBold': Inter_800ExtraBold,
   });
 
   const [isTokenChecked, setIsTokenChecked] = useState(false);
@@ -36,19 +37,21 @@ export default function RootLayout() {
         scheduleService.startMonitoring(60); // Check every 60 seconds
 
         const token = await AsyncStorage.getItem('token');
-        console.log('Checking token:', token);
 
         if (token) {
-          const response = await axios.post(`${config.backendUrl}/auth/check-token`, {
-            token,
-          });
-
-          if (response.status === 200) {
-            const { user } = response.data;
-            if (user?.userType === 'driver') {
+          // There is no /auth/check-token endpoint on the backend -- this
+          // used to call one that doesn't exist, so every app relaunch
+          // silently failed and force-logged the user out. getProfile hits
+          // the real, already-authenticated route and doubles as the
+          // token-validity check.
+          const response = await authAPI.getProfile(token);
+          if (response.success && response.user) {
+            if (response.user.userType === 'driver') {
               router.replace('/(driver)/(tabs)');
-            } else if (user?.userType === 'user') {
+            } else if (response.user.userType === 'customer') {
               router.replace('/(main)/(tabs)');
+            } else {
+              await AsyncStorage.removeItem('token');
             }
           } else {
             await AsyncStorage.removeItem('token');

@@ -1,5 +1,6 @@
-import React from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
+import { colors, radius, shadow, spacing, typography } from '@/theme';
+import Button from './ui/Button';
 
 type CustomAlertProps = {
   visible: boolean;
@@ -10,19 +11,12 @@ type CustomAlertProps = {
 
 export default function CustomAlert({ visible, title, message, onClose }: CustomAlertProps) {
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.alertBox}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
-          <Pressable style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>OK</Text>
-          </Pressable>
+          <Button label="OK" onPress={onClose} style={styles.button} />
         </View>
       </View>
     </Modal>
@@ -38,38 +32,27 @@ const styles = StyleSheet.create({
   },
   alertBox: {
     width: 320,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
-    elevation: 10,
+    backgroundColor: colors.neutral[0],
+    borderRadius: radius.lg,
+    padding: spacing.xxl,
+    ...shadow.raised,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#111827',
+    fontFamily: typography.h2.fontFamily,
+    fontSize: typography.h2.fontSize,
+    marginBottom: spacing.md,
+    color: colors.neutral[900],
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
-    color: '#374151',
+    fontFamily: typography.body.fontFamily,
+    fontSize: typography.body.fontSize,
+    color: colors.neutral[700],
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
     alignSelf: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    minWidth: 120,
   },
 });
