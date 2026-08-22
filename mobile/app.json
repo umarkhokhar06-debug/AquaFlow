@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#063B5C"
       },
-      "versionCode": 4
+      "versionCode": 5
     },
     "runtimeVersion": {
       "policy": "appVersion"

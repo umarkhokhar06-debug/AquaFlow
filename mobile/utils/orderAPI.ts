@@ -8,7 +8,9 @@ import {
   OrdersResponse, 
   ProductsResponse,
   OrderStatusUpdate,
-  OrderStatistics
+  OrderStatistics,
+  QueueStatus,
+  QueueStatusResponse
 } from '../types/order';
 
 // Get auth token from storage
@@ -90,6 +92,34 @@ export const orderAPI = {
       console.error('Error fetching order:', error);
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || 'Failed to fetch order');
+      }
+      throw new Error('Network error');
+    }
+  },
+
+  // Get queue position + rough ETA for one order
+  async getQueueStatus(orderId: string): Promise<QueueStatus> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.get<QueueStatusResponse>(`${config.apiUrl}/orders/${orderId}/queue-status`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to fetch queue status');
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching queue status:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch queue status');
       }
       throw new Error('Network error');
     }

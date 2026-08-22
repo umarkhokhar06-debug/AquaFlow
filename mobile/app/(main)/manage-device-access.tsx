@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
   },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   header: {
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   placeholder: {
@@ -390,14 +390,14 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 12,
     marginBottom: 4,
   },
   infoText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   formCard: {
@@ -413,13 +413,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   description: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 12,
     lineHeight: 18,
@@ -447,12 +447,12 @@ const styles = StyleSheet.create({
   },
   modeButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#6B7280',
   },
   modeButtonTextActive: {
     color: '#087EA4',
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
   },
   addRow: {
     flexDirection: 'row',
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1F2937',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   inviteBlock: {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   },
   expiryText: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   inviteActions: {
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   regenButton: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   },
   regenButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#374151',
   },
   scanLink: {
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   },
   scanLinkText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
   },
   tenantRow: {
@@ -575,12 +575,12 @@ const styles = StyleSheet.create({
   },
   tenantName: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   tenantEmail: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   ownerBadgeText: {
     fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1D4ED8',
   },
   removeButton: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
     paddingVertical: 12,
   },

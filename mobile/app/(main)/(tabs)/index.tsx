@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,10 @@ import {
   StatusBar,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { DrawerActions } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
 import {
   Droplets,
   Truck,
@@ -21,6 +20,9 @@ import {
   Zap,
   ArrowRight,
   AlertTriangle,
+  MapPin,
+  Calendar,
+  CircleCheck as CheckCircle,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
@@ -29,7 +31,7 @@ import { Card, Badge, Button } from '@/app/components/ui';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
-import { Product } from '@/types/order';
+import { Order, Product, QueueStatus, parseDate, getOrderId } from '@/types/order';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -76,11 +78,161 @@ function getDeliverySlots(): DeliverySlot[] {
   return slots;
 }
 
-export default function DashboardScreen() {
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending': return colors.warning[500];
+    case 'confirmed': return colors.primary[500];
+    case 'preparing': return colors.info[500];
+    case 'out_for_delivery': return '#FF6B35';
+    case 'delivered': return colors.success[500];
+    case 'cancelled': return colors.danger[500];
+    default: return colors.neutral[500];
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'pending': return 'Pending';
+    case 'confirmed': return 'Confirmed';
+    case 'preparing': return 'Preparing';
+    case 'out_for_delivery': return 'Out for Delivery';
+    case 'delivered': return 'Delivered';
+    case 'cancelled': return 'Cancelled';
+    default: return status;
+  }
+};
+
+const getProductName = (type: string) => {
+  switch (type) {
+    case 'large_tanker': return 'Large Tanker';
+    case 'small_tanker': return 'Small Tanker';
+    case 'water_bottles': return 'Water Bottles';
+    default: return type;
+  }
+};
+
+const formatDate = (date: string | { $date: string }) =>
+  parseDate(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+const formatTime = (date: string | { $date: string }) =>
+  parseDate(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+const QUEUE_POLL_MS = 20000;
+
+function ActiveOrderCard({ order }: { order: Order }) {
+  const router = useRouter();
+  const [queue, setQueue] = useState<QueueStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStatus = async () => {
+      try {
+        const status = await orderAPI.getQueueStatus(getOrderId(order));
+        if (!cancelled) setQueue(status);
+      } catch (error) {
+        console.error('Error fetching queue status:', error);
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, QUEUE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [getOrderId(order)]);
+
+  const isOutForDelivery = order.status === 'out_for_delivery';
+
+  return (
+    <Card style={styles.activeCard}>
+      <View style={styles.activeHeader}>
+        <View style={styles.activeHeaderLeft}>
+          <View style={styles.activeIconCircle}>
+            <Truck size={20} color={colors.primary[500]} />
+          </View>
+          <View>
+            <Text style={styles.activeTitle}>{getProductName(order.items[0]?.type || '')}</Text>
+            <Text style={styles.activeOrderNumber}>#{order.orderNumber}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+            {getStatusText(order.status)}
+          </Text>
+        </View>
+      </View>
+
+      {isOutForDelivery ? (
+        <View style={styles.queueRow}>
+          <Text style={styles.queueHeadline}>Your tanker is on the way</Text>
+        </View>
+      ) : queue && queue.position !== null ? (
+        <View style={styles.queueRow}>
+          <Text style={styles.queueHeadline}>You're #{queue.position} in line</Text>
+          {queue.etaMinutes !== null && (
+            <Text style={styles.queueSubtext}>~{queue.etaMinutes} min estimated</Text>
+          )}
+        </View>
+      ) : (
+        <View style={styles.queueRow}>
+          <Text style={styles.queueHeadline}>Your order is being prepared</Text>
+        </View>
+      )}
+
+      <Button
+        label="Track live"
+        variant="primary"
+        size="sm"
+        onPress={() => router.push('/(main)/(tabs)/tracking')}
+      />
+    </Card>
+  );
+}
+
+function HistoryOrderCard({ order }: { order: Order }) {
+  const router = useRouter();
+  return (
+    <TouchableOpacity style={styles.orderCard} onPress={() => router.push(`/(main)/order-details/${getOrderId(order)}`)}>
+      <View style={styles.orderHeader}>
+        <View style={styles.orderType}>
+          <Droplets size={18} color={colors.primary[500]} />
+          <View style={styles.orderInfo}>
+            <Text style={styles.orderTitle}>{getProductName(order.items[0]?.type || '')}</Text>
+            <Text style={styles.orderVolume}>Qty {order.items[0]?.quantity || 1}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+            {getStatusText(order.status)}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.orderRow}>
+        <MapPin size={13} color={colors.neutral[500]} />
+        <Text style={styles.orderDetailText} numberOfLines={1}>
+          {order.deliveryAddress?.address || 'Address not available'}
+        </Text>
+      </View>
+      <View style={styles.orderRow}>
+        <Calendar size={13} color={colors.neutral[500]} />
+        <Text style={styles.orderDetailText}>
+          {formatDate(order.orderDate)} at {formatTime(order.orderDate)}
+        </Text>
+      </View>
+      <View style={styles.orderFooter}>
+        <Text style={styles.orderPrice}>Rs. {order.totalAmount.toLocaleString()}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function OrdersScreen() {
   const [tankLevel, setTankLevel] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [ordering, setOrdering] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showTimingModal, setShowTimingModal] = useState(false);
@@ -90,20 +242,33 @@ export default function DashboardScreen() {
   const [resultAlert, setResultAlert] = useState<{ title: string; message: string; onClose?: () => void } | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const { isConnected, connect, onSystemNotification } = useSocket();
+  const {
+    isConnected, connect, onSystemNotification,
+    onOrderUpdate, onOrderStatusUpdate, removeOrderUpdateListener, removeOrderStatusUpdateListener,
+  } = useSocket();
+
+  const activeOrders = orders.filter((o) => ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(o.status));
+  const historyOrders = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status));
+  const hasActiveOrder = activeOrders.length > 0;
+
+  const fetchOrders = async () => {
+    try {
+      const ordersData = await orderAPI.getMyOrders();
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
 
   const handleServiceSelect = async (product: Product) => {
     if (!user) {
       setResultAlert({ title: 'Please log in', message: 'You need to be logged in to place an order.' });
       return;
     }
-
     if (!product.availability) {
       setResultAlert({ title: 'Unavailable', message: 'This service is currently unavailable.' });
       return;
     }
-
     setSelectedProduct(product);
     setShowTimingModal(true);
   };
@@ -117,7 +282,6 @@ export default function DashboardScreen() {
   const handleAddressSelected = (address: SelectedAddress) => {
     setSelectedAddress(address);
     setShowAddressModal(false);
-
     if (selectedProduct) {
       handleDirectOrder(selectedProduct, address, selectedSlot);
     }
@@ -125,9 +289,7 @@ export default function DashboardScreen() {
 
   const handleDirectOrder = async (product: Product, address: SelectedAddress, slot: DeliverySlot | null) => {
     if (!user) return;
-
     setOrdering(product.type);
-
     try {
       const orderData = {
         items: [{ type: product.type, quantity: 1 }],
@@ -149,12 +311,13 @@ export default function DashboardScreen() {
       };
 
       const order = await orderAPI.createOrder(orderData);
+      await fetchOrders();
       const whenText = slot?.date ? ` for ${slot.label}` : '';
 
       setResultAlert({
         title: 'Order placed',
         message: `Your order #${order.orderNumber} has been placed${whenText}. Total: Rs. ${order.totalAmount.toLocaleString()}`,
-        onClose: () => router.push('/(main)/(tabs)/orders'),
+        onClose: () => router.push('/(main)/(tabs)/tracking'),
       });
     } catch (error) {
       console.error('Order error:', error);
@@ -173,11 +336,10 @@ export default function DashboardScreen() {
     const fetchData = async () => {
       try {
         setLoading(true);
-
         const userData = await storage.getUserData();
         setUser(userData?.user || null);
 
-        const productsData = await orderAPI.getProducts();
+        const [productsData] = await Promise.all([orderAPI.getProducts(), fetchOrders()]);
         setProducts(productsData);
 
         try {
@@ -194,17 +356,13 @@ export default function DashboardScreen() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        setResultAlert({ title: 'Something went wrong', message: 'Failed to load data. Please try again.' });
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-
-    connect().catch((error) => {
-      console.error('Failed to connect to socket:', error);
-    });
+    connect().catch((error) => console.error('Failed to connect to socket:', error));
   }, []);
 
   useEffect(() => {
@@ -213,39 +371,55 @@ export default function DashboardScreen() {
     const handleSystemNotification = (data: any) => {
       notificationService.handleSocketNotification(data);
     };
-
     onSystemNotification(handleSystemNotification);
 
-    return () => {
-      // Note: the useSocket hook doesn't expose a remove-listener for
-      // system notifications yet -- unchanged from prior behavior.
+    const handleOrderUpdate = (data: any) => {
+      setOrders((prev) => prev.map((order) => {
+        if (getOrderId(order) !== data.orderId) return order;
+        const updated = { ...order };
+        if (data.updateType === 'status-update' && data.data.status) {
+          updated.status = data.data.status;
+          notificationService.handleOrderNotification(order.orderNumber, data.data.status);
+        }
+        if (data.updateType === 'driver-assigned' && data.data.driver) {
+          updated.driver = data.data.driver;
+          notificationService.handleDriverAssignmentNotification(order.orderNumber, data.data.driver.name);
+        }
+        return updated;
+      }));
     };
-  }, [isConnected, onSystemNotification]);
 
-  const openDrawer = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
+    const handleOrderStatusUpdate = (data: any) => {
+      setOrders((prev) => prev.map((order) => {
+        if (getOrderId(order) !== data.orderId) return order;
+        notificationService.handleOrderNotification(order.orderNumber, data.status);
+        return { ...order, status: data.status };
+      }));
+    };
+
+    onOrderUpdate(handleOrderUpdate);
+    onOrderStatusUpdate(handleOrderStatusUpdate);
+
+    return () => {
+      removeOrderUpdateListener(handleOrderUpdate);
+      removeOrderStatusUpdateListener(handleOrderStatusUpdate);
+    };
+  }, [isConnected, onOrderUpdate, onOrderStatusUpdate, removeOrderUpdateListener, removeOrderStatusUpdateListener, onSystemNotification]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
   };
 
-  const openNotifications = () => {
-    router.push('/(main)/notifications');
-  };
+  const openDrawer = () => router.push('/(main)/(tabs)/account');
+  const openNotifications = () => router.push('/(main)/notifications');
 
   const ServiceCard = ({
-    product,
-    time,
-    icon,
-    color,
-    onPress,
-  }: {
-    product: Product;
-    time: string;
-    icon: React.ReactNode;
-    color: string;
-    onPress: (product: Product) => void;
-  }) => {
+    product, time, icon, color, onPress,
+  }: { product: Product; time: string; icon: React.ReactNode; color: string; onPress: (product: Product) => void }) => {
     const isOrdering = ordering === product.type;
     const price = `Rs. ${product.unitPrice.toLocaleString()}`;
-
     return (
       <TouchableOpacity
         onPress={product.availability ? () => onPress(product) : undefined}
@@ -280,10 +454,14 @@ export default function DashboardScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.neutral[0]} />
-
       <HeaderComponent openDrawer={openDrawer} openNotifications={openNotifications} />
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeTitle}>Welcome back, {user?.name || 'Guest'}!</Text>
           <Text style={styles.welcomeSubtitle}>
@@ -292,108 +470,94 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {tankLevel !== null && tankLevel <= 30 && (
-          <Card style={styles.alertCard}>
-            <View style={styles.alertRow}>
-              <View style={styles.alertIconCircle}>
-                <AlertTriangle size={20} color={colors.warning[700]} />
-              </View>
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>Low Water Level</Text>
-                <Text style={styles.alertText}>Your tank is running low. Consider ordering a refill.</Text>
-              </View>
-              <Button
-                label="Order Now"
-                variant="warning"
-                size="sm"
-                onPress={() => {
-                  if (products.length > 0) {
-                    const smallTanker = products.find((p) => p.type === 'small_tanker') || products[0];
-                    handleServiceSelect(smallTanker);
-                  }
-                }}
-              />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary[500]} />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : hasActiveOrder ? (
+          <View style={styles.activeSection}>
+            <Text style={styles.sectionTitle}>Your Active Order</Text>
+            {activeOrders.map((order) => (
+              <ActiveOrderCard key={getOrderId(order)} order={order} />
+            ))}
+          </View>
+        ) : (
+          <>
+            {tankLevel !== null && tankLevel <= 30 && (
+              <Card style={styles.alertCard}>
+                <View style={styles.alertRow}>
+                  <View style={styles.alertIconCircle}>
+                    <AlertTriangle size={20} color={colors.warning[700]} />
+                  </View>
+                  <View style={styles.alertContent}>
+                    <Text style={styles.alertTitle}>Low Water Level</Text>
+                    <Text style={styles.alertText}>Your tank is running low. Consider ordering a refill.</Text>
+                  </View>
+                  <Button
+                    label="Order Now"
+                    variant="warning"
+                    size="sm"
+                    onPress={() => {
+                      if (products.length > 0) {
+                        const smallTanker = products.find((p) => p.type === 'small_tanker') || products[0];
+                        handleServiceSelect(smallTanker);
+                      }
+                    }}
+                  />
+                </View>
+              </Card>
+            )}
+
+            <View style={styles.servicesSection}>
+              <Text style={styles.sectionTitle}>Choose Your Service</Text>
+              {products.map((product) => {
+                let time = '15-30 min';
+                let icon = <Droplets size={20} color={colors.info[500]} />;
+                let color: string = colors.info[500];
+                if (product.type === 'large_tanker') {
+                  time = '45-60 min';
+                  icon = <Truck size={24} color={colors.primary[500]} />;
+                  color = colors.primary[500];
+                } else if (product.type === 'small_tanker') {
+                  time = '30-45 min';
+                  icon = <Truck size={20} color={colors.success[500]} />;
+                  color = colors.success[500];
+                }
+                return (
+                  <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} onPress={handleServiceSelect} />
+                );
+              })}
             </View>
-          </Card>
+
+            <Card style={styles.expressCard}>
+              <View style={styles.expressRow}>
+                <View style={styles.expressIcon}>
+                  <Zap size={24} color={colors.warning[500]} />
+                </View>
+                <View style={styles.expressContent}>
+                  <Text style={styles.expressTitle}>Express Delivery</Text>
+                  <Text style={styles.expressSubtitle}>Get water delivered within 1 hour</Text>
+                </View>
+                <View style={styles.expressPricing}>
+                  <Text style={styles.expressPriceText}>+Rs. 300</Text>
+                  <Badge label="Coming soon" tone="warning" />
+                </View>
+              </View>
+            </Card>
+          </>
         )}
 
-        <View style={styles.servicesSection}>
-          <Text style={styles.sectionTitle}>Choose Your Service</Text>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary[500]} />
-              <Text style={styles.loadingText}>Loading services...</Text>
+        <View style={styles.historySection}>
+          <Text style={styles.sectionTitle}>Order History</Text>
+          {historyOrders.length === 0 ? (
+            <View style={styles.emptyState}>
+              <CheckCircle size={40} color={colors.neutral[300]} />
+              <Text style={styles.emptyText}>Your completed orders will appear here</Text>
             </View>
           ) : (
-            products.map((product) => {
-              let time = '15-30 min';
-              let icon = <Droplets size={20} color={colors.info[500]} />;
-              let color: string = colors.info[500];
-
-              if (product.type === 'large_tanker') {
-                time = '45-60 min';
-                icon = <Truck size={24} color={colors.primary[500]} />;
-                color = colors.primary[500];
-              } else if (product.type === 'small_tanker') {
-                time = '30-45 min';
-                icon = <Truck size={20} color={colors.success[500]} />;
-                color = colors.success[500];
-              }
-
-              return (
-                <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} onPress={handleServiceSelect} />
-              );
-            })
+            historyOrders.map((order) => <HistoryOrderCard key={getOrderId(order)} order={order} />)
           )}
-        </View>
-
-        <Card style={styles.expressCard}>
-          <View style={styles.expressRow}>
-            <View style={styles.expressIcon}>
-              <Zap size={24} color={colors.warning[500]} />
-            </View>
-            <View style={styles.expressContent}>
-              <Text style={styles.expressTitle}>Express Delivery</Text>
-              <Text style={styles.expressSubtitle}>Get water delivered within 1 hour</Text>
-            </View>
-            <View style={styles.expressPricing}>
-              <Text style={styles.expressPriceText}>+Rs. 300</Text>
-              <Badge label="Coming soon" tone="warning" />
-            </View>
-          </View>
-        </Card>
-
-        <TouchableOpacity onPress={() => router.push('/(main)/schedule')} activeOpacity={0.8}>
-          <Card style={styles.scheduleCard}>
-            <View style={styles.scheduleRow}>
-              <View style={styles.scheduleIcon}>
-                <Clock size={24} color={colors.success[500]} />
-              </View>
-              <View style={styles.scheduleContent}>
-                <Text style={styles.scheduleTitle}>Auto-Order Schedule</Text>
-                <Text style={styles.scheduleSubtitle}>Automatically order when tank level drops</Text>
-              </View>
-              <ArrowRight size={20} color={colors.success[500]} />
-            </View>
-          </Card>
-        </TouchableOpacity>
-
-        <View style={styles.recommendedSection}>
-          <View style={styles.recommendedHeader}>
-            <Text style={styles.sectionTitle}>Recommended for You</Text>
-            <TrendingUp size={20} color={colors.primary[500]} />
-          </View>
-
-          <Card style={styles.recommendedCard}>
-            <View style={styles.recommendedRow}>
-              <View style={styles.recommendedContent}>
-                <Text style={styles.recommendedTitle}>Weekly Large Tanker</Text>
-                <Text style={styles.recommendedSubtitle}>Based on your usage pattern</Text>
-              </View>
-              <Button label="Schedule" variant="primary" size="sm" onPress={() => router.push('/(main)/schedule')} />
-            </View>
-          </Card>
         </View>
       </ScrollView>
 
@@ -458,294 +622,77 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.neutral[0],
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl - spacing.sm,
-  },
-  welcomeSection: {
-    paddingVertical: spacing.xxl,
-  },
-  welcomeTitle: {
-    fontFamily: typography.h1.fontFamily,
-    fontSize: typography.h1.fontSize,
-    color: colors.neutral[900],
-    marginBottom: spacing.sm,
-  },
-  welcomeSubtitle: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 16,
-    color: colors.neutral[500],
-  },
-  welcomeNumeric: {
-    fontFamily: typography.h3.fontFamily,
-    color: colors.primary[600],
-  },
-  alertCard: {
-    backgroundColor: colors.warning[50],
-    borderColor: colors.warning[100],
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning[500],
-    marginBottom: spacing.xxl,
-  },
-  alertRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  alertIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.xl,
-    backgroundColor: colors.warning[100],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  alertContent: {
-    flex: 1,
-  },
-  alertTitle: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: 14,
-    color: colors.warning[700],
-    marginBottom: 2,
-  },
-  alertText: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 12,
-    color: colors.warning[700],
-  },
-  servicesSection: {
-    marginBottom: spacing.xxl,
-  },
-  sectionTitle: {
-    fontFamily: typography.h2.fontFamily,
-    fontSize: typography.h2.fontSize,
-    color: colors.neutral[900],
-    marginBottom: spacing.lg,
-  },
-  serviceCard: {
-    marginBottom: spacing.md,
-  },
-  serviceCardDisabled: {
-    opacity: 0.6,
-  },
-  serviceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  serviceIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.lg,
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: typography.h3.fontSize,
-    color: colors.neutral[900],
-    marginBottom: 4,
-  },
-  serviceVolume: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 14,
-    color: colors.neutral[500],
-    marginBottom: spacing.sm,
-  },
-  serviceDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  servicePrice: {
-    fontFamily: typography.numeric.fontFamily,
-    fontSize: 16,
-    color: colors.primary[600],
-  },
-  serviceTime: {
-    fontFamily: typography.caption.fontFamily,
-    fontSize: 12,
-    color: colors.neutral[500],
-    marginLeft: spacing.sm,
-  },
-  serviceRight: {
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  expressCard: {
-    backgroundColor: colors.warning[50],
-    borderColor: colors.warning[100],
-    marginBottom: spacing.xxl,
-  },
-  expressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  expressIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.xl,
-    backgroundColor: colors.warning[100],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.lg,
-  },
-  expressContent: {
-    flex: 1,
-  },
-  expressTitle: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: typography.h3.fontSize,
-    color: colors.warning[700],
-    marginBottom: 4,
-  },
-  expressSubtitle: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 12,
-    color: colors.warning[700],
-  },
-  expressPricing: {
-    alignItems: 'flex-end',
-    gap: spacing.xs,
-  },
-  expressPriceText: {
-    fontFamily: typography.numeric.fontFamily,
-    fontSize: 14,
-    color: colors.warning[700],
-  },
-  scheduleCard: {
-    backgroundColor: colors.success[50],
-    borderColor: colors.success[100],
-    marginBottom: spacing.xxl,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  scheduleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.xl,
-    backgroundColor: colors.neutral[0],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.lg,
-  },
-  scheduleContent: {
-    flex: 1,
-  },
-  scheduleTitle: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: typography.h3.fontSize,
-    color: colors.success[700],
-    marginBottom: 4,
-  },
-  scheduleSubtitle: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 12,
-    color: colors.success[700],
-  },
-  recommendedSection: {
-    marginBottom: spacing.xxl,
-  },
-  recommendedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.lg,
-  },
-  recommendedCard: {
-    backgroundColor: colors.neutral[50],
-    borderColor: colors.neutral[200],
-  },
-  recommendedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recommendedContent: {
-    flex: 1,
-  },
-  recommendedTitle: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: typography.h3.fontSize,
-    color: colors.neutral[900],
-    marginBottom: 4,
-  },
-  recommendedSubtitle: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 12,
-    color: colors.neutral[500],
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xxxl + spacing.sm,
-  },
-  loadingText: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 14,
-    color: colors.neutral[500],
-    marginTop: spacing.md,
-  },
-  timingModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'flex-end',
-  },
-  timingModalCard: {
-    backgroundColor: colors.neutral[0],
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xxl,
-    paddingBottom: spacing.xxxl + spacing.sm,
-  },
-  timingModalTitle: {
-    fontFamily: typography.h2.fontFamily,
-    fontSize: typography.h2.fontSize,
-    color: colors.neutral[900],
-    marginBottom: 4,
-  },
-  timingModalSubtitle: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 14,
-    color: colors.neutral[500],
-    marginBottom: spacing.xl,
-  },
-  timingSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.success[50],
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-    borderRadius: radius.md,
-    paddingVertical: spacing.lg - 2,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm + 2,
-  },
-  timingSlotText: {
-    fontFamily: typography.body.fontFamily,
-    fontSize: 15,
-    color: colors.neutral[900],
-  },
-  timingCancelButton: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.xs,
-  },
-  timingCancelText: {
-    fontFamily: typography.h3.fontFamily,
-    fontSize: 15,
-    color: colors.neutral[500],
-  },
+  container: { flex: 1, backgroundColor: colors.neutral[0] },
+  content: { flex: 1 },
+  contentContainer: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl - spacing.sm },
+  welcomeSection: { paddingVertical: spacing.xxl },
+  welcomeTitle: { fontFamily: typography.h1.fontFamily, fontSize: typography.h1.fontSize, color: colors.neutral[900], marginBottom: spacing.sm },
+  welcomeSubtitle: { fontFamily: typography.body.fontFamily, fontSize: 16, color: colors.neutral[500] },
+  welcomeNumeric: { fontFamily: typography.h3.fontFamily, color: colors.primary[600] },
+  alertCard: { backgroundColor: colors.warning[50], borderColor: colors.warning[100], borderLeftWidth: 4, borderLeftColor: colors.warning[500], marginBottom: spacing.xxl },
+  alertRow: { flexDirection: 'row', alignItems: 'center' },
+  alertIconCircle: { width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.warning[100], justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  alertContent: { flex: 1 },
+  alertTitle: { fontFamily: typography.h3.fontFamily, fontSize: 14, color: colors.warning[700], marginBottom: 2 },
+  alertText: { fontFamily: typography.body.fontFamily, fontSize: 12, color: colors.warning[700] },
+  servicesSection: { marginBottom: spacing.xxl },
+  sectionTitle: { fontFamily: typography.h2.fontFamily, fontSize: typography.h2.fontSize, color: colors.neutral[900], marginBottom: spacing.lg },
+  serviceCard: { marginBottom: spacing.md },
+  serviceCardDisabled: { opacity: 0.6 },
+  serviceContent: { flexDirection: 'row', alignItems: 'center' },
+  serviceIcon: { width: 48, height: 48, borderRadius: radius.xl, justifyContent: 'center', alignItems: 'center', marginRight: spacing.lg },
+  serviceInfo: { flex: 1 },
+  serviceTitle: { fontFamily: typography.h3.fontFamily, fontSize: typography.h3.fontSize, color: colors.neutral[900], marginBottom: 4 },
+  serviceVolume: { fontFamily: typography.body.fontFamily, fontSize: 14, color: colors.neutral[500], marginBottom: spacing.sm },
+  serviceDetails: { flexDirection: 'row', alignItems: 'center' },
+  servicePrice: { fontFamily: typography.numeric.fontFamily, fontSize: 16, color: colors.primary[600] },
+  serviceTime: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500], marginLeft: spacing.sm },
+  serviceRight: { alignItems: 'flex-end', gap: spacing.sm },
+  expressCard: { backgroundColor: colors.warning[50], borderColor: colors.warning[100], marginBottom: spacing.xxl },
+  expressRow: { flexDirection: 'row', alignItems: 'center' },
+  expressIcon: { width: 48, height: 48, borderRadius: radius.xl, backgroundColor: colors.warning[100], justifyContent: 'center', alignItems: 'center', marginRight: spacing.lg },
+  expressContent: { flex: 1 },
+  expressTitle: { fontFamily: typography.h3.fontFamily, fontSize: typography.h3.fontSize, color: colors.warning[700], marginBottom: 4 },
+  expressSubtitle: { fontFamily: typography.body.fontFamily, fontSize: 12, color: colors.warning[700] },
+  expressPricing: { alignItems: 'flex-end', gap: spacing.xs },
+  expressPriceText: { fontFamily: typography.numeric.fontFamily, fontSize: 14, color: colors.warning[700] },
+  loadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl + spacing.sm },
+  loadingText: { fontFamily: typography.body.fontFamily, fontSize: 14, color: colors.neutral[500], marginTop: spacing.md },
+  timingModalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)', justifyContent: 'flex-end' },
+  timingModalCard: { backgroundColor: colors.neutral[0], borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xxl, paddingBottom: spacing.xxxl + spacing.sm },
+  timingModalTitle: { fontFamily: typography.h2.fontFamily, fontSize: typography.h2.fontSize, color: colors.neutral[900], marginBottom: 4 },
+  timingModalSubtitle: { fontFamily: typography.body.fontFamily, fontSize: 14, color: colors.neutral[500], marginBottom: spacing.xl },
+  timingSlot: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.success[50], borderWidth: 1, borderColor: '#DCFCE7', borderRadius: radius.md, paddingVertical: spacing.lg - 2, paddingHorizontal: spacing.lg, marginBottom: spacing.sm + 2 },
+  timingSlotText: { fontFamily: typography.body.fontFamily, fontSize: 15, color: colors.neutral[900] },
+  timingCancelButton: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
+  timingCancelText: { fontFamily: typography.h3.fontFamily, fontSize: 15, color: colors.neutral[500] },
+
+  activeSection: { marginBottom: spacing.xxl },
+  activeCard: { gap: spacing.md },
+  activeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  activeHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  activeIconCircle: { width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.primary[50], justifyContent: 'center', alignItems: 'center' },
+  activeTitle: { fontFamily: typography.h3.fontFamily, fontSize: typography.h3.fontSize, color: colors.neutral[900] },
+  activeOrderNumber: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500], marginTop: 2 },
+  queueRow: { paddingVertical: spacing.sm },
+  queueHeadline: { fontFamily: typography.h3.fontFamily, fontSize: 16, color: colors.neutral[900] },
+  queueSubtext: { fontFamily: typography.body.fontFamily, fontSize: 13, color: colors.neutral[500], marginTop: 2 },
+
+  historySection: { marginTop: spacing.md },
+  orderCard: { backgroundColor: colors.neutral[0], borderRadius: radius.lg, borderWidth: 1, borderColor: colors.neutral[200], padding: spacing.lg, marginBottom: spacing.md, gap: spacing.sm },
+  orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  orderType: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  orderInfo: {},
+  orderTitle: { fontFamily: typography.h3.fontFamily, fontSize: 14, color: colors.neutral[900] },
+  orderVolume: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500] },
+  orderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  orderDetailText: { fontFamily: typography.body.fontFamily, fontSize: 12, color: colors.neutral[500], flex: 1 },
+  orderFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.neutral[100] },
+  orderPrice: { fontFamily: typography.numeric.fontFamily, fontSize: 15, color: colors.neutral[900] },
+
+  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.sm },
+  statusText: { fontFamily: typography.label.fontFamily, fontSize: 11 },
+
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxxl, gap: spacing.sm },
+  emptyText: { fontFamily: typography.body.fontFamily, fontSize: 13, color: colors.neutral[500], textAlign: 'center' },
 });

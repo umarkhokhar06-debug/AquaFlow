@@ -9,7 +9,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -27,7 +27,6 @@ import {
   Users,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
-import { DrawerActions } from '@react-navigation/native';
 import {
   getLatestIoTData,
   getAllIoTData,
@@ -53,7 +52,6 @@ export default function TankMonitoringScreen() {
   const [todayUsage, setTodayUsage] = useState(0);
   const [weeklyUsage, setWeeklyUsage] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-    const navigation = useNavigation();
   const [lastUpdate, setLastUpdate] = useState('');
   const [weeklyData, setWeeklyData] = useState<
     { day: string; level: number }[]
@@ -274,7 +272,7 @@ export default function TankMonitoringScreen() {
   };
 
   const openDrawer = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
+    router.push('/(main)/(tabs)/account');
   };
 
   const openNotifications = () => {
@@ -575,7 +573,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   deviceSwitcher: {
@@ -600,7 +598,7 @@ const styles = StyleSheet.create({
   },
   deviceChipTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   deviceChipTitleActive: {
@@ -608,7 +606,7 @@ const styles = StyleSheet.create({
   },
   deviceChipSubtitle: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
     marginTop: 2,
   },
@@ -627,7 +625,7 @@ const styles = StyleSheet.create({
   },
   manageAccessButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   refreshButton: {
@@ -645,13 +643,13 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
     marginLeft: 4,
   },
   lastUpdateText: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginLeft: 8,
   },
@@ -685,7 +683,7 @@ const styles = StyleSheet.create({
   },
   levelTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginLeft: 8,
   },
@@ -698,7 +696,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     marginLeft: 4,
   },
   levelDisplay: {
@@ -707,13 +705,13 @@ const styles = StyleSheet.create({
   },
   levelPercentage: {
     fontSize: 48,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#F59E0B',
     marginBottom: 8,
   },
   levelLiters: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   progressContainer: {
@@ -724,12 +722,12 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#374151',
   },
   progressValue: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   progressBar: {
@@ -757,13 +755,13 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginBottom: 4,
   },
   alertText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#92400E',
   },
   orderButton: {
@@ -774,7 +772,7 @@ const styles = StyleSheet.create({
   },
   orderButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   visualizationCard: {
@@ -790,7 +788,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 20,
   },
@@ -810,7 +808,7 @@ const styles = StyleSheet.create({
   },
   tankLabel: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   tankBody: {
@@ -827,13 +825,13 @@ const styles = StyleSheet.create({
   },
   tankTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   tankCapacity: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   sensorData: {
@@ -849,14 +847,14 @@ const styles = StyleSheet.create({
   },
   sensorValue: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 8,
     marginBottom: 4,
   },
   sensorLabel: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   usageCard: {
@@ -891,19 +889,19 @@ const styles = StyleSheet.create({
   },
   usageValue: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
     marginBottom: 4,
   },
   usageLabel: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 2,
   },
   usageChange: {
     fontSize: 10,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#10B981',
   },
   chartCard: {
@@ -936,7 +934,7 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   chartBars: {
@@ -964,7 +962,7 @@ const styles = StyleSheet.create({
   },
   barLabel: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   alertsCard: {
@@ -993,19 +991,19 @@ const styles = StyleSheet.create({
   },
   alertItemTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   alertMessage: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 4,
   },
   alertTime: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
 });

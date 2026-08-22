@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   notificationButton: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   notificationBadgeText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#FFFFFF',
   },
   content: {
@@ -421,13 +421,13 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   statsGrid: {
@@ -463,18 +463,18 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 18,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
     marginBottom: 2,
   },
   statTitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   statSubtitle: {
     fontSize: 10,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   quickActions: {
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },
@@ -517,12 +517,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   viewAllText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
   },
   orderCard: {
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   },
   orderId: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginRight: 8,
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 8,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#FFFFFF',
   },
   statusBadge: {
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
   },
   customerInfo: {
     flexDirection: 'row',
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   customerName: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#1F2937',
     marginLeft: 8,
   },
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   },
   orderDetailText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginLeft: 8,
     flex: 1,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   },
   orderAmount: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#28A745',
   },
   statusCard: {
@@ -648,13 +648,13 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 15,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   statusSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
 });

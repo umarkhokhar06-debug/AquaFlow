@@ -25,7 +25,7 @@ export const globalstyles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   notificationButton: {
@@ -50,7 +50,7 @@ export const globalstyles = StyleSheet.create({
   },
   notificationBadgeText: {
     fontSize: 10,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#FFFFFF',
   },
   content: {
@@ -65,13 +65,13 @@ export const globalstyles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   alertCard: {
@@ -92,13 +92,13 @@ export const globalstyles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginBottom: 2,
   },
   alertText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#92400E',
   },
   orderNowButton: {
@@ -109,7 +109,7 @@ export const globalstyles = StyleSheet.create({
   },
   orderNowButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   servicesSection: {
@@ -117,7 +117,7 @@ export const globalstyles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 16,
   },
@@ -154,13 +154,13 @@ export const globalstyles = StyleSheet.create({
   },
   serviceTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   serviceVolume: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 8,
   },
@@ -170,12 +170,12 @@ export const globalstyles = StyleSheet.create({
   },
   servicePrice: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#087EA4',
   },
   serviceTime: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginLeft: 8,
   },
@@ -190,7 +190,7 @@ export const globalstyles = StyleSheet.create({
   },
   availabilityText: {
     fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   expressSection: {
@@ -219,13 +219,13 @@ export const globalstyles = StyleSheet.create({
   },
   expressTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginBottom: 4,
   },
   expressSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#92400E',
   },
   expressPricing: {
@@ -233,13 +233,13 @@ export const globalstyles = StyleSheet.create({
   },
   expressPriceText: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#92400E',
     marginBottom: 4,
   },
   expressBadge: {
     fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     backgroundColor: '#F59E0B',
     paddingHorizontal: 8,
@@ -269,13 +269,13 @@ export const globalstyles = StyleSheet.create({
   },
   recommendedTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   recommendedSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   scheduleButton: {
@@ -286,7 +286,7 @@ export const globalstyles = StyleSheet.create({
   },
   scheduleButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
 });

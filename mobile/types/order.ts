@@ -105,6 +105,18 @@ export interface OrderStatusUpdate {
   status: 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
 }
 
+export interface QueueStatus {
+  status: Order['status'];
+  terminal: boolean;
+  position: number | null;
+  etaMinutes: number | null;
+}
+
+export interface QueueStatusResponse extends QueueStatus {
+  success: boolean;
+  message?: string;
+}
+
 export interface OrderStatistics {
   totalOrders: number;
   totalRevenue: number;

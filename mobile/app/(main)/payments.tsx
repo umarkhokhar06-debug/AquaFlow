@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   addButton: {
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     marginLeft: 4,
   },
@@ -329,13 +329,13 @@ const styles = StyleSheet.create({
   },
   cashTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   cashSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   availableBadge: {
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   availableText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   paymentCard: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   paymentTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginRight: 8,
   },
@@ -403,19 +403,19 @@ const styles = StyleSheet.create({
   },
   defaultText: {
     fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginLeft: 4,
   },
   paymentDetails: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 2,
   },
   paymentExpiry: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   paymentActions: {
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   setDefaultText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#6B7280',
     marginLeft: 4,
   },
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   verifyText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
     marginLeft: 4,
   },
@@ -477,13 +477,13 @@ const styles = StyleSheet.create({
   },
   securityTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1E40AF',
     marginBottom: 4,
   },
   securityText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1E40AF',
     lineHeight: 16,
   },
@@ -494,14 +494,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: 24,
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   },
   emptyAddButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },

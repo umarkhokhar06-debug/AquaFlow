@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   addButton: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     marginLeft: 4,
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 12,
   },
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   addressType: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginRight: 8,
   },
@@ -377,18 +377,18 @@ const styles = StyleSheet.create({
   },
   defaultText: {
     fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginLeft: 4,
   },
   addressTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   addressName: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
     marginTop: 2,
   },
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#374151',
     lineHeight: 20,
     marginBottom: 8,
@@ -423,13 +423,13 @@ const styles = StyleSheet.create({
   },
   landmarkText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#087EA4',
     marginLeft: 4,
   },
   phoneText: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#374151',
   },
   addressFooter: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   },
   setDefaultText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#6B7280',
     marginLeft: 4,
   },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   viewMapText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
     marginLeft: 4,
   },
@@ -467,14 +467,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: 24,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   emptyAddButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },

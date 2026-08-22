@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   placeholder: {
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 16,
   },
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   typeButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#6B7280',
   },
   typeButtonTextActive: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#374151',
     marginBottom: 8,
   },
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1F2937',
   },
   textInput: {
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1F2937',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   portionButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#6B7280',
   },
   portionButtonTextActive: {
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   },
   defaultToggleText: {
     fontSize: 15,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#374151',
   },
   saveButton: {
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   sectionHeader: {
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   },
   currentLocationText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   mapToggle: {
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
   },
   mapToggleText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
   },
   mapContainer: {
@@ -687,13 +687,13 @@ const styles = StyleSheet.create({
   },
   mapInfoText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   mapInfoHint: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
 });

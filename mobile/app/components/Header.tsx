@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, typography } from '@/theme';
 import { notificationService } from '@/utils/notificationService';
 
-const HeaderComponent = ({ openDrawer, openNotifications }: { openDrawer: () => void; openNotifications: () => void }) => {
+const HeaderComponent = ({ openDrawer, openNotifications }: { openDrawer?: () => void; openNotifications?: () => void }) => {
   const insets = useSafeAreaInsets();
   const [unreadCount, setUnreadCount] = useState(notificationService.getUnreadCount());
 
@@ -17,18 +17,26 @@ const HeaderComponent = ({ openDrawer, openNotifications }: { openDrawer: () => 
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-      <TouchableOpacity onPress={openDrawer} style={styles.iconButton}>
-        <Menu size={24} color={colors.neutral[900]} />
-      </TouchableOpacity>
+      {openDrawer ? (
+        <TouchableOpacity onPress={openDrawer} style={styles.iconButton}>
+          <Menu size={24} color={colors.neutral[900]} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconButton} />
+      )}
       <Text style={styles.title}>AabRahat</Text>
-      <TouchableOpacity style={styles.iconButton} onPress={openNotifications}>
-        <Bell size={24} color={colors.neutral[900]} />
-        {unreadCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+      {openNotifications ? (
+        <TouchableOpacity style={styles.iconButton} onPress={openNotifications}>
+          <Bell size={24} color={colors.neutral[900]} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.iconButton} />
+      )}
     </View>
   );
 };

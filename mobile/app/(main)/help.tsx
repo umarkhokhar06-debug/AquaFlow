@@ -58,7 +58,7 @@ export default function HelpScreen() {
       title: 'Order History',
       subtitle: 'View past orders',
       icon: <Clock size={20} color="#EF4444" />,
-      action: () => router.push('/(main)/(tabs)/orders'),
+      action: () => router.push('/(main)/(tabs)'),
     },
     {
       id: '3',
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   placeholder: {
@@ -298,13 +298,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 16,
   },
@@ -334,13 +334,13 @@ const styles = StyleSheet.create({
   },
   contactTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   contactSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   quickActionCard: {
@@ -370,13 +370,13 @@ const styles = StyleSheet.create({
   },
   quickActionTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   quickActionSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   faqContainer: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   faqQuestionText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#1F2937',
     marginLeft: 12,
   },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   },
   faqAnswerText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     lineHeight: 20,
   },
@@ -441,12 +441,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   infoValue: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   rateSection: {
@@ -469,13 +469,13 @@ const styles = StyleSheet.create({
   },
   rateTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#92400E',
     marginBottom: 4,
   },
   rateSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#92400E',
     lineHeight: 16,
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   },
   rateButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
 });

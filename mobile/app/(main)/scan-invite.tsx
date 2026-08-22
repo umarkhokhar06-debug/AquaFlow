@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     fontSize: 15,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1F2937',
     textAlign: 'center',
     marginBottom: 20,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#FFFFFF',
     textAlign: 'center',
     paddingHorizontal: 24,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   manualToggleText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   manualHeader: {
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   manualTitle: {
     fontSize: 17,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   manualBody: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   manualLabel: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 10,
   },
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#1F2937',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -281,12 +281,12 @@ const styles = StyleSheet.create({
   },
   redeemButtonText: {
     fontSize: 15,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   switchModeText: {
     fontSize: 13,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Sora-Medium',
     color: '#087EA4',
     textAlign: 'center',
   },

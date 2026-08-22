@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 12,
   },
@@ -980,13 +980,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
@@ -1000,13 +1000,13 @@ const styles = StyleSheet.create({
   },
   selectOrderTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
   },
   selectOrderText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
   },
   socketText: {
     fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
   },
   statusDot: {
     width: 8,
@@ -1080,7 +1080,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   centerButton: {
@@ -1121,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   miniMetricValue: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   /* Drawer Styles */
@@ -1171,13 +1171,13 @@ const styles = StyleSheet.create({
   },
   drawerCustomerName: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   drawerOrderNumber: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   drawerCloseButton: {
@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
   },
   drawerCloseText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   drawerContent: {
@@ -1204,7 +1204,7 @@ const styles = StyleSheet.create({
   },
   expandedOrdersTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
   },
   expandedOrderNumber: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   expandedOrderItemRight: {
@@ -1236,12 +1236,12 @@ const styles = StyleSheet.create({
   },
   expandedOrderAmount: {
     fontSize: 14,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
   },
   expandedOrderCustomer: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -1271,13 +1271,13 @@ const styles = StyleSheet.create({
   },
   detailCardLabel: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginBottom: 2,
   },
   detailCardValue: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   drawerActions: {
@@ -1295,7 +1295,7 @@ const styles = StyleSheet.create({
   },
   drawerPrimaryButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   drawerSecondaryButton: {
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
   },
   drawerSecondaryButtonText: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   drawerOutlineButton: {
@@ -1327,7 +1327,7 @@ const styles = StyleSheet.create({
   },
   drawerOutlineButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   drawerDangerButton: {
@@ -1343,7 +1343,7 @@ const styles = StyleSheet.create({
   },
   drawerDangerButtonText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#EF4444',
   },
   drawerQuickActions: {
@@ -1369,7 +1369,7 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
     marginTop: 6,
   },
@@ -1395,7 +1395,7 @@ const styles = StyleSheet.create({
   },
   orderNumber: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 6,
   },
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
   },
   orderDetailText: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     flex: 1,
   },
@@ -1424,12 +1424,12 @@ const styles = StyleSheet.create({
   },
   orderAmount: {
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Sora-Bold',
     color: '#1F2937',
   },
   orderCustomer: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   customerCard: {
@@ -1457,13 +1457,13 @@ const styles = StyleSheet.create({
   },
   customerName: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   orderNumberSmall: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
   },
   customerActions: {
@@ -1487,7 +1487,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 13,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#4B5563',
     marginLeft: 8,
     flex: 1,
@@ -1501,14 +1501,14 @@ const styles = StyleSheet.create({
   },
   noLocationTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
     marginBottom: 8,
   },
   noLocationText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginBottom: 24,

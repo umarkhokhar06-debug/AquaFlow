@@ -27,7 +27,7 @@ export default function DriverTabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: 'Inter-Medium',
+          fontFamily: 'Sora-Medium',
         },
       }}
     >

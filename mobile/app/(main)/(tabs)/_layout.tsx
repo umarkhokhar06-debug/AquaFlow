@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Package, MapPin, User, Droplet } from 'lucide-react-native';
+import { Package, MapPin, Droplet, CircleUserRound } from 'lucide-react-native';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -27,30 +27,12 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontFamily: 'Inter-Medium',
+          fontFamily: 'Sora-Medium',
         },
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="tank-monitoring"
-        options={{
-          title: 'Tank Monitoring',
-          tabBarIcon: ({ color, size }) => (
-            <Droplet size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
         options={{
           title: 'Orders',
           tabBarIcon: ({ color, size }) => (
@@ -64,6 +46,24 @@ export default function TabLayout() {
           title: 'Tracking',
           tabBarIcon: ({ color, size }) => (
             <MapPin size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="tank-monitoring"
+        options={{
+          title: 'Water Level',
+          tabBarIcon: ({ color, size }) => (
+            <Droplet size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color, size }) => (
+            <CircleUserRound size={size} color={color} />
           ),
         }}
       />

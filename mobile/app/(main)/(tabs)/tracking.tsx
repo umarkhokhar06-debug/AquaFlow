@@ -33,11 +33,10 @@ import {
   X,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
-import { DrawerActions } from '@react-navigation/native';
-import { router, useNavigation } from 'expo-router';
+import { router } from 'expo-router';
 import { socketService, DriverLocationData } from '@/utils/socketService';
 import { orderAPI } from '@/utils/orderAPI';
-import { Order } from '@/types/order';
+import { Order, QueueStatus, getOrderId } from '@/types/order';
 
 const { width, height } = Dimensions.get('window');
 
@@ -61,8 +60,8 @@ export default function TrackingScreen() {
   const [isDriverOnline, setIsDriverOnline] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(true);
   const [showDriverInfo, setShowDriverInfo] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
   const mapRef = useRef<MapView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const panelHeight = useRef(new Animated.Value(220)).current;
@@ -83,6 +82,31 @@ export default function TrackingScreen() {
       }
     }
   }, [selectedOrder]);
+
+  // Before a driver is assigned there's nothing to show on the map --
+  // poll the queue position/ETA instead.
+  useEffect(() => {
+    if (!selectedOrder || selectedOrder.driver) {
+      setQueueStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchQueueStatus = async () => {
+      try {
+        const status = await orderAPI.getQueueStatus(getOrderId(selectedOrder));
+        if (!cancelled) setQueueStatus(status);
+      } catch (error) {
+        console.error('[TrackingScreen] Error fetching queue status:', error);
+      }
+    };
+    fetchQueueStatus();
+    const interval = setInterval(fetchQueueStatus, 20000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedOrder?._id, selectedOrder?.driver]);
 
   // Use driver location from order data when available
   useEffect(() => {
@@ -170,11 +194,13 @@ export default function TrackingScreen() {
         return;
       }
 
-      // Filter for active orders (preparing, out_for_delivery)
-      const activeOrders = allOrders.filter((order: Order) => 
-        ['preparing', 'out_for_delivery'].includes(order.status)
+      // Filter for active orders -- including pending/confirmed (not yet
+      // assigned a driver) so a just-placed order shows up here immediately
+      // with its queue position, not only once a driver is assigned.
+      const activeOrders = allOrders.filter((order: Order) =>
+        ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(order.status)
       );
-      console.log(`[TrackingScreen] Filtered ${activeOrders.length} active orders (preparing, out_for_delivery):`, 
+      console.log(`[TrackingScreen] Filtered ${activeOrders.length} active orders:`,
         activeOrders.map(o => ({ id: o._id, orderNumber: o.orderNumber, status: o.status })));
       
       setOrders(activeOrders);
@@ -306,7 +332,7 @@ export default function TrackingScreen() {
   };
 
   const openDrawer = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
+    router.push('/(main)/(tabs)/account');
   };
 
   const openNotifications = () => {
@@ -387,34 +413,55 @@ export default function TrackingScreen() {
         </View>
       ) : (
         <>
-          {/* Map View - Takes Maximum Space */}
-          <View style={styles.mapContainer}>
-            <TrackingMap
-              ref={mapRef}
-              style={styles.map}
-              driverLocation={driverLocation}
-              customerLocation={customerLocation}
-              isDriverOnline={isDriverOnline}
-              pulseAnim={pulseAnim}
-              latitudeDelta={LATITUDE_DELTA}
-              longitudeDelta={LONGITUDE_DELTA}
-            />
+          {selectedOrder && !selectedOrder.driver ? (
+            /* No driver assigned yet -- nothing to show on a map, show
+               queue position/ETA instead. */
+            <View style={styles.queueContainer}>
+              <View style={styles.queueIconCircle}>
+                <Clock size={32} color="#087EA4" />
+              </View>
+              {queueStatus && queueStatus.position !== null ? (
+                <>
+                  <Text style={styles.queueHeadline}>You're #{queueStatus.position} in line</Text>
+                  {queueStatus.etaMinutes !== null && (
+                    <Text style={styles.queueSubtext}>~{queueStatus.etaMinutes} min estimated</Text>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.queueHeadline}>Waiting to be assigned a driver…</Text>
+              )}
+              <Text style={styles.queueHint}>We'll show live tracking here once a driver is on the way.</Text>
+            </View>
+          ) : (
+            /* Map View - Takes Maximum Space */
+            <View style={styles.mapContainer}>
+              <TrackingMap
+                ref={mapRef}
+                style={styles.map}
+                driverLocation={driverLocation}
+                customerLocation={customerLocation}
+                isDriverOnline={isDriverOnline}
+                pulseAnim={pulseAnim}
+                latitudeDelta={LATITUDE_DELTA}
+                longitudeDelta={LONGITUDE_DELTA}
+              />
 
-            {/* Center Map Button */}
-            <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap}>
-              <Navigation size={18} color="#087EA4" />
-            </TouchableOpacity>
+              {/* Center Map Button */}
+              <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap}>
+                <Navigation size={18} color="#087EA4" />
+              </TouchableOpacity>
 
-            {/* Driver Status Badge */}
-            <View style={styles.statusBadgeContainer}>
-              <View style={[styles.driverStatusBadge, { backgroundColor: isDriverOnline ? '#10B981' : '#6B7280' }]}>
-                <View style={styles.statusDot} />
-                <Text style={styles.driverStatusText}>
-                  {isDriverOnline ? 'Online' : 'Offline'}
-                </Text>
+              {/* Driver Status Badge */}
+              <View style={styles.statusBadgeContainer}>
+                <View style={[styles.driverStatusBadge, { backgroundColor: isDriverOnline ? '#10B981' : '#6B7280' }]}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.driverStatusText}>
+                    {isDriverOnline ? 'Online' : 'Offline'}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           {/* Collapsible Bottom Panel */}
           <Animated.View style={[styles.bottomPanel, { height: panelHeight }]}>
@@ -600,7 +647,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 12,
   },
@@ -612,13 +659,13 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     textAlign: 'center',
     marginTop: 8,
@@ -626,6 +673,40 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     position: 'relative',
+  },
+  queueContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    gap: 6,
+  },
+  queueIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  queueHeadline: {
+    fontSize: 18,
+    fontFamily: 'Sora-SemiBold',
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  queueSubtext: {
+    fontSize: 14,
+    fontFamily: 'Sora-Regular',
+    color: '#6B7280',
+  },
+  queueHint: {
+    fontSize: 12,
+    fontFamily: 'Sora-Regular',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 8,
   },
   map: {
     flex: 1,
@@ -672,7 +753,7 @@ const styles = StyleSheet.create({
   },
   driverStatusText: {
     fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   bottomPanel: {
@@ -706,12 +787,12 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   panelSubtitle: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
     marginTop: 2,
   },
@@ -746,7 +827,7 @@ const styles = StyleSheet.create({
   },
   orderNumber: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
@@ -760,7 +841,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 10,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
   },
   orderCardBody: {
     gap: 4,
@@ -772,7 +853,7 @@ const styles = StyleSheet.create({
   },
   orderDetailText: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     flex: 1,
   },
@@ -800,12 +881,12 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   actionButtonTextSecondary: {
     fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
   modalOverlay: {
@@ -830,7 +911,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   modalContent: {
@@ -857,12 +938,12 @@ const styles = StyleSheet.create({
   },
   driverName: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
   },
   driverSubtitle: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
@@ -880,18 +961,18 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
   infoValue: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginTop: 2,
   },
   infoSubtext: {
     fontSize: 11,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
     marginTop: 4,
   },
@@ -915,12 +996,12 @@ const styles = StyleSheet.create({
   },
   actionButtonFullText: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#FFFFFF',
   },
   actionButtonFullTextSecondary: {
     fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Sora-SemiBold',
     color: '#087EA4',
   },
 });
