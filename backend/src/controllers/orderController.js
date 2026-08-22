@@ -1,5 +1,6 @@
 const orderService = require('../services/orderService');
 const driverService = require('../services/driverService');
+const dispatchService = require('../services/dispatchService');
 
 const orderController = {
   // Create new order
@@ -317,6 +318,15 @@ const orderController = {
     try {
       const result = await orderService.reorder(req.params.orderId, req.user.id);
       res.status(201).json(result);
+    } catch (error) {
+      res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
+    }
+  },
+
+  getQueueStatus: async (req, res) => {
+    try {
+      const result = await dispatchService.getCustomerQueueStatus(req.params.orderId, req.user.id);
+      res.status(200).json({ success: true, ...result });
     } catch (error) {
       res.status(orderController._statusFor(error)).json({ success: false, message: error.message });
     }

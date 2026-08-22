@@ -86,7 +86,7 @@ export default function DriverDeliveriesScreen() {
       case 'preparing':
         return '#F59E0B';
       case 'out_for_delivery':
-        return '#007AFF';
+        return '#087EA4';
       case 'delivered':
         return '#28A745';
       default:
@@ -181,7 +181,7 @@ export default function DriverDeliveriesScreen() {
           <Text style={styles.customerName}>{delivery.customerName}</Text>
         </View>
         <TouchableOpacity style={styles.phoneButton}>
-          <Phone size={14} color="#007AFF" />
+          <Phone size={14} color="#087EA4" />
         </TouchableOpacity>
       </View>
 
@@ -221,7 +221,7 @@ export default function DriverDeliveriesScreen() {
 
       {/* Header */}
       <LinearGradient
-        colors={['#007AFF', '#0056CC']}
+        colors={['#087EA4', '#063B5C']}
         style={[styles.header, { paddingTop: insets.top + 20 }]}
       >
         <View style={styles.headerContent}>
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     height: 34,
   },
   activeFilterTab: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
   },
   filterTabText: {
     fontSize: 14,

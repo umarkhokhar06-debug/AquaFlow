@@ -99,7 +99,7 @@ export default function ManageDeviceAccessScreen() {
     if (!invite || !device) return;
     try {
       await Share.share({
-        message: `You've been invited to view "${device.name}" at ${device.houseLabel} on AquaFlow.\n\nOpen the app, go to My Devices → Scan Invite, and scan the QR code, or enter this code manually:\n\n${invite.token}\n\n(Expires ${new Date(invite.expiresAt).toLocaleString()})`,
+        message: `You've been invited to view "${device.name}" at ${device.houseLabel} on AabRahat.\n\nOpen the app, go to My Devices → Scan Invite, and scan the QR code, or enter this code manually:\n\n${invite.token}\n\n(Expires ${new Date(invite.expiresAt).toLocaleString()})`,
       });
     } catch (error) {
       console.log('Share error:', error);
@@ -132,7 +132,7 @@ export default function ManageDeviceAccessScreen() {
   if (fetching) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -153,7 +153,7 @@ export default function ManageDeviceAccessScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.header}>
+      <LinearGradient colors={['#087EA4', '#063B5C']} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
@@ -165,7 +165,7 @@ export default function ManageDeviceAccessScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.infoCard}>
-          <Users size={24} color="#007AFF" />
+          <Users size={24} color="#087EA4" />
           <Text style={styles.infoTitle}>{device.name}</Text>
           <Text style={styles.infoText}>{device.houseLabel}</Text>
         </View>
@@ -174,7 +174,7 @@ export default function ManageDeviceAccessScreen() {
           <Text style={styles.label}>Add a tenant</Text>
           <Text style={styles.description}>
             They'll be able to see this device's live water level, but won't be able to
-            change calibration or remove other people's access. They need an AquaFlow
+            change calibration or remove other people's access. They need an AabRahat
             account already — if they don't have one yet, use the invite QR below instead.
           </Text>
 
@@ -230,7 +230,7 @@ export default function ManageDeviceAccessScreen() {
 
         <View style={styles.formCard}>
           <View style={styles.inviteHeader}>
-            <QrCode size={20} color="#007AFF" />
+            <QrCode size={20} color="#087EA4" />
             <Text style={[styles.label, { marginBottom: 0, marginLeft: 8 }]}>Invite by QR code</Text>
           </View>
           <Text style={styles.description}>
@@ -258,7 +258,7 @@ export default function ManageDeviceAccessScreen() {
             <View style={styles.inviteBlock}>
               <View style={styles.qrWrap}>
                 <QRCode
-                  value={JSON.stringify({ type: 'aquaflow-device-invite', token: invite.token })}
+                  value={JSON.stringify({ type: 'urbanwaters-device-invite', token: invite.token })}
                   size={180}
                 />
               </View>
@@ -283,7 +283,7 @@ export default function ManageDeviceAccessScreen() {
             style={styles.scanLink}
             onPress={() => router.push('/(main)/scan-invite')}
           >
-            <ScanLine size={14} color="#007AFF" />
+            <ScanLine size={14} color="#087EA4" />
             <Text style={styles.scanLinkText}>Have an invite code yourself? Scan it here</Text>
           </TouchableOpacity>
         </View>
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   backLinkText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   header: {
     paddingTop: 50,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   modeButtonTextActive: {
-    color: '#007AFF',
+    color: '#087EA4',
     fontFamily: 'Inter-SemiBold',
   },
   addRow: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 12,
     paddingVertical: 12,
   },
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
   },
   shareButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   scanLinkText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   tenantRow: {
     flexDirection: 'row',

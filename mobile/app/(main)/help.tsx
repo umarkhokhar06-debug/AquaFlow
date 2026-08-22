@@ -30,10 +30,10 @@ export default function HelpScreen() {
     {
       id: '2',
       title: 'Email Support',
-      subtitle: 'support@aquaflow.com',
-      icon: <Mail size={20} color="#007AFF" />,
-      action: () => Linking.openURL('mailto:support@aquaflow.com'),
-      color: '#007AFF',
+      subtitle: 'umarkhokhar06@gmail.com',
+      icon: <Mail size={20} color="#087EA4" />,
+      action: () => Linking.openURL('mailto:umarkhokhar06@gmail.com'),
+      color: '#087EA4',
     },
     {
       id: '3',
@@ -138,7 +138,7 @@ export default function HelpScreen() {
         style={styles.faqQuestion}
         onPress={() => handleFaqToggle(faq.id)}
       >
-        <HelpCircle size={16} color="#007AFF" />
+        <HelpCircle size={16} color="#087EA4" />
         <Text style={styles.faqQuestionText}>{faq.question}</Text>
         <ChevronRight 
           size={16} 
@@ -237,7 +237,7 @@ export default function HelpScreen() {
               <Star size={24} color="#F59E0B" fill="#F59E0B" />
             </View>
             <View style={styles.rateContent}>
-              <Text style={styles.rateTitle}>Enjoying AquaFlow?</Text>
+              <Text style={styles.rateTitle}>Enjoying AabRahat?</Text>
               <Text style={styles.rateSubtitle}>
                 Rate us on the App Store to help others discover our service
               </Text>

@@ -73,7 +73,7 @@ export default function HelpScreen() {
     {
       title: 'Call Support',
       description: 'Speak with our support team',
-      icon: <Phone size={24} color="#007AFF" />,
+      icon: <Phone size={24} color="#087EA4" />,
       action: () => {
         Alert.alert('Call Support', 'This will open your phone app to call support.');
       },
@@ -115,7 +115,7 @@ export default function HelpScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading help content...</Text>
       </View>
     );
@@ -126,14 +126,14 @@ export default function HelpScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#007AFF" />
+          <ArrowLeft size={24} color="#087EA4" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & Support</Text>
         <TouchableOpacity 
           onPress={() => setShowCreateTicket(!showCreateTicket)} 
           style={styles.addButton}
         >
-          <Plus size={20} color="#007AFF" />
+          <Plus size={20} color="#087EA4" />
         </TouchableOpacity>
       </View>
 
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   pickerOptionSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   pickerOptionText: {
@@ -427,11 +427,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   pickerOptionTextSelected: {
-    color: '#007AFF',
+    color: '#087EA4',
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',

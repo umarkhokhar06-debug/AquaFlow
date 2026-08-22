@@ -90,7 +90,7 @@ export default function OrderDetailsScreen() {
       case 'pending':
         return '#F59E0B';
       case 'confirmed':
-        return '#007AFF';
+        return '#087EA4';
       case 'preparing':
         return '#8B5CF6';
       case 'out_for_delivery':
@@ -109,7 +109,7 @@ export default function OrderDetailsScreen() {
       case 'pending':
         return <Clock size={20} color="#F59E0B" />;
       case 'confirmed':
-        return <CheckCircle size={20} color="#007AFF" />;
+        return <CheckCircle size={20} color="#087EA4" />;
       case 'preparing':
         return <Clock size={20} color="#8B5CF6" />;
       case 'out_for_delivery':
@@ -188,7 +188,7 @@ export default function OrderDetailsScreen() {
       <View style={[globalstyles.container, { paddingTop: insets.top }]}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#087EA4" />
           <Text style={styles.loadingText}>Loading order details...</Text>
         </View>
       </View>
@@ -250,7 +250,7 @@ export default function OrderDetailsScreen() {
           {order.items.map((item, index) => (
             <View key={index} style={styles.itemCard}>
               <View style={styles.itemHeader}>
-                <Droplets size={20} color="#007AFF" />
+                <Droplets size={20} color="#087EA4" />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{getProductName(item.type)}</Text>
                   <Text style={styles.itemSize}>{getProductSize(item.type)}</Text>
@@ -299,7 +299,7 @@ export default function OrderDetailsScreen() {
                 <Text style={styles.driverName}>{order.driver.name}</Text>
                 <Text style={styles.driverEmail}>{order.driver.email}</Text>
               </View>
-              <Truck size={20} color="#007AFF" />
+              <Truck size={20} color="#087EA4" />
             </View>
           </View>
         )}

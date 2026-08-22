@@ -1,7 +1,7 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -74,7 +74,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/addresses')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         {/* <DrawerItem
           label="Payment Methods"
@@ -86,7 +86,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/payments')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         /> */}
         <DrawerItem
           label="My Devices"
@@ -98,7 +98,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/calibration-settings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Settings"
@@ -110,7 +110,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/settings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Auto-Order Schedule"
@@ -122,7 +122,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/schedule')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Notifications"
@@ -134,7 +134,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/notifications')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Help & Support"
@@ -146,7 +146,7 @@ function CustomDrawerContent(props: any) {
           onPress={() => router.push('/(main)/help')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
       </View>
 
@@ -171,7 +171,7 @@ export default function MainLayout() {
             backgroundColor: '#FFFFFF',
             width: 320,
           },
-          drawerType: 'slide',
+          drawerType: Platform.OS === 'web' ? 'front' : 'slide',
           overlayColor: 'rgba(0, 0, 0, 0.5)',
         }}
       >
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,

@@ -127,7 +127,7 @@ export default function SignupScreen() {
               <ArrowLeft size={24} color={colors.neutral[0]} />
             </TouchableOpacity>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join AquaFlow today</Text>
+            <Text style={styles.subtitle}>Join AabRahat today</Text>
           </View>
 
           <View style={styles.form}>

@@ -234,7 +234,7 @@ export default function ScheduleScreen() {
           style={styles.addButton}
           onPress={() => setShowAddModal(true)}
         >
-          <Plus size={24} color="#007AFF" />
+          <Plus size={24} color="#087EA4" />
         </TouchableOpacity>
       </View>
 
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   createButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   modalCreate: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   modalContent: {
     flex: 1,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   productOptionSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   productOptionName: {
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
   },
   input: {
     borderWidth: 1,
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   addressOptionSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   addressOptionType: {
@@ -705,6 +705,6 @@ const styles = StyleSheet.create({
   addressPlaceholderText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#007AFF',
+    color: '#087EA4',
   },
 });

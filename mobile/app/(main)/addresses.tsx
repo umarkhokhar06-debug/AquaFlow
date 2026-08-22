@@ -127,7 +127,7 @@ export default function AddressesScreen() {
         <View style={styles.addressTypeContainer}>
           <View style={[styles.addressIcon, address.type === 'Home' ? styles.homeIcon : styles.officeIcon]}>
             {address.type === 'Home' ? (
-              <Home size={20} color="#007AFF" />
+              <Home size={20} color="#087EA4" />
             ) : address.type === 'Office' ? (
               <Building2 size={20} color="#10B981" />
             ) : (
@@ -168,7 +168,7 @@ export default function AddressesScreen() {
         <Text style={styles.addressText}>{address.address}</Text>
         {address.landmark && (
           <View style={styles.landmarkRow}>
-            <MapPin size={14} color="#007AFF" />
+            <MapPin size={14} color="#087EA4" />
             <Text style={styles.landmarkText}>{address.landmark}</Text>
           </View>
         )}
@@ -191,7 +191,7 @@ export default function AddressesScreen() {
           style={styles.viewMapButton}
           onPress={() => handleViewOnMap(address)}
         >
-          <Navigation size={16} color="#007AFF" />
+          <Navigation size={16} color="#087EA4" />
           <Text style={styles.viewMapText}>View on Map</Text>
         </TouchableOpacity>
       </View>
@@ -215,7 +215,7 @@ export default function AddressesScreen() {
           style={styles.addButton}
           onPress={handleAddAddress}
         >
-          <Plus size={24} color="#007AFF" />
+          <Plus size={24} color="#087EA4" />
           <Text style={styles.addButtonText}>Add Address</Text>
         </TouchableOpacity>
       </View>
@@ -227,7 +227,7 @@ export default function AddressesScreen() {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color="#087EA4" />
             <Text style={styles.loadingText}>Loading addresses...</Text>
           </View>
         ) : (
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   landmarkText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#007AFF',
+    color: '#087EA4',
     marginLeft: 4,
   },
   phoneText: {
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   viewMapText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
     marginLeft: 4,
   },
   emptyState: {
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   emptyAddButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,

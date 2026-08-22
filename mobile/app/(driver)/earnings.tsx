@@ -96,7 +96,7 @@ export default function EarningsScreen() {
   const getEarningTypeColor = (type: string) => {
     switch (type) {
       case 'delivery':
-        return '#007AFF';
+        return '#087EA4';
       case 'bonus':
         return '#34D399';
       case 'tip':
@@ -122,7 +122,7 @@ export default function EarningsScreen() {
           {/* <Text style={styles.earningOrder}>Payment: {item.paymentMethod || 'N/A'}</Text> */}
         </View>
         <View style={styles.earningAmount}>
-          <Text style={[styles.amount, { color: '#007AFF' }]}> 
+          <Text style={[styles.amount, { color: '#087EA4' }]}> 
             {formatCurrency(item.amount)}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}> 
@@ -144,7 +144,7 @@ export default function EarningsScreen() {
   if (loading && earnings.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading earnings...</Text>
       </View>
     );
@@ -155,14 +155,14 @@ export default function EarningsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#007AFF" />
+          <ArrowLeft size={24} color="#087EA4" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Earnings</Text>
         <TouchableOpacity 
           onPress={() => setShowFilter(!showFilter)} 
           style={styles.filterButton}
         >
-          <Filter size={20} color="#007AFF" />
+          <Filter size={20} color="#087EA4" />
         </TouchableOpacity>
       </View>
 
@@ -179,7 +179,7 @@ export default function EarningsScreen() {
 
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
-              <Package size={24} color="#007AFF" />
+              <Package size={24} color="#087EA4" />
               <Text style={styles.summaryLabel}>Monthly Earnings</Text>
             </View>
             <Text style={styles.summaryValue}>{formatCurrency(summary.monthlyEarnings)}</Text>

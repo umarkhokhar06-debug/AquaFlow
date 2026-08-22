@@ -132,7 +132,7 @@ export default function OrdersScreen() {
       case 'pending':
         return '#F59E0B';
       case 'confirmed':
-        return '#007AFF';
+        return '#087EA4';
       case 'preparing':
         return '#8B5CF6';
       case 'out_for_delivery':
@@ -151,7 +151,7 @@ export default function OrdersScreen() {
       case 'pending':
         return <Clock size={16} color="#F59E0B" />;
       case 'confirmed':
-        return <CheckCircle size={16} color="#007AFF" />;
+        return <CheckCircle size={16} color="#087EA4" />;
       case 'preparing':
         return <Clock size={16} color="#8B5CF6" />;
       case 'out_for_delivery':
@@ -237,7 +237,7 @@ export default function OrdersScreen() {
       <TouchableOpacity style={styles.orderCard} onPress={handleOrderPress}>
         <View style={styles.orderHeader}>
           <View style={styles.orderType}>
-            <Droplets size={20} color="#007AFF" />
+            <Droplets size={20} color="#087EA4" />
             <View style={styles.orderInfo}>
               <Text style={styles.orderTitle}>{getProductName(order.items[0]?.type || '')}</Text>
               <Text style={styles.orderVolume}>
@@ -339,7 +339,7 @@ export default function OrdersScreen() {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color="#087EA4" />
             <Text style={styles.loadingText}>Loading orders...</Text>
           </View>
         ) : activeTab === 'active' ? (
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
   },
   tabText: {
     fontSize: 14,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   estimatedTime: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   completedTime: {
     fontSize: 14,

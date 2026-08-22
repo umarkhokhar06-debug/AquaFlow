@@ -44,7 +44,7 @@ export const globalstyles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -171,7 +171,7 @@ export const globalstyles = StyleSheet.create({
   servicePrice: {
     fontSize: 16,
     fontFamily: 'Inter-Bold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   serviceTime: {
     fontSize: 12,
@@ -279,7 +279,7 @@ export const globalstyles = StyleSheet.create({
     color: '#6B7280',
   },
   scheduleButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,

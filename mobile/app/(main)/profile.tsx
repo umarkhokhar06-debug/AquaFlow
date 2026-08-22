@@ -61,7 +61,7 @@ export default function ProfileScreen() {
       
       {/* Header */}
       <LinearGradient
-        colors={['#007AFF', '#0056CC']}
+        colors={['#087EA4', '#063B5C']}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -91,7 +91,7 @@ export default function ProfileScreen() {
         {/* Profile Picture */}
         <View style={styles.profilePictureSection}>
           <View style={styles.profilePicture}>
-            <User size={60} color="#007AFF" />
+            <User size={60} color="#087EA4" />
           </View>
           {isEditing && (
             <TouchableOpacity style={styles.cameraButton}>
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   portionButtonActive: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   portionButtonDisabled: {
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   portionButtonTextActive: {
-    color: '#007AFF',
+    color: '#087EA4',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

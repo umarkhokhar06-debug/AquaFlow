@@ -240,6 +240,10 @@ orderSchema.pre('save', function(next) {
   next();
 });
 
+// Supports the customer queue-position count query (unassigned orders,
+// ranked by creation time) without a collection scan.
+orderSchema.index({ status: 1, orderDate: 1 });
+
 
 // Calculate totals before saving
 orderSchema.pre('save', function(next) {

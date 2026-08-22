@@ -76,7 +76,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   return (
     <div className="w-64 bg-gray-900 text-white min-h-screen">
       <div className="p-6">
-        <h2 className="text-xl font-bold">Aqua Flow</h2>
+        <h2 className="text-xl font-bold">AabRahat</h2>
         <p className="text-gray-400 text-sm mt-1 capitalize">
           {isPortalUser ? user?.userType?.replace(/_/g, ' ') + ' Portal' : 'Dashboard'}
         </p>

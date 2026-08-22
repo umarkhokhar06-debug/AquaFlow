@@ -113,7 +113,7 @@ export default function AddressSelectionModal({
                 : styles.otherIcon
           ]}>
             {address.type === 'Home' ? (
-              <Home size={20} color="#007AFF" />
+              <Home size={20} color="#087EA4" />
             ) : address.type === 'Office' ? (
               <Building2 size={20} color="#10B981" />
             ) : (
@@ -141,7 +141,7 @@ export default function AddressSelectionModal({
           <View style={styles.selectionIndicator}>
             {isSelected ? (
               <View style={styles.selectedCircle}>
-                <CheckCircle size={24} color="#007AFF" fill="#007AFF" />
+                <CheckCircle size={24} color="#087EA4" fill="#087EA4" />
               </View>
             ) : (
               <View style={styles.unselectedCircle} />
@@ -179,7 +179,7 @@ export default function AddressSelectionModal({
           >
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color="#087EA4" />
                 <Text style={styles.loadingText}>Loading addresses...</Text>
               </View>
             ) : addresses.length === 0 ? (
@@ -203,7 +203,7 @@ export default function AddressSelectionModal({
               style={styles.addButton}
               onPress={handleAddNewAddress}
             >
-              <Plus size={20} color="#007AFF" />
+              <Plus size={20} color="#087EA4" />
               <Text style={styles.addButtonText}>Add New Address</Text>
             </TouchableOpacity>
 
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
   },
   selectedCard: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   cardContent: {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   landmarkText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#007AFF',
+    color: '#087EA4',
     marginTop: 4,
   },
   phoneText: {
@@ -394,11 +394,11 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
     marginLeft: 8,
   },
   confirmButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

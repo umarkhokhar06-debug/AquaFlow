@@ -186,7 +186,7 @@ export default function SettingsScreen() {
       title: 'Account',
       items: [
         {
-          icon: <User size={20} color="#007AFF" />,
+          icon: <User size={20} color="#087EA4" />,
           title: 'Profile Settings',
           subtitle: 'Manage your profile information',
           onPress: navigateToProfile,
@@ -286,7 +286,7 @@ export default function SettingsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading settings...</Text>
       </View>
     );
@@ -297,11 +297,11 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#007AFF" />
+          <ArrowLeft size={24} color="#087EA4" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={styles.headerRight}>
-          {saving && <ActivityIndicator size="small" color="#007AFF" />}
+          {saving && <ActivityIndicator size="small" color="#087EA4" />}
         </View>
       </View>
 
@@ -337,7 +337,7 @@ export default function SettingsScreen() {
                       <Switch
                         value={item.value}
                         onValueChange={item.onToggle}
-                        trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                        trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                         thumbColor={item.value ? '#FFFFFF' : '#FFFFFF'}
                       />
                     ) : item.showChevron ? (

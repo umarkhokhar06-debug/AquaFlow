@@ -12,7 +12,7 @@ class IoTSubscriber {
   connect() {
     try {
       const deviceOptions = {
-        clientId: `aquaflow-backend-${Date.now()}`,
+        clientId: `urbanwaters-backend-${Date.now()}`,
         host: process.env.AWS_IOT_ENDPOINT,
         keepalive: 60,
         protocol: 'mqtts',

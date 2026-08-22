@@ -4,12 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-} from '@expo-google-fonts/inter';
+  Sora_400Regular,
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+  Sora_800ExtraBold,
+} from '@expo-google-fonts/sora';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleService } from '@/utils/scheduleService';
@@ -20,11 +20,11 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   useFrameworkReady();
   const [fontsLoaded] = useFonts({
-    'Inter-Regular': Inter_400Regular,
-    'Inter-Medium': Inter_500Medium,
-    'Inter-SemiBold': Inter_600SemiBold,
-    'Inter-Bold': Inter_700Bold,
-    'Inter-ExtraBold': Inter_800ExtraBold,
+    'Sora-Regular': Sora_400Regular,
+    'Sora-Medium': Sora_500Medium,
+    'Sora-SemiBold': Sora_600SemiBold,
+    'Sora-Bold': Sora_700Bold,
+    'Sora-ExtraBold': Sora_800ExtraBold,
   });
 
   const [isTokenChecked, setIsTokenChecked] = useState(false);

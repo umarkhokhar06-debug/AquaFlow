@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "rewrites": [
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/delete-account", "destination": "/delete-account.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

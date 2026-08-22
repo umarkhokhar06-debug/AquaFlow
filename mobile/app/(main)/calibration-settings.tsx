@@ -44,7 +44,7 @@ export default function DeviceListScreen() {
   if (fetching) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading your devices...</Text>
       </View>
     );
@@ -54,7 +54,7 @@ export default function DeviceListScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.header}>
+      <LinearGradient colors={['#087EA4', '#063B5C']} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
@@ -69,7 +69,7 @@ export default function DeviceListScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {devices.length === 0 && (
           <TouchableOpacity style={styles.scanInviteCard} onPress={() => router.push('/(main)/scan-invite')}>
-            <ScanLine size={22} color="#007AFF" />
+            <ScanLine size={22} color="#087EA4" />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.scanInviteTitle}>Have an invite code?</Text>
               <Text style={styles.scanInviteText}>Scan the QR someone shared with you to get access to their device.</Text>
@@ -78,7 +78,7 @@ export default function DeviceListScreen() {
         )}
 
         <View style={styles.infoCard}>
-          <Gauge size={24} color="#007AFF" />
+          <Gauge size={24} color="#087EA4" />
           <Text style={styles.infoTitle}>Tank Calibration</Text>
           <Text style={styles.infoText}>
             Calibration is set by the admin when a device is installed, so readings
@@ -138,7 +138,7 @@ export default function DeviceListScreen() {
                     style={styles.manageButton}
                     onPress={() => router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: device.deviceId } })}
                   >
-                    <Users size={14} color="#007AFF" />
+                    <Users size={14} color="#087EA4" />
                     <Text style={styles.manageButtonText}>Manage Access</Text>
                   </TouchableOpacity>
                 )}
@@ -337,6 +337,6 @@ const styles = StyleSheet.create({
   manageButtonText: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
 });

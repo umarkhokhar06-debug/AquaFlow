@@ -20,6 +20,7 @@ router.get('/:orderId/delivery-otp', requireCustomer, orderController.getDeliver
 router.post('/:orderId/rating', requireCustomer, orderController.rateOrder);
 router.get('/:orderId/invoice', orderController.getInvoice);
 router.post('/:orderId/reorder', requireCustomer, orderController.reorder);
+router.get('/:orderId/queue-status', requireCustomer, orderController.getQueueStatus);
 
 // Driver, Dispatcher and Admin routes
 router.get('/', requireAnyRole(['admin', 'super_admin', 'driver', 'dispatcher']), orderController.getAllOrders);

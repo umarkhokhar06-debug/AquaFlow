@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AquaFlow Device Simulator</title>
+<title>AabRahat Device Simulator</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -105,7 +105,7 @@
 <body>
 
   <div id="login-screen" class="card">
-    <h1>AquaFlow Simulator</h1>
+    <h1>AabRahat Simulator</h1>
     <p class="subtitle">Admin login required to control devices.</p>
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username" />
@@ -118,7 +118,7 @@
   <div id="app">
     <div class="toolbar">
       <div>
-        <h1>AquaFlow Device Simulator</h1>
+        <h1>AabRahat Device Simulator</h1>
         <p class="subtitle">Set water levels manually, or randomize every device at once. All simulated devices also auto-randomize every minute on their own.</p>
       </div>
       <div class="toolbar-actions">
@@ -138,7 +138,7 @@
 
 <script>
 const API_URL = window.location.origin + '/api';
-let token = localStorage.getItem('aquaflow_admin_token') || '';
+let token = localStorage.getItem('urbanwaters_admin_token') || '';
 let devices = [];
 let filterText = '';
 let countdownSeconds = 60;
@@ -173,7 +173,7 @@ async function login() {
       throw new Error('This account is not an admin. Use an admin login.');
     }
     token = body.token;
-    localStorage.setItem('aquaflow_admin_token', token);
+    localStorage.setItem('urbanwaters_admin_token', token);
     showApp();
   } catch (e) {
     errEl.textContent = e.message;
@@ -182,7 +182,7 @@ async function login() {
 
 function logout() {
   token = '';
-  localStorage.removeItem('aquaflow_admin_token');
+  localStorage.removeItem('urbanwaters_admin_token');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'block';
 }

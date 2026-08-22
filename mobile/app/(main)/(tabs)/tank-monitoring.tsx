@@ -254,7 +254,7 @@ export default function TankMonitoringScreen() {
       case 'success':
         return <Wifi size={16} color="#10B981" />;
       case 'info':
-        return <TrendingUp size={16} color="#007AFF" />;
+        return <TrendingUp size={16} color="#087EA4" />;
       default:
         return <AlertTriangle size={16} color="#6B7280" />;
     }
@@ -339,7 +339,7 @@ export default function TankMonitoringScreen() {
               style={styles.manageAccessButton}
               onPress={() => router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: selectedDevice.deviceId } })}
             >
-              <Users size={16} color="#007AFF" />
+              <Users size={16} color="#087EA4" />
               <Text style={styles.manageAccessButtonText}>
                 Manage who can see this device ({1 + selectedDevice.tenants.length})
               </Text>
@@ -355,7 +355,7 @@ export default function TankMonitoringScreen() {
         >
           <RefreshCw 
             size={20} 
-            color="#007AFF" 
+            color="#087EA4" 
             style={isRefreshing ? { transform: [{ rotate: '360deg' }] } : undefined}
           />
           <Text style={styles.refreshText}>
@@ -370,7 +370,7 @@ export default function TankMonitoringScreen() {
         <View style={styles.levelCard}>
           <View style={styles.levelHeader}>
             <View style={styles.levelTitleContainer}>
-              <Droplets size={24} color="#007AFF" />
+              <Droplets size={24} color="#087EA4" />
               <Text style={styles.levelTitle}>Current Water Level</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: isOnline ? '#D1FAE5' : '#FEE2E2' }]}>
@@ -449,7 +449,7 @@ export default function TankMonitoringScreen() {
 
           <View style={styles.sensorData}>
             <View style={styles.sensorItem}>
-              <Thermometer size={16} color="#007AFF" />
+              <Thermometer size={16} color="#087EA4" />
               <Text style={styles.sensorValue}>{temperature.toFixed(1)}°C</Text>
               <Text style={styles.sensorLabel}>Temperature</Text>
             </View>
@@ -470,7 +470,7 @@ export default function TankMonitoringScreen() {
         <View style={styles.usageCard}>
           <View style={styles.usageItem}>
             <View style={styles.usageIcon}>
-              <TrendingUp size={20} color="#007AFF" />
+              <TrendingUp size={20} color="#087EA4" />
             </View>
             <View style={styles.usageContent}>
               <Text style={styles.usageValue}>{todayUsage}L</Text>
@@ -513,7 +513,7 @@ export default function TankMonitoringScreen() {
                         styles.barFill, 
                         { 
                           height: `${data.level}%`,
-                          backgroundColor: '#007AFF'
+                          backgroundColor: '#087EA4'
                         }
                       ]} 
                     />
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   },
   deviceChipActive: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
   },
   deviceChipTitle: {
     fontSize: 14,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
   },
   deviceChipTitleActive: {
-    color: '#007AFF',
+    color: '#087EA4',
   },
   deviceChipSubtitle: {
     fontSize: 11,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   manageAccessButtonText: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   refreshButton: {
     flexDirection: 'row',
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
   refreshText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
     marginLeft: 4,
   },
   lastUpdateText: {

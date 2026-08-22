@@ -15,8 +15,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Save, MapPin, Home, Building2, User, Phone, Navigation } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import type MapView from 'react-native-maps';
 import * as Location from 'expo-location';
+import AddressMap from '@/components/AddressMap';
 
 interface Address {
   id: string;
@@ -233,7 +234,7 @@ export default function AddEditAddressScreen() {
               style={[styles.typeButton, addressType === 'Home' && styles.typeButtonActive]}
               onPress={() => setAddressType('Home')}
             >
-              <Home size={20} color={addressType === 'Home' ? '#007AFF' : '#6B7280'} />
+              <Home size={20} color={addressType === 'Home' ? '#087EA4' : '#6B7280'} />
               <Text style={[styles.typeButtonText, addressType === 'Home' && styles.typeButtonTextActive]}>
                 Home
               </Text>
@@ -242,7 +243,7 @@ export default function AddEditAddressScreen() {
               style={[styles.typeButton, addressType === 'Office' && styles.typeButtonActive]}
               onPress={() => setAddressType('Office')}
             >
-              <Building2 size={20} color={addressType === 'Office' ? '#007AFF' : '#6B7280'} />
+              <Building2 size={20} color={addressType === 'Office' ? '#087EA4' : '#6B7280'} />
               <Text style={[styles.typeButtonText, addressType === 'Office' && styles.typeButtonTextActive]}>
                 Office
               </Text>
@@ -251,7 +252,7 @@ export default function AddEditAddressScreen() {
               style={[styles.typeButton, addressType === 'Other' && styles.typeButtonActive]}
               onPress={() => setAddressType('Other')}
             >
-              <MapPin size={20} color={addressType === 'Other' ? '#007AFF' : '#6B7280'} />
+              <MapPin size={20} color={addressType === 'Other' ? '#087EA4' : '#6B7280'} />
               <Text style={[styles.typeButtonText, addressType === 'Other' && styles.typeButtonTextActive]}>
                 Other
               </Text>
@@ -364,7 +365,7 @@ export default function AddEditAddressScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Location on Map</Text>
             <TouchableOpacity onPress={getCurrentLocation} style={styles.currentLocationButton}>
-              <Navigation size={16} color="#007AFF" />
+              <Navigation size={16} color="#087EA4" />
               <Text style={styles.currentLocationText}>Use Current</Text>
             </TouchableOpacity>
           </View>
@@ -373,7 +374,7 @@ export default function AddEditAddressScreen() {
             style={styles.mapToggle}
             onPress={() => setShowMap(!showMap)}
           >
-            <MapPin size={18} color="#007AFF" />
+            <MapPin size={18} color="#087EA4" />
             <Text style={styles.mapToggleText}>
               {showMap ? 'Hide Map' : 'Show Map & Set Location'}
             </Text>
@@ -381,29 +382,17 @@ export default function AddEditAddressScreen() {
 
           {showMap && (
             <View style={styles.mapContainer}>
-              <MapView
+              <AddressMap
                 ref={mapRef}
-                provider={PROVIDER_GOOGLE}
                 style={styles.map}
-                initialRegion={{
-                  latitude,
-                  longitude,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-                onPress={(e) => {
-                  const { latitude: lat, longitude: lng } = e.nativeEvent.coordinate;
+                latitude={latitude}
+                longitude={longitude}
+                address={address}
+                onPress={({ latitude: lat, longitude: lng }) => {
                   setLatitude(lat);
                   setLongitude(lng);
                 }}
-              >
-                <Marker
-                  coordinate={{ latitude, longitude }}
-                  title="Delivery Location"
-                  description={address || 'Tap on map to set location'}
-                  pinColor="#007AFF"
-                />
-              </MapView>
+              />
               <View style={styles.mapInfo}>
                 <Text style={styles.mapInfoText}>
                   📍 Lat: {latitude.toFixed(6)}, Lng: {longitude.toFixed(6)}
@@ -509,7 +498,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   typeButtonActive: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#EFF6FF',
   },
   typeButtonText: {
@@ -518,7 +507,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   typeButtonTextActive: {
-    color: '#007AFF',
+    color: '#087EA4',
   },
   inputGroup: {
     marginBottom: 16,
@@ -575,7 +564,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   portionButtonActive: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#EFF6FF',
   },
   portionButtonText: {
@@ -584,7 +573,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   portionButtonTextActive: {
-    color: '#007AFF',
+    color: '#087EA4',
   },
   defaultToggle: {
     flexDirection: 'row',
@@ -610,8 +599,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#007AFF',
+    borderColor: '#087EA4',
+    backgroundColor: '#087EA4',
   },
   checkboxInner: {
     width: 12,
@@ -628,12 +617,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingVertical: 16,
     borderRadius: 16,
     marginTop: 24,
     gap: 8,
-    shadowColor: '#007AFF',
+    shadowColor: '#087EA4',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -665,7 +654,7 @@ const styles = StyleSheet.create({
   currentLocationText: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   mapToggle: {
     flexDirection: 'row',
@@ -680,7 +669,7 @@ const styles = StyleSheet.create({
   mapToggleText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   mapContainer: {
     borderRadius: 12,

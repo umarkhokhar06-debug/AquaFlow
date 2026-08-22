@@ -114,7 +114,7 @@ export default function DriverProfileScreen() {
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.header}>
+      <LinearGradient colors={['#087EA4', '#063B5C']} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={24} color="#FFFFFF" />
@@ -127,7 +127,7 @@ export default function DriverProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color="#087EA4" />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : !profileData ? (
@@ -311,7 +311,7 @@ export default function DriverProfileScreen() {
                   <Switch
                     value={editedData?.settings?.notificationsEnabled || false}
                     onValueChange={(value) => updateField('settings.notificationsEnabled', value)}
-                    trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                    trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                   />
                 </View>
 
@@ -325,7 +325,7 @@ export default function DriverProfileScreen() {
                   <Switch
                     value={editedData?.settings?.soundEnabled || false}
                     onValueChange={(value) => updateField('settings.soundEnabled', value)}
-                    trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                    trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                   />
                 </View>
 
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeTab: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
   },
   tabText: {
     fontSize: 13,
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   saveBtn: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

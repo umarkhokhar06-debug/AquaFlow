@@ -8,7 +8,7 @@ This application includes AWS IoT Core integration to receive sensor data and st
    - Add your AWS IoT endpoint to `.env` file:
    ```
    AWS_IOT_ENDPOINT=your-iot-endpoint.iot.us-east-1.amazonaws.com
-   AWS_IOT_TOPIC=aquaflow/sensor/data
+   AWS_IOT_TOPIC=urbanwaters/sensor/data
    ```
 
 2. **Certificates**:

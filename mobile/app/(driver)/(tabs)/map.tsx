@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   PanResponder,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import type MapView from 'react-native-maps';
+import DriverTrackingMap from '@/components/DriverTrackingMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { 
@@ -487,7 +488,7 @@ export default function DriverMapScreen() {
               </Text>
             </View>
           </View>
-          <ChevronRight size={20} color={isSelected ? '#007AFF' : '#9CA3AF'} />
+          <ChevronRight size={20} color={isSelected ? '#087EA4' : '#9CA3AF'} />
         </View>
 
         <View style={styles.orderCardBody}>
@@ -603,7 +604,7 @@ export default function DriverMapScreen() {
         >
           <View style={styles.drawerHeaderLeft}>
             <View style={styles.drawerCustomerIcon}>
-              <Package size={20} color="#007AFF" />
+              <Package size={20} color="#087EA4" />
             </View>
             <View>
               <Text style={styles.drawerCustomerName}>{selectedOrder.customerName}</Text>
@@ -621,7 +622,7 @@ export default function DriverMapScreen() {
             style={styles.quickActionButton}
             onPress={onCallCustomer}
           >
-            <Phone size={18} color="#007AFF" />
+            <Phone size={18} color="#087EA4" />
             <Text style={styles.quickActionText}>Call</Text>
           </TouchableOpacity>
 
@@ -629,7 +630,7 @@ export default function DriverMapScreen() {
             style={styles.quickActionButton}
             onPress={onMessageCustomer}
           >
-            <MessageCircle size={18} color="#007AFF" />
+            <MessageCircle size={18} color="#087EA4" />
             <Text style={styles.quickActionText}>Message</Text>
           </TouchableOpacity>
 
@@ -637,7 +638,7 @@ export default function DriverMapScreen() {
             style={styles.quickActionButton}
             onPress={onOpenMaps}
           >
-            <Navigation size={18} color="#007AFF" />
+            <Navigation size={18} color="#087EA4" />
             <Text style={styles.quickActionText}>Navigate</Text>
           </TouchableOpacity>
 
@@ -697,7 +698,7 @@ export default function DriverMapScreen() {
 
               <View style={styles.detailCard}>
                 <View style={styles.detailCardRow}>
-                  <MapPin size={16} color="#007AFF" />
+                  <MapPin size={16} color="#087EA4" />
                   <View style={styles.detailCardText}>
                     <Text style={styles.detailCardLabel}>Location</Text>
                     <Text style={styles.detailCardValue}>
@@ -707,7 +708,7 @@ export default function DriverMapScreen() {
                 </View>
 
                 <View style={styles.detailCardRow}>
-                  <Package size={16} color="#007AFF" />
+                  <Package size={16} color="#087EA4" />
                   <View style={styles.detailCardText}>
                     <Text style={styles.detailCardLabel}>Items</Text>
                     <Text style={styles.detailCardValue}>
@@ -750,7 +751,7 @@ export default function DriverMapScreen() {
                   style={styles.drawerSecondaryButton}
                   onPress={onOpenMaps}
                 >
-                  <Navigation size={18} color="#007AFF" />
+                  <Navigation size={18} color="#087EA4" />
                   <Text style={styles.drawerSecondaryButtonText}>Open Maps</Text>
                 </TouchableOpacity>
 
@@ -758,7 +759,7 @@ export default function DriverMapScreen() {
                   style={styles.drawerOutlineButton}
                   onPress={onCallCustomer}
                 >
-                  <Phone size={16} color="#007AFF" />
+                  <Phone size={16} color="#087EA4" />
                   <Text style={styles.drawerOutlineButtonText}>Call</Text>
                 </TouchableOpacity>
 
@@ -766,7 +767,7 @@ export default function DriverMapScreen() {
                   style={styles.drawerOutlineButton}
                   onPress={onMessageCustomer}
                 >
-                  <MessageCircle size={16} color="#007AFF" />
+                  <MessageCircle size={16} color="#087EA4" />
                   <Text style={styles.drawerOutlineButtonText}>Message</Text>
                 </TouchableOpacity>
 
@@ -791,7 +792,7 @@ export default function DriverMapScreen() {
       
   {loading || !driverLocation ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#087EA4" />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : orders.length === 0 ? (
@@ -812,51 +813,19 @@ export default function DriverMapScreen() {
             <>
               {/* Full Map Container */}
               <View style={styles.mapContainer}>
-                <MapView
+                <DriverTrackingMap
                   ref={mapRef}
-                  provider={PROVIDER_GOOGLE}
                   style={styles.map}
-                  initialRegion={{
-                    latitude: (driverLocation.latitude + selectedOrder.deliveryLocation.latitude) / 2,
-                    longitude: (driverLocation.longitude + selectedOrder.deliveryLocation.longitude) / 2,
-                    latitudeDelta: LATITUDE_DELTA,
-                    longitudeDelta: LONGITUDE_DELTA,
+                  driverLocation={driverLocation}
+                  deliveryLocation={{
+                    latitude: selectedOrder.deliveryLocation.latitude,
+                    longitude: selectedOrder.deliveryLocation.longitude,
                   }}
-                  showsUserLocation={false}
-                  showsMyLocationButton={false}
-                >
-                  {/* Route Polyline */}
-                  {routeCoordinates.length > 0 && (
-                    <Polyline
-                      coordinates={routeCoordinates}
-                      strokeColor="#007AFF"
-                      strokeWidth={4}
-                    />
-                  )}
-
-                  {/* Driver Marker */}
-                  <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                    <Animated.View style={[styles.driverMarkerContainer, { transform: [{ scale: pulseAnim }] }]}>
-                      <View style={styles.driverMarkerPulse} />
-                    </Animated.View>
-                    <View style={styles.driverMarker}>
-                      <Truck size={20} color="#FFFFFF" />
-                    </View>
-                  </Marker>
-
-                  {/* Customer Marker */}
-                  <Marker 
-                    coordinate={{
-                      latitude: selectedOrder.deliveryLocation.latitude,
-                      longitude: selectedOrder.deliveryLocation.longitude,
-                    }} 
-                    anchor={{ x: 0.5, y: 1 }}
-                  >
-                    <View style={styles.customerMarker}>
-                      <MapPin size={28} color="#EF4444" />
-                    </View>
-                  </Marker>
-                </MapView>
+                  routeCoordinates={routeCoordinates}
+                  pulseAnim={pulseAnim}
+                  latitudeDelta={LATITUDE_DELTA}
+                  longitudeDelta={LONGITUDE_DELTA}
+                />
 
                 {/* Top Status Bar */}
                 <View style={styles.topStatusBar}>
@@ -889,14 +858,14 @@ export default function DriverMapScreen() {
                       }
                     }}
                   >
-                    <Navigation size={20} color="#007AFF" />
+                    <Navigation size={20} color="#087EA4" />
                   </TouchableOpacity>
                 </View>
 
                 {/* Mini Metrics */}
                 <View style={styles.miniMetricsContainer}>
                   <View style={styles.miniMetricCard}>
-                    <Gauge size={14} color="#007AFF" />
+                    <Gauge size={14} color="#087EA4" />
                     <Text style={styles.miniMetricValue}>{currentSpeed} km/h</Text>
                   </View>
                   <View style={styles.miniMetricCard}>
@@ -932,7 +901,7 @@ export default function DriverMapScreen() {
               <View style={styles.customerCard}>
                 <View style={styles.customerHeader}>
                   <View style={styles.customerIconContainer}>
-                    <Package size={20} color="#007AFF" />
+                    <Package size={20} color="#087EA4" />
                   </View>
                   <View style={styles.customerInfo}>
                     <Text style={styles.customerName}>{selectedOrder.customerName}</Text>
@@ -940,10 +909,10 @@ export default function DriverMapScreen() {
                   </View>
                   <View style={styles.customerActions}>
                     <TouchableOpacity style={styles.iconButton} onPress={handleCallCustomer}>
-                      <Phone size={18} color="#007AFF" />
+                      <Phone size={18} color="#087EA4" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconButton} onPress={handleMessageCustomer}>
-                      <MessageCircle size={18} color="#007AFF" />
+                      <MessageCircle size={18} color="#087EA4" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1056,41 +1025,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  driverMarkerContainer: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  driverMarkerPulse: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 122, 255, 0.2)',
-  },
-  driverMarker: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  customerMarker: {
-    width: 32,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   topStatusBar: {
     position: 'absolute',
@@ -1258,7 +1192,7 @@ const styles = StyleSheet.create({
   drawerCloseText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   drawerContent: {
     paddingHorizontal: 20,
@@ -1286,7 +1220,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   expandedOrderItemSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   expandedOrderItemLeft: {
@@ -1373,12 +1307,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
   },
   drawerSecondaryButtonText: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   drawerOutlineButton: {
     flexDirection: 'row',
@@ -1394,7 +1328,7 @@ const styles = StyleSheet.create({
   drawerOutlineButtonText: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   drawerDangerButton: {
     flexDirection: 'row',
@@ -1430,13 +1364,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   quickActionPrimary: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#087EA4',
+    borderColor: '#087EA4',
   },
   quickActionText: {
     fontSize: 11,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
     marginTop: 6,
   },
   orderCard: {
@@ -1447,7 +1381,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   orderCardSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   orderCardHeader: {

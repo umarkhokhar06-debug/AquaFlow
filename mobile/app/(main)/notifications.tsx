@@ -81,7 +81,7 @@ export default function NotificationsScreen() {
         return <XCircle size={20} color="#EF4444" />;
       case 'info':
       default:
-        return <Info size={20} color="#007AFF" />;
+        return <Info size={20} color="#087EA4" />;
     }
   };
 
@@ -95,7 +95,7 @@ export default function NotificationsScreen() {
         return '#EF4444';
       case 'info':
       default:
-        return '#007AFF';
+        return '#087EA4';
     }
   };
 
@@ -161,7 +161,7 @@ export default function NotificationsScreen() {
                 style={styles.actionButton}
                 onPress={markAllAsRead}
               >
-                <CheckCircle size={20} color="#007AFF" />
+                <CheckCircle size={20} color="#087EA4" />
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.actionButton}
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   unreadNotification: {
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#087EA4',
   },
   notificationHeader: {
     flexDirection: 'row',

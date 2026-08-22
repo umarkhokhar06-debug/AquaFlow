@@ -97,7 +97,7 @@ export default function PaymentsScreen() {
       case 'easypaisa':
         return <Smartphone size={20} color="#10B981" />;
       case 'card':
-        return <CreditCard size={20} color="#007AFF" />;
+        return <CreditCard size={20} color="#087EA4" />;
       case 'jazzcash':
         return <Smartphone size={20} color="#F59E0B" />;
       default:
@@ -171,7 +171,7 @@ export default function PaymentsScreen() {
           style={styles.verifyButton}
           onPress={() => handleVerifyPayment(payment.id)}
         >
-          <Shield size={16} color="#007AFF" />
+          <Shield size={16} color="#087EA4" />
           <Text style={styles.verifyText}>Verify</Text>
         </TouchableOpacity>
       </View>
@@ -195,7 +195,7 @@ export default function PaymentsScreen() {
           style={styles.addButton}
           onPress={handleAddPayment}
         >
-          <Plus size={24} color="#007AFF" />
+          <Plus size={24} color="#087EA4" />
           <Text style={styles.addButtonText}>Add Payment</Text>
         </TouchableOpacity>
       </View>
@@ -226,7 +226,7 @@ export default function PaymentsScreen() {
 
         {/* Security Notice */}
         <View style={styles.securityNotice}>
-          <Shield size={20} color="#007AFF" />
+          <Shield size={20} color="#087EA4" />
           <View style={styles.securityContent}>
             <Text style={styles.securityTitle}>Your payments are secure</Text>
             <Text style={styles.securityText}>
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   verifyText: {
     fontSize: 12,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
     marginLeft: 4,
   },
   securityNotice: {
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#087EA4',
   },
   securityContent: {
     flex: 1,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   emptyAddButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,

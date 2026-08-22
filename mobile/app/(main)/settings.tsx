@@ -111,7 +111,7 @@ export default function SettingsScreen() {
       
       {/* Header */}
       <LinearGradient
-        colors={['#007AFF', '#0056CC']}
+        colors={['#087EA4', '#063B5C']}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -132,7 +132,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Notifications</Text>
           <View style={styles.settingGroup}>
             <SettingItem
-              icon={<Bell size={20} color="#007AFF" />}
+              icon={<Bell size={20} color="#087EA4" />}
               title="Push Notifications"
               subtitle="Receive order updates and alerts"
               showArrow={false}
@@ -140,13 +140,13 @@ export default function SettingsScreen() {
                 <Switch
                   value={pushNotifications}
                   onValueChange={setPushNotifications}
-                  trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                  trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                   thumbColor="#FFFFFF"
                 />
               }
             />
             <SettingItem
-              icon={<Volume2 size={20} color="#007AFF" />}
+              icon={<Volume2 size={20} color="#087EA4" />}
               title="Sound & Vibration"
               subtitle="Enable notification sounds"
               showArrow={false}
@@ -154,7 +154,7 @@ export default function SettingsScreen() {
                 <Switch
                   value={soundEnabled}
                   onValueChange={setSoundEnabled}
-                  trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                  trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                   thumbColor="#FFFFFF"
                 />
               }
@@ -200,13 +200,13 @@ export default function SettingsScreen() {
                 <Switch
                   value={darkMode}
                   onValueChange={setDarkMode}
-                  trackColor={{ false: '#E5E7EB', true: '#007AFF' }}
+                  trackColor={{ false: '#E5E7EB', true: '#087EA4' }}
                   thumbColor="#FFFFFF"
                 />
               }
             />
             <SettingItem
-              icon={<Globe size={20} color="#007AFF" />}
+              icon={<Globe size={20} color="#087EA4" />}
               title="Language"
               subtitle="English"
               onPress={() => console.log('Language settings')}
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Tank Monitoring</Text>
           <View style={styles.settingGroup}>
             <SettingItem
-              icon={<SettingsIcon size={20} color="#007AFF" />}
+              icon={<SettingsIcon size={20} color="#087EA4" />}
               title="My Devices"
               subtitle="View tank devices and manage tenant access"
               onPress={() => router.push('/(main)/calibration-settings')}
@@ -232,7 +232,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Support & About</Text>
           <View style={styles.settingGroup}>
             <SettingItem
-              icon={<HelpCircle size={20} color="#007AFF" />}
+              icon={<HelpCircle size={20} color="#087EA4" />}
               title="Help & Support"
               subtitle="Get help and contact support"
               onPress={() => router.push('/(main)/help')}
@@ -265,8 +265,8 @@ export default function SettingsScreen() {
 
         {/* App Version */}
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>AquaFlow v1.0.0</Text>
-          <Text style={styles.versionSubtext}>© 2026 AquaFlow. All rights reserved.</Text>
+          <Text style={styles.versionText}>AabRahat v1.0.0</Text>
+          <Text style={styles.versionSubtext}>© 2026 AabRahat. All rights reserved.</Text>
         </View>
       </ScrollView>
 
@@ -275,7 +275,7 @@ export default function SettingsScreen() {
           <View style={modalStyles.card}>
             <Text style={modalStyles.title}>Delete your account?</Text>
             <Text style={modalStyles.subtitle}>
-              This permanently deletes your AquaFlow account and profile data. This cannot be undone. Enter your
+              This permanently deletes your AabRahat account and profile data. This cannot be undone. Enter your
               password to confirm.
             </Text>
             <TextField

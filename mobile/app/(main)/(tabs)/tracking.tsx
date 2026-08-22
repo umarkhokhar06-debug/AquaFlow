@@ -13,7 +13,8 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import type MapView from 'react-native-maps';
+import TrackingMap from '@/components/TrackingMap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Navigation, 
@@ -340,7 +341,7 @@ export default function TrackingScreen() {
               </Text>
             </View>
           </View>
-          <ChevronRight size={18} color={isSelected ? '#007AFF' : '#9CA3AF'} />
+          <ChevronRight size={18} color={isSelected ? '#087EA4' : '#9CA3AF'} />
         </View>
 
         {isSelected && (
@@ -373,7 +374,7 @@ export default function TrackingScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#087EA4" />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : orders.length === 0 ? (
@@ -388,50 +389,20 @@ export default function TrackingScreen() {
         <>
           {/* Map View - Takes Maximum Space */}
           <View style={styles.mapContainer}>
-            <MapView
+            <TrackingMap
               ref={mapRef}
-              provider={PROVIDER_GOOGLE}
               style={styles.map}
-              initialRegion={{
-                latitude: (driverLocation.latitude + customerLocation.latitude) / 2,
-                longitude: (driverLocation.longitude + customerLocation.longitude) / 2,
-                latitudeDelta: LATITUDE_DELTA,
-                longitudeDelta: LONGITUDE_DELTA,
-              }}
-            >
-              {/* Route Polyline */}
-              {isDriverOnline && (
-                <Polyline
-                  coordinates={[driverLocation, customerLocation]}
-                  strokeColor="#007AFF"
-                  strokeWidth={3}
-                  lineDashPattern={[5, 5]}
-                />
-              )}
-
-              {/* Driver Marker */}
-              {isDriverOnline && (
-                <Marker coordinate={driverLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                  <Animated.View style={[styles.driverMarkerContainer, { transform: [{ scale: pulseAnim }] }]}> 
-                    <View style={styles.driverMarkerPulse} />
-                  </Animated.View>
-                  <View style={styles.driverMarker}>
-                    <Truck size={18} color="#FFFFFF" />
-                  </View>
-                </Marker>
-              )}
-
-              {/* Customer Marker */}
-              <Marker coordinate={customerLocation} anchor={{ x: 0.5, y: 1 }}>
-                <View style={styles.customerMarker}>
-                  <MapPin size={24} color="#EF4444" />
-                </View>
-              </Marker>
-            </MapView>
+              driverLocation={driverLocation}
+              customerLocation={customerLocation}
+              isDriverOnline={isDriverOnline}
+              pulseAnim={pulseAnim}
+              latitudeDelta={LATITUDE_DELTA}
+              longitudeDelta={LONGITUDE_DELTA}
+            />
 
             {/* Center Map Button */}
             <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap}>
-              <Navigation size={18} color="#007AFF" />
+              <Navigation size={18} color="#087EA4" />
             </TouchableOpacity>
 
             {/* Driver Status Badge */}
@@ -499,7 +470,7 @@ export default function TrackingScreen() {
                   style={[styles.actionButtonSmall, styles.actionButtonSecondary]} 
                   onPress={handleMessageDriver}
                 >
-                  <MessageCircle size={16} color="#007AFF" />
+                  <MessageCircle size={16} color="#087EA4" />
                   <Text style={styles.actionButtonTextSecondary}>Message</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -532,7 +503,7 @@ export default function TrackingScreen() {
                 <View style={styles.modalContent}>
                   <View style={styles.driverInfoRow}>
                     <View style={styles.driverAvatar}>
-                      <Truck size={24} color="#007AFF" />
+                      <Truck size={24} color="#087EA4" />
                     </View>
                     <View style={styles.driverDetailBlock}>
                       <Text style={styles.driverName}>{selectedOrder?.driver?.name}</Text>
@@ -542,7 +513,7 @@ export default function TrackingScreen() {
 
                   {selectedOrder && selectedOrder.driver && (selectedOrder.driver as any).phone && (
                     <View style={styles.infoItem}>
-                      <Phone size={18} color="#007AFF" />
+                      <Phone size={18} color="#087EA4" />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Phone</Text>
                         <Text style={styles.infoValue}>{(selectedOrder.driver as any).phone}</Text>
@@ -603,7 +574,7 @@ export default function TrackingScreen() {
                         setShowDriverInfo(false);
                       }}
                     >
-                      <MessageCircle size={18} color="#007AFF" />
+                      <MessageCircle size={18} color="#087EA4" />
                       <Text style={styles.actionButtonFullTextSecondary}>Message</Text>
                     </TouchableOpacity>
                   </View>
@@ -658,41 +629,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  driverMarkerContainer: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  driverMarkerPulse: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 122, 255, 0.2)',
-  },
-  driverMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  customerMarker: {
-    width: 28,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   centerButton: {
     position: 'absolute',
@@ -796,7 +732,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   orderCardSelected: {
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
     backgroundColor: '#F0F8FF',
   },
   orderCardHeader: {
@@ -856,7 +792,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     gap: 5,
   },
   actionButtonSecondary: {
@@ -870,7 +806,7 @@ const styles = StyleSheet.create({
   actionButtonTextSecondary: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   modalOverlay: {
     flex: 1,
@@ -971,7 +907,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     gap: 8,
   },
   actionButtonFullSecondary: {
@@ -985,6 +921,6 @@ const styles = StyleSheet.create({
   actionButtonFullTextSecondary: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
 });

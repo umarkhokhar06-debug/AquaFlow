@@ -66,7 +66,7 @@ class AiSupportService {
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 1024,
-      system: 'You are a support-triage assistant for Aqua Flow, a water-tanker delivery platform with IoT tank-level sensors. Given a customer issue, call provide_support_guidance with concrete, specific steps -- not generic advice. Recommend assign_technician only for hardware/device/installation problems that cannot be resolved remotely.',
+      system: 'You are a support-triage assistant for AabRahat, a water-tanker delivery platform with IoT tank-level sensors. Given a customer issue, call provide_support_guidance with concrete, specific steps -- not generic advice. Recommend assign_technician only for hardware/device/installation problems that cannot be resolved remotely.',
       tools: [TROUBLESHOOT_TOOL],
       tool_choice: { type: 'tool', name: 'provide_support_guidance' },
       messages: [{ role: 'user', content: context }]

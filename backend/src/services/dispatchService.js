@@ -12,6 +12,11 @@ const EXCEPTION_THRESHOLD_MS = 30 * 60 * 1000; // 30 min unassigned = exception
 // Real traffic/route-aware scoring needs a maps/traffic provider, which is
 // an open decision (SRS §26) — this is a working stand-in until then.
 const WORKLOAD_KM_EQUIVALENT = 10;
+// Same stand-in status as WORKLOAD_KM_EQUIVALENT above: a flat per-order
+// duration estimate, used only to give the customer a rough ETA while
+// queued. Replace with a real routing-based estimate once a maps/traffic
+// provider is in place (SRS §26).
+const AVG_MINUTES_PER_ORDER = 20;
 
 function haversineKm(a, b) {
   if (!a || !b || typeof a.latitude !== 'number' || typeof b.latitude !== 'number') return null;
@@ -59,6 +64,58 @@ class DispatchService {
     }
 
     return queue;
+  }
+
+  // Customer-facing queue position + rough ETA for one order. Position
+  // before a driver is assigned = rank among unassigned orders, oldest
+  // first; once assigned, position = this order's slot in that driver's
+  // own queue (the order actively being delivered has no queue number --
+  // that's the live-tracking state instead).
+  async getCustomerQueueStatus(orderId, userId) {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+    if (order.customer.toString() !== userId.toString()) {
+      throw new Error('Access denied. You can only view your own order\'s queue status');
+    }
+
+    if (['delivered', 'cancelled'].includes(order.status)) {
+      return { status: order.status, terminal: true, position: null, etaMinutes: null };
+    }
+
+    if (!order.driver) {
+      const position = await Order.countDocuments({
+        status: { $in: ['pending', 'confirmed'] },
+        driver: null,
+        orderDate: { $lte: order.orderDate }
+      });
+      return {
+        status: order.status,
+        terminal: false,
+        position,
+        etaMinutes: position * AVG_MINUTES_PER_ORDER
+      };
+    }
+
+    const driver = await User.findById(order.driver).select('currentOrder orderQueue');
+    if (driver && driver.currentOrder && driver.currentOrder.toString() === order._id.toString()) {
+      // Already the order being delivered right now -- no queue number,
+      // caller should show live tracking instead.
+      return { status: order.status, terminal: false, position: null, etaMinutes: null };
+    }
+
+    const index = driver
+      ? driver.orderQueue.findIndex(q => q.order.toString() === order._id.toString())
+      : -1;
+    const position = index >= 0 ? index + 1 : null;
+
+    return {
+      status: order.status,
+      terminal: false,
+      position,
+      etaMinutes: position !== null ? position * AVG_MINUTES_PER_ORDER : null
+    };
   }
 
   // Ranks available drivers for a given order. Lower score = better.

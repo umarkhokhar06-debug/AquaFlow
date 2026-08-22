@@ -86,7 +86,7 @@ export default function OrderDetailScreen() {
       case 'preparing':
         return '#F59E0B';
       case 'out_for_delivery':
-        return '#007AFF';
+        return '#087EA4';
       case 'delivered':
         return '#28A745';
       default:
@@ -125,7 +125,7 @@ export default function OrderDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
         <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
@@ -135,7 +135,7 @@ export default function OrderDetailScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>Order not found or failed to load.</Text>
-        <TouchableOpacity style={{marginTop: 24, backgroundColor: '#007AFF', padding: 12, borderRadius: 8}} onPress={() => router.back()}>
+        <TouchableOpacity style={{marginTop: 24, backgroundColor: '#087EA4', padding: 12, borderRadius: 8}} onPress={() => router.back()}>
           <Text style={{color: '#fff', fontWeight: 'bold'}}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -146,11 +146,11 @@ export default function OrderDetailScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}> 
-      <StatusBar barStyle="light-content" backgroundColor="#007AFF" />
+      <StatusBar barStyle="light-content" backgroundColor="#087EA4" />
       
       {/* Header */}
       <LinearGradient
-        colors={['#007AFF', '#0056CC']}
+        colors={['#087EA4', '#063B5C']}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -207,7 +207,7 @@ export default function OrderDetailScreen() {
           <View style={styles.customerCard}>
             <View style={styles.customerHeader}>
               <View style={styles.customerAvatar}>
-                <User size={24} color="#007AFF" />
+                <User size={24} color="#087EA4" />
               </View>
               <View style={styles.customerInfo}>
                 <Text style={styles.customerName}>{order.customerName}</Text>
@@ -227,7 +227,7 @@ export default function OrderDetailScreen() {
               </View>
               <Text style={styles.addressText}>{order.customerAddress}</Text>
               <TouchableOpacity onPress={handleNavigate} style={styles.navigateButton}>
-                <Navigation size={16} color="#007AFF" />
+                <Navigation size={16} color="#087EA4" />
                 <Text style={styles.navigateText}>Navigate</Text>
               </TouchableOpacity>
             </View>
@@ -241,7 +241,7 @@ export default function OrderDetailScreen() {
             {order.items.map((item, index) => (
               <View key={index} style={[styles.itemRow, index !== order.items.length - 1 && styles.itemBorder]}>
                 <View style={styles.itemIcon}>
-                  <Package size={16} color="#007AFF" />
+                  <Package size={16} color="#087EA4" />
                 </View>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.productName}</Text>
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   updateStatusButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   navigateText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#087EA4',
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   summaryCard: {
     backgroundColor: '#FFFFFF',
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   deliveryCard: {
     backgroundColor: '#FFFFFF',

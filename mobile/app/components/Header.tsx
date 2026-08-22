@@ -20,7 +20,7 @@ const HeaderComponent = ({ openDrawer, openNotifications }: { openDrawer: () => 
       <TouchableOpacity onPress={openDrawer} style={styles.iconButton}>
         <Menu size={24} color={colors.neutral[900]} />
       </TouchableOpacity>
-      <Text style={styles.title}>AquaFlow</Text>
+      <Text style={styles.title}>AabRahat</Text>
       <TouchableOpacity style={styles.iconButton} onPress={openNotifications}>
         <Bell size={24} color={colors.neutral[900]} />
         {unreadCount > 0 && (

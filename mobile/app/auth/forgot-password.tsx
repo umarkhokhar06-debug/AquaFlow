@@ -79,7 +79,7 @@ export default function ForgotPasswordScreen() {
 
   if (emailSent) {
     return (
-      <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.container}>
+      <LinearGradient colors={['#087EA4', '#063B5C']} style={styles.container}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -141,7 +141,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <LinearGradient colors={['#007AFF', '#0056CC']} style={styles.background}>
+    <LinearGradient colors={['#087EA4', '#063B5C']} style={styles.background}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   sendButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   divider: {
     flexDirection: 'row',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    color: '#007AFF',
+    color: '#087EA4',
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
     textAlign: 'center',

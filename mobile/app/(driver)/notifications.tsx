@@ -68,7 +68,7 @@ export default function NotificationsScreen() {
       case 'order_assigned':
         return <CheckCircle size={20} color="#28A745" />;
       case 'order_update':
-        return <Truck size={20} color="#007AFF" />;
+        return <Truck size={20} color="#087EA4" />;
       case 'payment_received':
         return <CheckCircle size={20} color="#10B981" />;
       case 'system_update':
@@ -107,7 +107,7 @@ export default function NotificationsScreen() {
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <StatusBar barStyle="light-content" />
         <LinearGradient
-          colors={['#007AFF', '#0056CC']}
+          colors={['#087EA4', '#063B5C']}
           style={[styles.header, { paddingTop: insets.top + 20 }]}
         >
           <View style={styles.headerContent}>
@@ -129,7 +129,7 @@ export default function NotificationsScreen() {
           </View>
         </LinearGradient>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#087EA4" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
         </View>
       </View>
@@ -142,7 +142,7 @@ export default function NotificationsScreen() {
       
       {/* Header */}
       <LinearGradient
-        colors={['#007AFF', '#0056CC']}
+        colors={['#087EA4', '#063B5C']}
         style={[styles.header, { paddingTop: insets.top + 20 }]}
       >
         <View style={styles.headerContent}>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   markAllText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   content: {
     flex: 1,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   unreadCard: {
     backgroundColor: '#F0F8FF',
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#087EA4',
   },
   notificationContent: {
     flexDirection: 'row',
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   unreadTitle: {
     fontFamily: 'Inter-SemiBold',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   notificationMessage: {
     fontSize: 14,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     marginLeft: 8,
     marginTop: 4,
   },

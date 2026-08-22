@@ -41,7 +41,7 @@ function CustomDriverDrawerContent(props: any) {
           onPress={() => router.push('./(tabs)/deliveries')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="My Earnings"
@@ -49,7 +49,7 @@ function CustomDriverDrawerContent(props: any) {
           onPress={() => router.push('./earnings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Settings"
@@ -57,7 +57,7 @@ function CustomDriverDrawerContent(props: any) {
           onPress={() => router.push('./settings')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
         <DrawerItem
           label="Help & Support"
@@ -65,7 +65,7 @@ function CustomDriverDrawerContent(props: any) {
           onPress={() => router.push('./help')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
-          activeTintColor="#007AFF"
+          activeTintColor="#087EA4"
         />
       </View>
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,

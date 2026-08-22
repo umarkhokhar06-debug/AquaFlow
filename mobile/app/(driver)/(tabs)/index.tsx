@@ -119,7 +119,7 @@ export default function DriverDashboardScreen() {
       case 'preparing':
         return '#F59E0B';
       case 'out_for_delivery':
-        return '#007AFF';
+        return '#087EA4';
       case 'delivered':
         return '#28A745';
       default:
@@ -161,7 +161,7 @@ export default function DriverDashboardScreen() {
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
           <Text style={styles.orderId}>{order.orderNumber ? order.orderNumber : 'Order'}</Text>
-          <View style={[styles.priorityBadge, { backgroundColor: '#007AFF' }]}> 
+          <View style={[styles.priorityBadge, { backgroundColor: '#087EA4' }]}> 
             <Text style={styles.priorityText}>ORDER</Text>
           </View>
         </View>
@@ -176,7 +176,7 @@ export default function DriverDashboardScreen() {
         <User size={16} color="#6B7280" />
         <Text style={styles.customerName}>{order.customerName}</Text>
         <TouchableOpacity style={styles.phoneButton}>
-          <Phone size={14} color="#007AFF" />
+          <Phone size={14} color="#087EA4" />
         </TouchableOpacity>
       </View>
 
@@ -226,7 +226,7 @@ export default function DriverDashboardScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#087EA4" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
       ) : (
@@ -267,7 +267,7 @@ export default function DriverDashboardScreen() {
               </View>
             </View>
             {statusUpdating ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color="#087EA4" />
             ) : (
               <Switch
                 value={driverStatus !== 'offline'}
@@ -296,8 +296,8 @@ export default function DriverDashboardScreen() {
           <StatCard
             title="Today's Earnings"
             value={`$${driverStats.todayEarnings?.toFixed(2)}`}
-            icon={<DollarSign size={20} color="#007AFF" />}
-            color="#007AFF"
+            icon={<DollarSign size={20} color="#087EA4" />}
+            color="#087EA4"
           />
           <StatCard
             title="Rating"
@@ -321,7 +321,7 @@ export default function DriverDashboardScreen() {
             style={[styles.actionButton, styles.secondaryButton]}
             onPress={() => router.push('/(driver)/(tabs)/map')}
           >
-            <MapPin size={20} color="#007AFF" />
+            <MapPin size={20} color="#087EA4" />
             <Text style={[styles.actionButtonText, styles.secondaryButtonText]}>Open Map</Text>
           </TouchableOpacity>
         </View>
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 16,
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: '#F0F8FF',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#087EA4',
   },
   actionButtonText: {
     fontSize: 14,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   secondaryButtonText: {
-    color: '#007AFF',
+    color: '#087EA4',
   },
   ordersSection: {
     marginBottom: 24,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
   },
   orderCard: {
     backgroundColor: '#FFFFFF',

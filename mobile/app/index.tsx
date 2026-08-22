@@ -22,7 +22,7 @@ export default function SplashScreen() {
         <View style={styles.iconContainer}>
           <Droplets size={60} color={colors.neutral[0]} />
         </View>
-        <Text style={styles.title}>AquaFlow</Text>
+        <Text style={styles.title}>AabRahat</Text>
         <Text style={styles.subtitle}>Smart Water Delivery</Text>
       </View>
       <Text style={styles.version}>Version 1.0.0</Text>

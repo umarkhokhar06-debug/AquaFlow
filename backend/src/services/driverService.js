@@ -419,7 +419,7 @@ const driverService = {
         notificationService.createNotification(
           order.customer,
           'Order delivered',
-          `Your order ${order.orderNumber} has been delivered. Thank you for choosing AquaFlow.`,
+          `Your order ${order.orderNumber} has been delivered. Thank you for choosing AabRahat.`,
           'order_delivered',
           { orderId: order._id }
         ).catch(() => {});

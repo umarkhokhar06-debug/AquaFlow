@@ -52,7 +52,7 @@ export default function ScanInviteScreen() {
 
     try {
       const parsed = JSON.parse(result.data);
-      if (parsed?.type === 'aquaflow-device-invite' && parsed.token) {
+      if (parsed?.type === 'urbanwaters-device-invite' && parsed.token) {
         redeem(parsed.token);
         return;
       }
@@ -103,7 +103,7 @@ export default function ScanInviteScreen() {
   if (!permission) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#087EA4" />
       </View>
     );
   }
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   redeemButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#087EA4',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   switchModeText: {
     fontSize: 13,
     fontFamily: 'Inter-Medium',
-    color: '#007AFF',
+    color: '#087EA4',
     textAlign: 'center',
   },
 });

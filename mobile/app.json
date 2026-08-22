@@ -1,7 +1,7 @@
 {
   "expo": {
     "sdkVersion": "54.0.0",
-    "name": "AquaFlow",
+    "name": "AabRahat",
     "slug": "bolt-expo-nativewind",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,14 +11,15 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aquaflow.tankerapp"
+      "bundleIdentifier": "com.urbanwaters.tankerapp"
     },
     "android": {
-      "package": "com.aquaflow.tankerapp",
+      "package": "com.urbanwaters.tankerapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#007AFF"
-      }
+        "backgroundColor": "#063B5C"
+      },
+      "versionCode": 4
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -38,13 +39,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "AquaFlow uses your camera to scan QR invite codes for shared device access."
+          "cameraPermission": "AabRahat uses your camera to scan QR invite codes for shared device access."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "AquaFlow uses your location to set accurate delivery addresses and, for drivers, to share live location during deliveries."
+          "locationWhenInUsePermission": "AabRahat uses your location to set accurate delivery addresses and, for drivers, to share live location during deliveries."
         }
       ]
     ],
