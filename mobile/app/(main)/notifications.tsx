@@ -19,8 +19,8 @@ import {
   XCircle,
   Trash2
 } from 'lucide-react-native';
-import { globalstyles } from '@/app/commans/style';
 import { notificationService, Notification } from '@/utils/notificationService';
+import { colors, typography } from '@/theme';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -74,28 +74,28 @@ export default function NotificationsScreen() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return <CheckCircle size={20} color="#28A745" />;
+        return <CheckCircle size={20} color={colors.success[500]} />;
       case 'warning':
-        return <AlertTriangle size={20} color="#F59E0B" />;
+        return <AlertTriangle size={20} color={colors.warning[500]} />;
       case 'error':
-        return <XCircle size={20} color="#EF4444" />;
+        return <XCircle size={20} color={colors.danger[500]} />;
       case 'info':
       default:
-        return <Info size={20} color="#087EA4" />;
+        return <Info size={20} color={colors.primary[500]} />;
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'success':
-        return '#28A745';
+        return colors.success[500];
       case 'warning':
-        return '#F59E0B';
+        return colors.warning[500];
       case 'error':
-        return '#EF4444';
+        return colors.danger[500];
       case 'info':
       default:
-        return '#087EA4';
+        return colors.primary[500];
     }
   };
 
@@ -134,7 +134,7 @@ export default function NotificationsScreen() {
           style={styles.removeButton}
           onPress={() => removeNotification(notification.id)}
         >
-          <Trash2 size={16} color="#6B7280" />
+          <Trash2 size={16} color={colors.neutral[500]} />
         </TouchableOpacity>
       </View>
       <Text style={styles.notificationMessage}>{notification.message}</Text>
@@ -145,13 +145,13 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <View style={[globalstyles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.neutral[0]} />
       
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#1F2937" />
+          <ArrowLeft size={24} color={colors.neutral[900]} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={styles.headerActions}>
@@ -161,13 +161,13 @@ export default function NotificationsScreen() {
                 style={styles.actionButton}
                 onPress={markAllAsRead}
               >
-                <CheckCircle size={20} color="#087EA4" />
+                <CheckCircle size={20} color={colors.primary[500]} />
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.actionButton}
                 onPress={clearAll}
               >
-                <Trash2 size={20} color="#EF4444" />
+                <Trash2 size={20} color={colors.danger[500]} />
               </TouchableOpacity>
             </>
           )}
@@ -184,9 +184,9 @@ export default function NotificationsScreen() {
       >
         {notifications.length === 0 ? (
           <View style={styles.emptyState}>
-            <Bell size={48} color="#D1D5DB" />
+            <Bell size={48} color={colors.neutral[300]} />
             <Text style={styles.emptyTitle}>No Notifications</Text>
-            <Text style={styles.emptyText}>You don't have any notifications yet</Text>
+            <Text style={styles.emptyText}>You don&apos;t have any notifications yet</Text>
           </View>
         ) : (
           <>
@@ -201,28 +201,32 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.neutral[0],
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.neutral[100],
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   headerActions: {
     flexDirection: 'row',
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -242,7 +246,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   notificationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
   },
   unreadNotification: {
     borderLeftWidth: 4,
-    borderLeftColor: '#087EA4',
+    borderLeftColor: colors.primary[500],
   },
   notificationHeader: {
     flexDirection: 'row',
@@ -270,27 +274,27 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 2,
   },
   notificationTime: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
   },
   removeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
   notificationMessage: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     lineHeight: 20,
   },
   unreadIndicator: {
@@ -308,15 +312,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     textAlign: 'center',
   },
 });

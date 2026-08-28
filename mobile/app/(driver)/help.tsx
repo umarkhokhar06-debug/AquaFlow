@@ -19,7 +19,12 @@ export default function HelpScreen() {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [showCreateTicket, setShowCreateTicket] = useState(false);
-  const [ticketForm, setTicketForm] = useState({
+  const [ticketForm, setTicketForm] = useState<{
+    subject: string;
+    description: string;
+    category: SupportTicket['category'];
+    priority: SupportTicket['priority'];
+  }>({
     subject: '',
     description: '',
     category: 'general',
@@ -96,7 +101,7 @@ export default function HelpScreen() {
     },
   ];
 
-  const categories = [
+  const categories: { value: SupportTicket['category']; label: string }[] = [
     { value: 'technical', label: 'Technical Issues' },
     { value: 'payment', label: 'Payment Issues' },
     { value: 'order_issue', label: 'Order Issues' },
@@ -105,7 +110,7 @@ export default function HelpScreen() {
     { value: 'general', label: 'General Questions' },
   ];
 
-  const priorities = [
+  const priorities: { value: SupportTicket['priority']; label: string }[] = [
     { value: 'low', label: 'Low' },
     { value: 'medium', label: 'Medium' },
     { value: 'high', label: 'High' },

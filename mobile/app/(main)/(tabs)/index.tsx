@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Modal,
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -15,8 +13,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Droplets,
   Truck,
-  Clock,
-  TrendingUp,
   Zap,
   ArrowRight,
   AlertTriangle,
@@ -24,83 +20,35 @@ import {
   Calendar,
   CircleCheck as CheckCircle,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import HeaderComponent from '@/app/components/Header';
-import AddressSelectionModal from '@/app/components/AddressSelectionModal';
 import CustomAlert from '@/app/components/CustomAlert';
 import { Card, Badge, Button } from '@/app/components/ui';
+import TankCapsule from '@/app/components/graphics/TankCapsule';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
 import { Order, Product, QueueStatus, parseDate, getOrderId } from '@/types/order';
+import { orderStatusTone } from '@/app/components/ui/Badge';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
 import { colors, radius, spacing, typography } from '@/theme';
 
-interface SelectedAddress {
-  id: string;
-  type: 'Home' | 'Office' | 'Other';
-  fullName: string;
-  houseNumber: string;
-  portion: 'upper' | 'lower';
-  address: string;
-  landmark: string;
-  phoneNumber: string;
-  isDefault: boolean;
-  latitude?: number;
-  longitude?: number;
-}
-
-interface DeliverySlot {
-  label: string;
-  date: Date | null; // null = as soon as possible
-}
-
-function getDeliverySlots(): DeliverySlot[] {
-  const now = new Date();
-  const slots: DeliverySlot[] = [{ label: 'As soon as possible', date: null }];
-
-  const todayEvening = new Date(now);
-  todayEvening.setHours(18, 0, 0, 0);
-  if (todayEvening.getTime() - now.getTime() > 60 * 60 * 1000) {
-    slots.push({ label: 'Today, 6–8 PM', date: todayEvening });
-  }
-
-  const tomorrowMorning = new Date(now);
-  tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);
-  tomorrowMorning.setHours(9, 0, 0, 0);
-  slots.push({ label: 'Tomorrow, 9–11 AM', date: tomorrowMorning });
-
-  const tomorrowEvening = new Date(now);
-  tomorrowEvening.setDate(tomorrowEvening.getDate() + 1);
-  tomorrowEvening.setHours(18, 0, 0, 0);
-  slots.push({ label: 'Tomorrow, 6–8 PM', date: tomorrowEvening });
-
-  return slots;
-}
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending': return colors.warning[500];
-    case 'confirmed': return colors.primary[500];
-    case 'preparing': return colors.info[500];
-    case 'out_for_delivery': return '#FF6B35';
-    case 'delivered': return colors.success[500];
-    case 'cancelled': return colors.danger[500];
-    default: return colors.neutral[500];
-  }
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  out_for_delivery: 'Out for Delivery',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 };
 
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'pending': return 'Pending';
-    case 'confirmed': return 'Confirmed';
-    case 'preparing': return 'Preparing';
-    case 'out_for_delivery': return 'Out for Delivery';
-    case 'delivered': return 'Delivered';
-    case 'cancelled': return 'Cancelled';
-    default: return status;
-  }
-};
+function timeOfDayGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
 
 const getProductName = (type: string) => {
   switch (type) {
@@ -155,11 +103,7 @@ function ActiveOrderCard({ order }: { order: Order }) {
             <Text style={styles.activeOrderNumber}>#{order.orderNumber}</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {getStatusText(order.status)}
-          </Text>
-        </View>
+        <Badge label={STATUS_LABEL[order.status] || order.status} tone={orderStatusTone(order.status)} />
       </View>
 
       {isOutForDelivery ? (
@@ -168,7 +112,7 @@ function ActiveOrderCard({ order }: { order: Order }) {
         </View>
       ) : queue && queue.position !== null ? (
         <View style={styles.queueRow}>
-          <Text style={styles.queueHeadline}>You're #{queue.position} in line</Text>
+          <Text style={styles.queueHeadline}>You&apos;re #{queue.position} in line</Text>
           {queue.etaMinutes !== null && (
             <Text style={styles.queueSubtext}>~{queue.etaMinutes} min estimated</Text>
           )}
@@ -192,7 +136,7 @@ function ActiveOrderCard({ order }: { order: Order }) {
 function HistoryOrderCard({ order }: { order: Order }) {
   const router = useRouter();
   return (
-    <TouchableOpacity style={styles.orderCard} onPress={() => router.push(`/(main)/order-details/${getOrderId(order)}`)}>
+    <Card onPress={() => router.push(`/(main)/order-details/${getOrderId(order)}`)} style={styles.orderCard}>
       <View style={styles.orderHeader}>
         <View style={styles.orderType}>
           <Droplets size={18} color={colors.primary[500]} />
@@ -201,11 +145,7 @@ function HistoryOrderCard({ order }: { order: Order }) {
             <Text style={styles.orderVolume}>Qty {order.items[0]?.quantity || 1}</Text>
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {getStatusText(order.status)}
-          </Text>
-        </View>
+        <Badge label={STATUS_LABEL[order.status] || order.status} tone={orderStatusTone(order.status)} />
       </View>
       <View style={styles.orderRow}>
         <MapPin size={13} color={colors.neutral[500]} />
@@ -222,7 +162,7 @@ function HistoryOrderCard({ order }: { order: Order }) {
       <View style={styles.orderFooter}>
         <Text style={styles.orderPrice}>Rs. {order.totalAmount.toLocaleString()}</Text>
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 }
 
@@ -233,13 +173,7 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [ordering, setOrdering] = useState<string | null>(null);
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [showTimingModal, setShowTimingModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<DeliverySlot | null>(null);
-  const [resultAlert, setResultAlert] = useState<{ title: string; message: string; onClose?: () => void } | null>(null);
+  const [loginRequired, setLoginRequired] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
@@ -260,76 +194,12 @@ export default function OrdersScreen() {
     }
   };
 
-  const handleServiceSelect = async (product: Product) => {
+  const goToOrder = (productType?: string) => {
     if (!user) {
-      setResultAlert({ title: 'Please log in', message: 'You need to be logged in to place an order.' });
+      setLoginRequired(true);
       return;
     }
-    if (!product.availability) {
-      setResultAlert({ title: 'Unavailable', message: 'This service is currently unavailable.' });
-      return;
-    }
-    setSelectedProduct(product);
-    setShowTimingModal(true);
-  };
-
-  const handleSlotSelected = (slot: DeliverySlot) => {
-    setSelectedSlot(slot);
-    setShowTimingModal(false);
-    setShowAddressModal(true);
-  };
-
-  const handleAddressSelected = (address: SelectedAddress) => {
-    setSelectedAddress(address);
-    setShowAddressModal(false);
-    if (selectedProduct) {
-      handleDirectOrder(selectedProduct, address, selectedSlot);
-    }
-  };
-
-  const handleDirectOrder = async (product: Product, address: SelectedAddress, slot: DeliverySlot | null) => {
-    if (!user) return;
-    setOrdering(product.type);
-    try {
-      const orderData = {
-        items: [{ type: product.type, quantity: 1 }],
-        deliveryAddress: {
-          fullName: address.fullName,
-          houseNumber: address.houseNumber,
-          portion: address.portion,
-          address: address.address,
-          phoneNumber: address.phoneNumber,
-          specialInstructions: address.landmark ? `Landmark: ${address.landmark}` : 'Please deliver to the address provided',
-          latitude: address.latitude,
-          longitude: address.longitude,
-        },
-        paymentMethod: 'cash' as const,
-        notes: `Direct order for ${product.name}`,
-        ...(slot?.date
-          ? { deliveryType: 'scheduled' as const, scheduledFor: slot.date.toISOString() }
-          : { deliveryType: 'immediate' as const }),
-      };
-
-      const order = await orderAPI.createOrder(orderData);
-      await fetchOrders();
-      const whenText = slot?.date ? ` for ${slot.label}` : '';
-
-      setResultAlert({
-        title: 'Order placed',
-        message: `Your order #${order.orderNumber} has been placed${whenText}. Total: Rs. ${order.totalAmount.toLocaleString()}`,
-        onClose: () => router.push('/(main)/(tabs)/tracking'),
-      });
-    } catch (error) {
-      console.error('Order error:', error);
-      setResultAlert({
-        title: 'Order failed',
-        message: error instanceof Error ? error.message : 'Failed to place order. Please try again.',
-      });
-    } finally {
-      setOrdering(null);
-      setSelectedProduct(null);
-      setSelectedSlot(null);
-    }
+    router.push({ pathname: '/(main)/order', params: productType ? { productType } : {} });
   };
 
   useEffect(() => {
@@ -416,38 +286,33 @@ export default function OrdersScreen() {
   const openNotifications = () => router.push('/(main)/notifications');
 
   const ServiceCard = ({
-    product, time, icon, color, onPress,
-  }: { product: Product; time: string; icon: React.ReactNode; color: string; onPress: (product: Product) => void }) => {
-    const isOrdering = ordering === product.type;
+    product, time, icon, color,
+  }: { product: Product; time: string; icon: React.ReactNode; color: string }) => {
     const price = `Rs. ${product.unitPrice.toLocaleString()}`;
     return (
-      <TouchableOpacity
-        onPress={product.availability ? () => onPress(product) : undefined}
-        disabled={!product.availability || isOrdering}
-        activeOpacity={0.8}
+      <Card
+        onPress={product.availability ? () => goToOrder(product.type) : undefined}
+        style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]}
       >
-        <Card style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]}>
-          <View style={styles.serviceContent}>
-            <View style={[styles.serviceIcon, { backgroundColor: color + '1A' }]}>{icon}</View>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>{product.name}</Text>
-              <Text style={styles.serviceVolume}>{product.size}</Text>
-              <View style={styles.serviceDetails}>
-                <Text style={styles.servicePrice}>{price}</Text>
-                <Text style={styles.serviceTime}>• {time}</Text>
-              </View>
-            </View>
-            <View style={styles.serviceRight}>
-              <Badge
-                label={isOrdering ? 'Ordering...' : product.availability ? 'Available' : 'Unavailable'}
-                tone={product.availability ? 'success' : 'danger'}
-              />
-              {product.availability && !isOrdering && <ArrowRight size={20} color={colors.neutral[500]} />}
-              {isOrdering && <ActivityIndicator size="small" color={colors.primary[500]} />}
+        <View style={styles.serviceContent}>
+          <View style={[styles.serviceIcon, { backgroundColor: color + '1A' }]}>{icon}</View>
+          <View style={styles.serviceInfo}>
+            <Text style={styles.serviceTitle}>{product.name}</Text>
+            <Text style={styles.serviceVolume}>{product.size}</Text>
+            <View style={styles.serviceDetails}>
+              <Text style={styles.servicePrice}>{price}</Text>
+              <Text style={styles.serviceTime}>• {time}</Text>
             </View>
           </View>
-        </Card>
-      </TouchableOpacity>
+          <View style={styles.serviceRight}>
+            <Badge
+              label={product.availability ? 'Available' : 'Unavailable'}
+              tone={product.availability ? 'success' : 'danger'}
+            />
+            {product.availability && <ArrowRight size={20} color={colors.neutral[500]} />}
+          </View>
+        </View>
+      </Card>
     );
   };
 
@@ -462,13 +327,42 @@ export default function OrdersScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome back, {user?.name || 'Guest'}!</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Your water tank is at{' '}
-            <Text style={styles.welcomeNumeric}>{tankLevel !== null ? `${tankLevel}%` : 'N/A'}</Text> capacity
-          </Text>
+        <View style={styles.greetingRow}>
+          <Text style={styles.greeting}>Good {timeOfDayGreeting()}</Text>
+          <Text style={styles.greetingName}>{user?.name || 'Guest'}</Text>
         </View>
+
+        <Card
+          onPress={() => goToOrder()}
+          padded={false}
+          style={styles.heroCardWrap}
+        >
+          <LinearGradient colors={[colors.primary[500], colors.primary[700]]} style={styles.heroCard}>
+            <View style={styles.heroText}>
+              <Text style={styles.heroEyebrow}>MOST USED</Text>
+              <Text style={styles.heroTitle}>Order a tanker</Text>
+              <Text style={styles.heroSubtitle}>Usually arrives in 40–60 min</Text>
+            </View>
+            <View style={styles.heroIconCircle}>
+              <Truck size={24} color="#fff" strokeWidth={1.8} />
+            </View>
+          </LinearGradient>
+        </Card>
+
+        {!loading && (
+          <Card onPress={() => router.push('/(main)/(tabs)/tank-monitoring')} style={styles.tankCard}>
+            <TankCapsule level={tankLevel ?? 0} size={64} showLabel={false} />
+            <View style={styles.tankInfo}>
+              <Text style={styles.tankLabel}>Main tank</Text>
+              <Text style={styles.tankHeadline}>
+                {tankLevel === null ? 'No sensor data' : tankLevel > 50 ? 'Comfortable level' : 'Getting low'}
+              </Text>
+              <Text style={styles.tankSub}>
+                {tankLevel !== null ? `${tankLevel}% full` : 'Connect a device to see live level'}
+              </Text>
+            </View>
+          </Card>
+        )}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -498,12 +392,7 @@ export default function OrdersScreen() {
                     label="Order Now"
                     variant="warning"
                     size="sm"
-                    onPress={() => {
-                      if (products.length > 0) {
-                        const smallTanker = products.find((p) => p.type === 'small_tanker') || products[0];
-                        handleServiceSelect(smallTanker);
-                      }
-                    }}
+                    onPress={() => goToOrder('small_tanker')}
                   />
                 </View>
               </Card>
@@ -525,7 +414,7 @@ export default function OrdersScreen() {
                   color = colors.success[500];
                 }
                 return (
-                  <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} onPress={handleServiceSelect} />
+                  <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} />
                 );
               })}
             </View>
@@ -561,61 +450,11 @@ export default function OrdersScreen() {
         </View>
       </ScrollView>
 
-      <AddressSelectionModal
-        visible={showAddressModal}
-        onClose={() => {
-          setShowAddressModal(false);
-          setSelectedProduct(null);
-          setSelectedSlot(null);
-        }}
-        onSelectAddress={handleAddressSelected}
-      />
-
-      <Modal
-        visible={showTimingModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          setShowTimingModal(false);
-          setSelectedProduct(null);
-        }}
-      >
-        <View style={styles.timingModalOverlay}>
-          <View style={styles.timingModalCard}>
-            <Text style={styles.timingModalTitle}>When should we deliver?</Text>
-            {selectedProduct && (
-              <Text style={styles.timingModalSubtitle}>
-                {selectedProduct.name} ({selectedProduct.size})
-              </Text>
-            )}
-            {getDeliverySlots().map((slot) => (
-              <TouchableOpacity key={slot.label} style={styles.timingSlot} onPress={() => handleSlotSelected(slot)}>
-                <Clock size={18} color={colors.success[500]} />
-                <Text style={styles.timingSlotText}>{slot.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.timingCancelButton}
-              onPress={() => {
-                setShowTimingModal(false);
-                setSelectedProduct(null);
-              }}
-            >
-              <Text style={styles.timingCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
       <CustomAlert
-        visible={!!resultAlert}
-        title={resultAlert?.title || ''}
-        message={resultAlert?.message || ''}
-        onClose={() => {
-          const onClose = resultAlert?.onClose;
-          setResultAlert(null);
-          onClose?.();
-        }}
+        visible={loginRequired}
+        title="Please log in"
+        message="You need to be logged in to place an order."
+        onClose={() => setLoginRequired(false)}
       />
     </View>
   );
@@ -625,10 +464,31 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.neutral[0] },
   content: { flex: 1 },
   contentContainer: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl - spacing.sm },
-  welcomeSection: { paddingVertical: spacing.xxl },
-  welcomeTitle: { fontFamily: typography.h1.fontFamily, fontSize: typography.h1.fontSize, color: colors.neutral[900], marginBottom: spacing.sm },
-  welcomeSubtitle: { fontFamily: typography.body.fontFamily, fontSize: 16, color: colors.neutral[500] },
-  welcomeNumeric: { fontFamily: typography.h3.fontFamily, color: colors.primary[600] },
+  greetingRow: { paddingTop: spacing.xxl, paddingBottom: spacing.md },
+  greeting: { fontFamily: typography.body.fontFamily, fontSize: 13, color: colors.neutral[500] },
+  greetingName: { fontFamily: typography.h1.fontFamily, fontSize: typography.h1.fontSize, color: colors.neutral[900], marginTop: 2 },
+  heroCardWrap: { marginBottom: spacing.md, overflow: 'hidden', borderWidth: 0 },
+  heroCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.xl,
+  },
+  heroText: { flex: 1 },
+  heroEyebrow: { fontFamily: typography.label.fontFamily, fontSize: 11, color: colors.primary[50], letterSpacing: 0.4, marginBottom: 6 },
+  heroTitle: { fontFamily: typography.h2.fontFamily, fontSize: 19, color: '#fff', marginBottom: 4 },
+  heroSubtitle: { fontFamily: typography.body.fontFamily, fontSize: 12.5, color: colors.primary[50] },
+  heroIconCircle: {
+    width: 52, height: 52, borderRadius: radius.xl,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center',
+    marginLeft: spacing.md,
+  },
+  tankCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginBottom: spacing.xl },
+  tankInfo: { flex: 1 },
+  tankLabel: { fontFamily: typography.label.fontFamily, fontSize: 12, color: colors.neutral[500], marginBottom: 4 },
+  tankHeadline: { fontFamily: typography.h3.fontFamily, fontSize: 15, color: colors.neutral[900], marginBottom: 4 },
+  tankSub: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500] },
   alertCard: { backgroundColor: colors.warning[50], borderColor: colors.warning[100], borderLeftWidth: 4, borderLeftColor: colors.warning[500], marginBottom: spacing.xxl },
   alertRow: { flexDirection: 'row', alignItems: 'center' },
   alertIconCircle: { width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.warning[100], justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },

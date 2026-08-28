@@ -37,6 +37,45 @@ import { router } from 'expo-router';
 import { socketService, DriverLocationData } from '@/utils/socketService';
 import { orderAPI } from '@/utils/orderAPI';
 import { Order, QueueStatus, getOrderId } from '@/types/order';
+import { Badge, orderStatusTone } from '@/app/components/ui';
+import StepStepper, { Step } from '@/app/components/StepStepper';
+import { colors, spacing, typography } from '@/theme';
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  out_for_delivery: 'Out for Delivery',
+  in_transit: 'In Transit',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+function buildTrackSteps(order: Order | null, queueStatus: QueueStatus | null): Step[] {
+  const hasDriver = !!order?.driver;
+  const isOnWay = order?.status === 'out_for_delivery';
+  const isDelivered = order?.status === 'delivered';
+
+  return [
+    { key: 'confirmed', label: 'Order confirmed', state: 'done' },
+    {
+      key: 'driver',
+      label: 'Driver assigned',
+      state: hasDriver ? 'done' : 'active',
+      sublabel: !hasDriver
+        ? queueStatus?.position != null
+          ? `You're #${queueStatus.position} in line${queueStatus.etaMinutes != null ? ` · ~${queueStatus.etaMinutes} min` : ''}`
+          : 'Waiting to be assigned'
+        : undefined,
+    },
+    {
+      key: 'onway',
+      label: 'On the way',
+      state: isDelivered ? 'done' : isOnWay ? 'active' : hasDriver ? 'pending' : 'pending',
+    },
+    { key: 'delivered', label: 'Delivered', state: isDelivered ? 'done' : 'pending' },
+  ];
+}
 
 const { width, height } = Dimensions.get('window');
 
@@ -224,32 +263,6 @@ export default function TrackingScreen() {
     setRefreshing(false);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'confirmed': return '#3B82F6';
-      case 'preparing': return '#9333EA';
-      case 'out_for_delivery': return '#F97316';
-      case 'in_transit': return '#10B981';
-      case 'delivered': return '#10B981';
-      case 'cancelled': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pending';
-      case 'confirmed': return 'Confirmed';
-      case 'preparing': return 'Preparing';
-      case 'out_for_delivery': return 'Out for Delivery';
-      case 'in_transit': return 'In Transit';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      default: return status;
-    }
-  };
-
   const getLastActiveTime = () => {
     if (!selectedOrder?.driver) {
       console.log('[getLastActiveTime] No driver in selectedOrder');
@@ -360,27 +373,22 @@ export default function TrackingScreen() {
         <View style={styles.orderCardHeader}>
           <View style={styles.orderCardLeft}>
             <Text style={styles.orderNumber}>{order.orderNumber}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(order.status) }]} />
-              <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-                {getStatusText(order.status)}
-              </Text>
-            </View>
+            <Badge label={STATUS_LABEL[order.status] || order.status} tone={orderStatusTone(order.status)} />
           </View>
-          <ChevronRight size={18} color={isSelected ? '#087EA4' : '#9CA3AF'} />
+          <ChevronRight size={18} color={isSelected ? colors.primary[500] : colors.neutral[400]} />
         </View>
 
         {isSelected && (
           <View style={styles.orderCardBody}>
             <View style={styles.orderDetail}>
-              <Package size={14} color="#6B7280" />
+              <Package size={14} color={colors.neutral[500]} />
               <Text style={styles.orderDetailText} numberOfLines={1}>
                 {order.items?.map(item => `${item.quantity}x ${item.type}`).join(', ')}
               </Text>
             </View>
-            
+
             <View style={styles.orderDetail}>
-              <MapPin size={14} color="#6B7280" />
+              <MapPin size={14} color={colors.neutral[500]} />
               <Text style={styles.orderDetailText} numberOfLines={1}>
                 {order.deliveryAddress?.address || 'No address'}
               </Text>
@@ -400,37 +408,25 @@ export default function TrackingScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#087EA4" />
+          <ActivityIndicator size="large" color={colors.primary[500]} />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Package size={64} color="#D1D5DB" />
+          <Package size={64} color={colors.neutral[300]} />
           <Text style={styles.emptyTitle}>No Active Orders</Text>
           <Text style={styles.emptyText}>
-            You don't have any active deliveries to track
+            You don&apos;t have any active deliveries to track
           </Text>
         </View>
       ) : (
         <>
           {selectedOrder && !selectedOrder.driver ? (
             /* No driver assigned yet -- nothing to show on a map, show
-               queue position/ETA instead. */
+               the step stepper with queue position/ETA instead. */
             <View style={styles.queueContainer}>
-              <View style={styles.queueIconCircle}>
-                <Clock size={32} color="#087EA4" />
-              </View>
-              {queueStatus && queueStatus.position !== null ? (
-                <>
-                  <Text style={styles.queueHeadline}>You're #{queueStatus.position} in line</Text>
-                  {queueStatus.etaMinutes !== null && (
-                    <Text style={styles.queueSubtext}>~{queueStatus.etaMinutes} min estimated</Text>
-                  )}
-                </>
-              ) : (
-                <Text style={styles.queueHeadline}>Waiting to be assigned a driver…</Text>
-              )}
-              <Text style={styles.queueHint}>We'll show live tracking here once a driver is on the way.</Text>
+              <StepStepper steps={buildTrackSteps(selectedOrder, queueStatus)} />
+              <Text style={styles.queueHint}>We&apos;ll show live tracking here once a driver is on the way.</Text>
             </View>
           ) : (
             /* Map View - Takes Maximum Space */
@@ -446,14 +442,27 @@ export default function TrackingScreen() {
                 longitudeDelta={LONGITUDE_DELTA}
               />
 
+              {/* Compact progress strip */}
+              <View style={styles.progressStrip}>
+                {buildTrackSteps(selectedOrder, null).map((step) => (
+                  <View
+                    key={step.key}
+                    style={[
+                      styles.progressSegment,
+                      step.state !== 'pending' && styles.progressSegmentFilled,
+                    ]}
+                  />
+                ))}
+              </View>
+
               {/* Center Map Button */}
               <TouchableOpacity style={styles.centerButton} onPress={handleCenterMap}>
-                <Navigation size={18} color="#087EA4" />
+                <Navigation size={18} color={colors.primary[500]} />
               </TouchableOpacity>
 
               {/* Driver Status Badge */}
               <View style={styles.statusBadgeContainer}>
-                <View style={[styles.driverStatusBadge, { backgroundColor: isDriverOnline ? '#10B981' : '#6B7280' }]}>
+                <View style={[styles.driverStatusBadge, { backgroundColor: isDriverOnline ? colors.success[500] : colors.neutral[500] }]}>
                   <View style={styles.statusDot} />
                   <Text style={styles.driverStatusText}>
                     {isDriverOnline ? 'Online' : 'Offline'}
@@ -474,15 +483,15 @@ export default function TrackingScreen() {
             <View style={styles.panelHeader}>
               <View>
                 <Text style={styles.panelTitle}>
-                  {selectedOrder?.orderNumber} • {getStatusText(selectedOrder?.status || '')}
+                  {selectedOrder?.orderNumber} • {STATUS_LABEL[selectedOrder?.status || ''] || selectedOrder?.status}
                 </Text>
                 <Text style={styles.panelSubtitle}>Active Orders ({orders.length})</Text>
               </View>
               <TouchableOpacity onPress={togglePanel}>
                 {panelExpanded ? (
-                  <ChevronDown size={20} color="#6B7280" />
+                  <ChevronDown size={20} color={colors.neutral[500]} />
                 ) : (
-                  <ChevronUp size={20} color="#6B7280" />
+                  <ChevronUp size={20} color={colors.neutral[500]} />
                 )}
               </TouchableOpacity>
             </View>
@@ -510,21 +519,21 @@ export default function TrackingScreen() {
                   style={styles.actionButtonSmall} 
                   onPress={handleCallDriver}
                 >
-                  <Phone size={16} color="#FFFFFF" />
+                  <Phone size={16} color={colors.neutral[0]} />
                   <Text style={styles.actionButtonText}>Call</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.actionButtonSmall, styles.actionButtonSecondary]} 
                   onPress={handleMessageDriver}
                 >
-                  <MessageCircle size={16} color="#087EA4" />
+                  <MessageCircle size={16} color={colors.primary[500]} />
                   <Text style={styles.actionButtonTextSecondary}>Message</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.actionButtonSmall}
                   onPress={() => setShowDriverInfo(true)}
                 >
-                  <User size={16} color="#FFFFFF" />
+                  <User size={16} color={colors.neutral[0]} />
                   <Text style={styles.actionButtonText}>Driver</Text>
                 </TouchableOpacity>
               </View>
@@ -543,14 +552,14 @@ export default function TrackingScreen() {
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Driver Information</Text>
                   <TouchableOpacity onPress={() => setShowDriverInfo(false)}>
-                    <X size={24} color="#1F2937" />
+                    <X size={24} color={colors.neutral[900]} />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.modalContent}>
                   <View style={styles.driverInfoRow}>
                     <View style={styles.driverAvatar}>
-                      <Truck size={24} color="#087EA4" />
+                      <Truck size={24} color={colors.primary[500]} />
                     </View>
                     <View style={styles.driverDetailBlock}>
                       <Text style={styles.driverName}>{selectedOrder?.driver?.name}</Text>
@@ -560,7 +569,7 @@ export default function TrackingScreen() {
 
                   {selectedOrder && selectedOrder.driver && (selectedOrder.driver as any).phone && (
                     <View style={styles.infoItem}>
-                      <Phone size={18} color="#087EA4" />
+                      <Phone size={18} color={colors.primary[500]} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Phone</Text>
                         <Text style={styles.infoValue}>{(selectedOrder.driver as any).phone}</Text>
@@ -570,7 +579,7 @@ export default function TrackingScreen() {
 
                   {isDriverOnline && (
                     <View style={styles.infoItem}>
-                      <Clock size={18} color="#10B981" />
+                      <Clock size={18} color={colors.success[500]} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Last Active</Text>
                         <Text style={styles.infoValue}>{getLastActiveTime()}</Text>
@@ -580,7 +589,7 @@ export default function TrackingScreen() {
 
                   {selectedOrder && selectedOrder.driver && (selectedOrder.driver as any)?.location && (
                     <View style={styles.infoItem}>
-                      <MapPin size={18} color="#F97316" />
+                      <MapPin size={18} color={colors.warning[500]} />
                       <View style={styles.infoContent}>
                         <Text style={styles.infoLabel}>Last Location</Text>
                         {(() => {
@@ -611,7 +620,7 @@ export default function TrackingScreen() {
                         setShowDriverInfo(false);
                       }}
                     >
-                      <Phone size={18} color="#FFFFFF" />
+                      <Phone size={18} color={colors.neutral[0]} />
                       <Text style={styles.actionButtonFullText}>Call Driver</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
@@ -621,7 +630,7 @@ export default function TrackingScreen() {
                         setShowDriverInfo(false);
                       }}
                     >
-                      <MessageCircle size={18} color="#087EA4" />
+                      <MessageCircle size={18} color={colors.primary[500]} />
                       <Text style={styles.actionButtonFullTextSecondary}>Message</Text>
                     </TouchableOpacity>
                   </View>
@@ -638,7 +647,7 @@ export default function TrackingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FF',
+    backgroundColor: colors.neutral[50],
   },
   loadingContainer: {
     flex: 1,
@@ -647,8 +656,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginTop: 12,
   },
   emptyContainer: {
@@ -659,14 +668,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginTop: 16,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     textAlign: 'center',
     marginTop: 8,
   },
@@ -676,40 +685,36 @@ const styles = StyleSheet.create({
   },
   queueContainer: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    paddingHorizontal: 40,
-    gap: 6,
-  },
-  queueIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F0F8FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  queueHeadline: {
-    fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
-    textAlign: 'center',
-  },
-  queueSubtext: {
-    fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    paddingHorizontal: spacing.xxl,
+    gap: spacing.lg,
   },
   queueHint: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginTop: 8,
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
+    marginTop: spacing.sm,
   },
   map: {
     flex: 1,
+  },
+  progressStrip: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 90,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  progressSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  progressSegmentFilled: {
+    backgroundColor: colors.primary[500],
   },
   centerButton: {
     position: 'absolute',
@@ -718,7 +723,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -749,15 +754,15 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     marginRight: 5,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
   },
   driverStatusText: {
     fontSize: 11,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   bottomPanel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
@@ -773,7 +778,7 @@ const styles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: colors.neutral[300],
     borderRadius: 2,
   },
   panelHeader: {
@@ -783,17 +788,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.neutral[100],
   },
   panelTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   panelSubtitle: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
     marginTop: 2,
   },
   ordersListContainer: {
@@ -806,15 +811,15 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     minWidth: 160,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     padding: 10,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: colors.neutral[200],
   },
   orderCardSelected: {
-    borderColor: '#087EA4',
-    backgroundColor: '#F0F8FF',
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[50],
   },
   orderCardHeader: {
     flexDirection: 'row',
@@ -827,8 +832,8 @@ const styles = StyleSheet.create({
   },
   orderNumber: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   statusBadge: {
@@ -841,7 +846,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 10,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: typography.h3.fontFamily,
   },
   orderCardBody: {
     gap: 4,
@@ -853,8 +858,8 @@ const styles = StyleSheet.create({
   },
   orderDetailText: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     flex: 1,
   },
   driverActionBar: {
@@ -863,7 +868,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.neutral[100],
   },
   actionButtonSmall: {
     flex: 1,
@@ -873,21 +878,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: '#087EA4',
+    backgroundColor: colors.primary[500],
     gap: 5,
   },
   actionButtonSecondary: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primary[50],
   },
   actionButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   actionButtonTextSecondary: {
     fontSize: 12,
-    fontFamily: 'Sora-SemiBold',
-    color: '#087EA4',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.primary[500],
   },
   modalOverlay: {
     flex: 1,
@@ -895,7 +900,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   driverInfoModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '80%',
@@ -907,12 +912,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.neutral[100],
   },
   modalTitle: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   modalContent: {
     paddingHorizontal: 16,
@@ -928,7 +933,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -938,13 +943,13 @@ const styles = StyleSheet.create({
   },
   driverName: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   driverSubtitle: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginTop: 2,
   },
   infoItem: {
@@ -952,7 +957,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     gap: 12,
   },
@@ -961,19 +966,19 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
   },
   infoValue: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginTop: 2,
   },
   infoSubtext: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
     marginTop: 4,
   },
   actionButtonsContainer: {
@@ -988,20 +993,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#087EA4',
+    backgroundColor: colors.primary[500],
     gap: 8,
   },
   actionButtonFullSecondary: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primary[50],
   },
   actionButtonFullText: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   actionButtonFullTextSecondary: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#087EA4',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.primary[500],
   },
 });

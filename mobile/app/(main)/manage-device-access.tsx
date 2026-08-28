@@ -141,7 +141,7 @@ export default function ManageDeviceAccessScreen() {
   if (!device) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>Device not found, or you don't own it.</Text>
+        <Text style={styles.loadingText}>Device not found, or you don&apos;t own it.</Text>
         <TouchableOpacity style={styles.backLink} onPress={() => router.back()}>
           <Text style={styles.backLinkText}>Go back</Text>
         </TouchableOpacity>
@@ -173,9 +173,9 @@ export default function ManageDeviceAccessScreen() {
         <View style={styles.formCard}>
           <Text style={styles.label}>Add a tenant</Text>
           <Text style={styles.description}>
-            They'll be able to see this device's live water level, but won't be able to
-            change calibration or remove other people's access. They need an AabRahat
-            account already — if they don't have one yet, use the invite QR below instead.
+            They&apos;ll be able to see this device&apos;s live water level, but won&apos;t be able to
+            change calibration or remove other people&apos;s access. They need an AabRahat
+            account already — if they don&apos;t have one yet, use the invite QR below instead.
           </Text>
 
           <View style={styles.modeToggle}>

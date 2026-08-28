@@ -800,7 +800,7 @@ export default function DriverMapScreen() {
           <Package size={64} color="#D1D5DB" />
           <Text style={styles.emptyTitle}>No Active Orders</Text>
           <Text style={styles.emptyText}>
-            You don't have any active deliveries at the moment
+            You don&apos;t have any active deliveries at the moment
           </Text>
         </View>
       ) : (
@@ -896,7 +896,7 @@ export default function DriverMapScreen() {
               <AlertCircle size={48} color="#6B7280" />
               <Text style={styles.noLocationTitle}>No Delivery Location</Text>
               <Text style={styles.noLocationText}>
-                This order doesn't have a valid delivery location set. Please contact the customer or support.
+                This order doesn&apos;t have a valid delivery location set. Please contact the customer or support.
               </Text>
               <View style={styles.customerCard}>
                 <View style={styles.customerHeader}>

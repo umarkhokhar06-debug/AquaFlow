@@ -329,7 +329,7 @@ export default function DriverDashboardScreen() {
         {/* Today's Orders */}
         <View style={styles.ordersSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Orders</Text>
+            <Text style={styles.sectionTitle}>Today&apos;s Orders</Text>
             <TouchableOpacity onPress={() => router.push('/(driver)/(tabs)/deliveries')}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>

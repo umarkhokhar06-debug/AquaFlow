@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { orderAPI } from './orderAPI';
-import { getLatestIoTData } from './iotAPI';
+import { getLatestIoTData, getMyDevices } from './iotAPI';
 import { notificationService } from './notificationService';
 
 export interface ScheduledOrder {
@@ -136,8 +136,15 @@ class ScheduleService {
       const activeSchedules = this.getActiveSchedules();
       if (activeSchedules.length === 0) return;
 
-      // Get current tank level
-      const iotData = await getLatestIoTData();
+      // Get current tank level from the account's primary device
+      const devicesRes = await getMyDevices();
+      const primaryDevice = devicesRes.success ? devicesRes.devices[0] : null;
+      if (!primaryDevice) {
+        console.error('No device available for schedule check');
+        return;
+      }
+
+      const iotData = await getLatestIoTData(primaryDevice.deviceId);
       if (!iotData.success || !iotData.data) {
         console.error('Failed to fetch IoT data for schedule check');
         return;

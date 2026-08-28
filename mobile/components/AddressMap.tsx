@@ -34,4 +34,6 @@ const AddressMap = forwardRef<MapView, AddressMapProps>(
   )
 );
 
+AddressMap.displayName = 'AddressMap';
+
 export default AddressMap;

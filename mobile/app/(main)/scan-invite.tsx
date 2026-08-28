@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { ArrowLeft, Keyboard } from 'lucide-react-native';
 import { redeemDeviceInvite } from '@/utils/iotAPI';
+import { colors, typography } from '@/theme';
 
 export default function ScanInviteScreen() {
   const router = useRouter();
@@ -70,7 +71,7 @@ export default function ScanInviteScreen() {
         <StatusBar barStyle="dark-content" />
         <View style={styles.manualHeader}>
           <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-            <ArrowLeft size={22} color="#1F2937" />
+            <ArrowLeft size={22} color={colors.neutral[900]} />
           </TouchableOpacity>
           <Text style={styles.manualTitle}>Enter Invite Code</Text>
           <View style={{ width: 40 }} />
@@ -83,14 +84,14 @@ export default function ScanInviteScreen() {
             onChangeText={setManualCode}
             placeholder="e.g. 740967444276b7b19171b61be110772c"
             autoCapitalize="none"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.neutral[400]}
           />
           <TouchableOpacity
             style={[styles.redeemButton, redeeming && styles.redeemButtonDisabled]}
             onPress={() => redeem(manualCode.trim())}
             disabled={redeeming || !manualCode.trim()}
           >
-            {redeeming ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.redeemButtonText}>Redeem</Text>}
+            {redeeming ? <ActivityIndicator color={colors.neutral[0]} /> : <Text style={styles.redeemButtonText}>Redeem</Text>}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setManualMode(false)}>
             <Text style={styles.switchModeText}>Scan a QR code instead</Text>
@@ -103,7 +104,7 @@ export default function ScanInviteScreen() {
   if (!permission) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#087EA4" />
+        <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
   }
@@ -137,7 +138,7 @@ export default function ScanInviteScreen() {
 
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.iconButtonLight} onPress={() => router.back()}>
-          <ArrowLeft size={22} color="#FFFFFF" />
+          <ArrowLeft size={22} color={colors.neutral[0]} />
         </TouchableOpacity>
 
         <View style={styles.frameWrap}>
@@ -145,11 +146,11 @@ export default function ScanInviteScreen() {
           <Text style={styles.hint}>
             {redeeming ? 'Joining device...' : 'Point your camera at the invite QR code'}
           </Text>
-          {redeeming && <ActivityIndicator color="#FFFFFF" style={{ marginTop: 12 }} />}
+          {redeeming && <ActivityIndicator color={colors.neutral[0]} style={{ marginTop: 12 }} />}
         </View>
 
         <TouchableOpacity style={styles.manualToggle} onPress={() => setManualMode(true)}>
-          <Keyboard size={16} color="#FFFFFF" />
+          <Keyboard size={16} color={colors.neutral[0]} />
           <Text style={styles.manualToggleText}>Enter code manually</Text>
         </TouchableOpacity>
       </View>
@@ -169,8 +170,8 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     fontSize: 15,
-    fontFamily: 'Sora-Regular',
-    color: '#1F2937',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[900],
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -205,13 +206,13 @@ const styles = StyleSheet.create({
     height: 240,
     borderRadius: 20,
     borderWidth: 3,
-    borderColor: '#FFFFFF',
+    borderColor: colors.neutral[0],
     marginBottom: 20,
   },
   hint: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
-    color: '#FFFFFF',
+    fontFamily: typography.bodyMed.fontFamily,
+    color: colors.neutral[0],
     textAlign: 'center',
     paddingHorizontal: 24,
   },
@@ -228,8 +229,8 @@ const styles = StyleSheet.create({
   },
   manualToggleText: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   manualHeader: {
     flexDirection: 'row',
@@ -238,39 +239,39 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: 20,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
   },
   manualTitle: {
     fontSize: 17,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   manualBody: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     paddingHorizontal: 20,
     paddingTop: 24,
   },
   manualLabel: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginBottom: 10,
   },
   manualInput: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#1F2937',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[900],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.neutral[200],
     marginBottom: 20,
   },
   redeemButton: {
-    backgroundColor: '#087EA4',
+    backgroundColor: colors.primary[500],
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -281,13 +282,13 @@ const styles = StyleSheet.create({
   },
   redeemButtonText: {
     fontSize: 15,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   switchModeText: {
     fontSize: 13,
-    fontFamily: 'Sora-Medium',
-    color: '#087EA4',
+    fontFamily: typography.bodyMed.fontFamily,
+    color: colors.primary[500],
     textAlign: 'center',
   },
 });

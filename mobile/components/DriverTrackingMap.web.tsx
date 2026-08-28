@@ -37,6 +37,8 @@ const DriverTrackingMap = forwardRef<
   );
 });
 
+DriverTrackingMap.displayName = 'DriverTrackingMap';
+
 const styles = StyleSheet.create({
   placeholder: {
     alignItems: 'center',

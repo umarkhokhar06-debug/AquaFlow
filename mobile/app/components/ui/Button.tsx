@@ -1,5 +1,6 @@
-import { ActivityIndicator, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors, radius, spacing, typography } from '@/theme';
+import Tap from '@/app/components/Tap';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'warning';
 type Size = 'sm' | 'md' | 'lg';
@@ -55,10 +56,9 @@ export default function Button({
   const variantStyle = (onDark && ON_DARK_VARIANT_STYLES[variant]) || VARIANT_STYLES[variant];
 
   return (
-    <TouchableOpacity
+    <Tap
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
       style={[
         styles.base,
         {
@@ -67,7 +67,6 @@ export default function Button({
           borderWidth: variantStyle.border ? 1 : 0,
           paddingVertical: sizeStyle.paddingVertical,
           paddingHorizontal: sizeStyle.paddingHorizontal,
-          opacity: isDisabled ? 0.5 : 1,
         },
         style,
       ]}
@@ -82,7 +81,7 @@ export default function Button({
           </Text>
         </View>
       )}
-    </TouchableOpacity>
+    </Tap>
   );
 }
 

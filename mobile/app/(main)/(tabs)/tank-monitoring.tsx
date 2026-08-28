@@ -27,6 +27,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
+import TankCapsule from '@/app/components/graphics/TankCapsule';
 import {
   getLatestIoTData,
   getAllIoTData,
@@ -35,6 +36,7 @@ import {
 } from '@/utils/iotAPI';
 import { storage } from '@/utils/auth';
 import { useSocket } from '@/hooks/useSocket';
+import { colors, typography } from '@/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -248,26 +250,26 @@ export default function TankMonitoringScreen() {
   const getAlertIcon = (type: string) => {
     switch (type) {
       case 'warning':
-        return <AlertTriangle size={16} color="#F59E0B" />;
+        return <AlertTriangle size={16} color={colors.warning[500]} />;
       case 'success':
-        return <Wifi size={16} color="#10B981" />;
+        return <Wifi size={16} color={colors.success[500]} />;
       case 'info':
-        return <TrendingUp size={16} color="#087EA4" />;
+        return <TrendingUp size={16} color={colors.primary[500]} />;
       default:
-        return <AlertTriangle size={16} color="#6B7280" />;
+        return <AlertTriangle size={16} color={colors.neutral[500]} />;
     }
   };
 
   const getAlertBg = (type: string) => {
     switch (type) {
       case 'warning':
-        return '#FEF3C7';
+        return colors.warning[50];
       case 'success':
-        return '#D1FAE5';
+        return colors.success[100];
       case 'info':
-        return '#DBEAFE';
+        return colors.primary[50];
       default:
-        return '#F3F4F6';
+        return colors.neutral[100];
     }
   };
 
@@ -281,7 +283,7 @@ export default function TankMonitoringScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.neutral[0]} />
       
       {/* Header */}
       <HeaderComponent openDrawer={openDrawer} openNotifications={openNotifications} />
@@ -337,7 +339,7 @@ export default function TankMonitoringScreen() {
               style={styles.manageAccessButton}
               onPress={() => router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: selectedDevice.deviceId } })}
             >
-              <Users size={16} color="#087EA4" />
+              <Users size={16} color={colors.primary[500]} />
               <Text style={styles.manageAccessButtonText}>
                 Manage who can see this device ({1 + selectedDevice.tenants.length})
               </Text>
@@ -353,7 +355,7 @@ export default function TankMonitoringScreen() {
         >
           <RefreshCw 
             size={20} 
-            color="#087EA4" 
+            color={colors.primary[500]} 
             style={isRefreshing ? { transform: [{ rotate: '360deg' }] } : undefined}
           />
           <Text style={styles.refreshText}>
@@ -368,41 +370,25 @@ export default function TankMonitoringScreen() {
         <View style={styles.levelCard}>
           <View style={styles.levelHeader}>
             <View style={styles.levelTitleContainer}>
-              <Droplets size={24} color="#087EA4" />
+              <Droplets size={24} color={colors.primary[500]} />
               <Text style={styles.levelTitle}>Current Water Level</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: isOnline ? '#D1FAE5' : '#FEE2E2' }]}>
-              {isOnline ? <Wifi size={12} color="#10B981" /> : <WifiOff size={12} color="#EF4444" />}
-              <Text style={[styles.statusText, { color: isOnline ? '#10B981' : '#EF4444' }]}>
+            <View style={[styles.statusBadge, { backgroundColor: isOnline ? colors.success[100] : colors.danger[100] }]}>
+              {isOnline ? <Wifi size={12} color={colors.success[500]} /> : <WifiOff size={12} color={colors.danger[500]} />}
+              <Text style={[styles.statusText, { color: isOnline ? colors.success[500] : colors.danger[500] }]}>
                 {isOnline ? 'online' : 'offline'}
               </Text>
             </View>
           </View>
 
           <View style={styles.levelDisplay}>
-            <Text style={styles.levelPercentage}>{tankLevel.toFixed(2)}%</Text>
+            <TankCapsule level={tankLevel} size={120} showLabel />
             <Text style={styles.levelLiters}>{Math.floor((tankLevel / 100) * 1000)} / 1000 liters</Text>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressLabel}>Water Level</Text>
-            <Text style={styles.progressValue}>{tankLevel.toFixed(2)}%</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { 
-                  width: `${tankLevel}%`,
-                  backgroundColor: tankLevel <= 30 ? '#EF4444' : tankLevel <= 60 ? '#F59E0B' : '#10B981'
-                }
-              ]} 
-            />
           </View>
 
           {tankLevel <= 30 && (
             <View style={styles.alertContainer}>
-              <AlertTriangle size={20} color="#F59E0B" />
+              <AlertTriangle size={20} color={colors.warning[500]} />
               <View style={styles.alertContent}>
                 <Text style={styles.alertTitle}>Low Water Alert</Text>
                 <Text style={styles.alertText}>
@@ -416,48 +402,23 @@ export default function TankMonitoringScreen() {
           )}
         </View>
 
-        {/* Tank Visualization */}
+        {/* Sensor Readings */}
         <View style={styles.visualizationCard}>
-          <Text style={styles.sectionTitle}>Tank Visualization</Text>
-          
-          <View style={styles.tankContainer}>
-            <View style={styles.tank}>
-              <View style={styles.tankLabels}>
-                <Text style={styles.tankLabel}>100%</Text>
-                <Text style={styles.tankLabel}>75%</Text>
-                <Text style={styles.tankLabel}>50%</Text>
-                <Text style={styles.tankLabel}>25%</Text>
-                <Text style={styles.tankLabel}>0%</Text>
-              </View>
-              <View style={styles.tankBody}>
-                <View 
-                  style={[
-                    styles.waterLevel, 
-                    { 
-                      height: `${tankLevel}%`,
-                      backgroundColor: tankLevel <= 30 ? '#FB923C' : '#60A5FA'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-            <Text style={styles.tankTitle}>Main Water Tank</Text>
-            <Text style={styles.tankCapacity}>1000L Capacity</Text>
-          </View>
+          <Text style={styles.sectionTitle}>Sensor Readings</Text>
 
           <View style={styles.sensorData}>
             <View style={styles.sensorItem}>
-              <Thermometer size={16} color="#087EA4" />
+              <Thermometer size={16} color={colors.primary[500]} />
               <Text style={styles.sensorValue}>{temperature.toFixed(1)}°C</Text>
               <Text style={styles.sensorLabel}>Temperature</Text>
             </View>
             <View style={styles.sensorItem}>
-              <Droplets size={16} color="#3B82F6" />
+              <Droplets size={16} color={colors.primary[500]} />
               <Text style={styles.sensorValue}>{humidity.toFixed(1)}%</Text>
               <Text style={styles.sensorLabel}>Humidity</Text>
             </View>
             <View style={styles.sensorItem}>
-              <Battery size={16} color="#10B981" />
+              <Battery size={16} color={colors.success[500]} />
               <Text style={styles.sensorValue}>{batteryLevel}%</Text>
               <Text style={styles.sensorLabel}>Sensor Battery</Text>
             </View>
@@ -468,23 +429,23 @@ export default function TankMonitoringScreen() {
         <View style={styles.usageCard}>
           <View style={styles.usageItem}>
             <View style={styles.usageIcon}>
-              <TrendingUp size={20} color="#087EA4" />
+              <TrendingUp size={20} color={colors.primary[500]} />
             </View>
             <View style={styles.usageContent}>
               <Text style={styles.usageValue}>{todayUsage}L</Text>
-              <Text style={styles.usageLabel}>Today's Usage</Text>
+              <Text style={styles.usageLabel}>Today&apos;s Usage</Text>
               <Text style={styles.usageChange}>+5% from yesterday</Text>
             </View>
           </View>
 
           <View style={styles.usageItem}>
             <View style={styles.usageIcon}>
-              <Calendar size={20} color="#10B981" />
+              <Calendar size={20} color={colors.success[500]} />
             </View>
             <View style={styles.usageContent}>
               <Text style={styles.usageValue}>{weeklyUsage}L</Text>
               <Text style={styles.usageLabel}>This Week</Text>
-              <Text style={[styles.usageChange, { color: '#EF4444' }]}>-2% from last week</Text>
+              <Text style={[styles.usageChange, { color: colors.danger[500] }]}>-2% from last week</Text>
             </View>
           </View>
         </View>
@@ -511,7 +472,7 @@ export default function TankMonitoringScreen() {
                         styles.barFill, 
                         { 
                           height: `${data.level}%`,
-                          backgroundColor: '#087EA4'
+                          backgroundColor: colors.primary[500]
                         }
                       ]} 
                     />
@@ -551,7 +512,7 @@ export default function TankMonitoringScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.neutral[0],
   },
   header: {
     flexDirection: 'row',
@@ -559,22 +520,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.neutral[100],
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   deviceSwitcher: {
     marginBottom: 12,
@@ -584,54 +545,54 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   deviceChip: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.neutral[50],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.neutral[200],
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
     minWidth: 140,
   },
   deviceChipActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#087EA4',
+    backgroundColor: colors.primary[50],
+    borderColor: colors.primary[500],
   },
   deviceChipTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   deviceChipTitleActive: {
-    color: '#087EA4',
+    color: colors.primary[500],
   },
   deviceChipSubtitle: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
     marginTop: 2,
   },
   deviceChipSubtitleActive: {
-    color: '#3B82F6',
+    color: colors.primary[500],
   },
   manageAccessButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: colors.primary[50],
     borderRadius: 12,
     paddingVertical: 12,
     marginBottom: 16,
   },
   manageAccessButtonText: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
-    color: '#087EA4',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.primary[500],
   },
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primary[50],
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
@@ -643,14 +604,14 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     fontSize: 12,
-    fontFamily: 'Sora-Medium',
-    color: '#087EA4',
+    fontFamily: typography.bodyMed.fontFamily,
+    color: colors.primary[500],
     marginLeft: 4,
   },
   lastUpdateText: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginLeft: 8,
   },
   content: {
@@ -661,7 +622,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   levelCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -683,8 +644,8 @@ const styles = StyleSheet.create({
   },
   levelTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginLeft: 8,
   },
   statusBadge: {
@@ -696,7 +657,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: typography.h3.fontFamily,
     marginLeft: 4,
   },
   levelDisplay: {
@@ -705,14 +666,14 @@ const styles = StyleSheet.create({
   },
   levelPercentage: {
     fontSize: 48,
-    fontFamily: 'Sora-Bold',
-    color: '#F59E0B',
+    fontFamily: typography.h1.fontFamily,
+    color: colors.warning[500],
     marginBottom: 8,
   },
   levelLiters: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
   },
   progressContainer: {
     flexDirection: 'row',
@@ -722,17 +683,17 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
-    color: '#374151',
+    fontFamily: typography.bodyMed.fontFamily,
+    color: colors.neutral[700],
   },
   progressValue: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 4,
     marginBottom: 20,
   },
@@ -743,11 +704,11 @@ const styles = StyleSheet.create({
   alertContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warning[50],
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#F59E0B',
+    borderLeftColor: colors.warning[500],
   },
   alertContent: {
     flex: 1,
@@ -755,28 +716,28 @@ const styles = StyleSheet.create({
   },
   alertTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
-    color: '#92400E',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.warning[700],
     marginBottom: 4,
   },
   alertText: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#92400E',
+    fontFamily: typography.body.fontFamily,
+    color: colors.warning[700],
   },
   orderButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: colors.warning[500],
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   orderButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora-SemiBold',
-    color: '#FFFFFF',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[0],
   },
   visualizationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -788,8 +749,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 20,
   },
   tankContainer: {
@@ -808,13 +769,13 @@ const styles = StyleSheet.create({
   },
   tankLabel: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
   },
   tankBody: {
     width: 120,
     height: 200,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 8,
     justifyContent: 'flex-end',
     overflow: 'hidden',
@@ -825,14 +786,14 @@ const styles = StyleSheet.create({
   },
   tankTitle: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   tankCapacity: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
   },
   sensorData: {
     flexDirection: 'row',
@@ -847,15 +808,15 @@ const styles = StyleSheet.create({
   },
   sensorValue: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginTop: 8,
     marginBottom: 4,
   },
   sensorLabel: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
   },
   usageCard: {
     flexDirection: 'row',
@@ -866,7 +827,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -879,7 +840,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -889,23 +850,23 @@ const styles = StyleSheet.create({
   },
   usageValue: {
     fontSize: 20,
-    fontFamily: 'Sora-Bold',
-    color: '#1F2937',
+    fontFamily: typography.h1.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   usageLabel: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginBottom: 2,
   },
   usageChange: {
     fontSize: 10,
-    fontFamily: 'Sora-Medium',
-    color: '#10B981',
+    fontFamily: typography.bodyMed.fontFamily,
+    color: colors.success[500],
   },
   chartCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -929,13 +890,13 @@ const styles = StyleSheet.create({
   },
   gridLine: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.neutral[100],
     width: width - 100,
   },
   gridLabel: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
   },
   chartBars: {
     flexDirection: 'row',
@@ -951,7 +912,7 @@ const styles = StyleSheet.create({
   bar: {
     width: 20,
     height: 160,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: colors.neutral[100],
     borderRadius: 4,
     justifyContent: 'flex-end',
     marginBottom: 8,
@@ -962,11 +923,11 @@ const styles = StyleSheet.create({
   },
   barLabel: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
   },
   alertsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.neutral[0],
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -991,19 +952,19 @@ const styles = StyleSheet.create({
   },
   alertItemTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
-    color: '#1F2937',
+    fontFamily: typography.h3.fontFamily,
+    color: colors.neutral[900],
     marginBottom: 4,
   },
   alertMessage: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
-    color: '#6B7280',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[500],
     marginBottom: 4,
   },
   alertTime: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
-    color: '#9CA3AF',
+    fontFamily: typography.body.fontFamily,
+    color: colors.neutral[400],
   },
 });

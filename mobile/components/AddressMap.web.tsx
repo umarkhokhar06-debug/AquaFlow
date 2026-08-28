@@ -31,6 +31,8 @@ const AddressMap = forwardRef<{ animateToRegion: () => void }, AddressMapProps>(
   }
 );
 
+AddressMap.displayName = 'AddressMap';
+
 const styles = StyleSheet.create({
   placeholder: {
     alignItems: 'center',

@@ -41,6 +41,8 @@ const TrackingMap = forwardRef<
   );
 });
 
+TrackingMap.displayName = 'TrackingMap';
+
 const styles = StyleSheet.create({
   placeholder: {
     alignItems: 'center',

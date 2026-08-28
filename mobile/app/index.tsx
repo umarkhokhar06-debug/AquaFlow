@@ -2,15 +2,17 @@ import { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Droplets } from 'lucide-react-native';
+import BrandMark from '@/app/components/graphics/BrandMark';
+import { hasSeenOnboarding } from '@/app/onboarding';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export default function SplashScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace('/auth/login');
+    const timer = setTimeout(async () => {
+      const seen = await hasSeenOnboarding();
+      router.replace(seen ? '/auth/choice' : '/onboarding');
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -20,7 +22,7 @@ export default function SplashScreen() {
     <LinearGradient colors={[colors.primary[500], colors.primary[700]]} style={styles.container}>
       <View style={styles.logoContainer}>
         <View style={styles.iconContainer}>
-          <Droplets size={60} color={colors.neutral[0]} />
+          <BrandMark size={54} variant="onDark" />
         </View>
         <Text style={styles.title}>AabRahat</Text>
         <Text style={styles.subtitle}>Smart Water Delivery</Text>

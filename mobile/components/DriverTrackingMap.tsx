@@ -55,6 +55,8 @@ const DriverTrackingMap = forwardRef<MapView, DriverTrackingMapProps>(
   )
 );
 
+DriverTrackingMap.displayName = 'DriverTrackingMap';
+
 const styles = StyleSheet.create({
   driverMarkerContainer: {
     position: 'absolute',

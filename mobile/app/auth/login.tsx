@@ -7,11 +7,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Droplets, Mail, Lock } from 'lucide-react-native';
+import { Mail, Lock } from 'lucide-react-native';
 import { authAPI, storage } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
+import BrandMark from '@/app/components/graphics/BrandMark';
 import { Button, TextField } from '../components/ui';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { redirectAfterLogin } = useLocalSearchParams<{ redirectAfterLogin?: string }>();
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
@@ -63,6 +65,8 @@ export default function LoginScreen() {
 
         if (response.user.userType === 'driver') {
           router.replace('/(driver)/(tabs)');
+        } else if (redirectAfterLogin === 'scan-invite') {
+          router.replace('/(main)/scan-invite');
         } else {
           router.replace('/(main)/(tabs)');
         }
@@ -87,7 +91,7 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Droplets size={40} color={colors.neutral[0]} />
+              <BrandMark size={40} variant="onDark" />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to your account</Text>

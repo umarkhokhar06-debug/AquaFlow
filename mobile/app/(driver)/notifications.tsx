@@ -221,7 +221,7 @@ export default function NotificationsScreen() {
             <Bell size={48} color="#D1D5DB" />
             <Text style={styles.emptyTitle}>No Notifications</Text>
             <Text style={styles.emptyText}>
-              You're all caught up! New notifications will appear here.
+              You&apos;re all caught up! New notifications will appear here.
             </Text>
           </View>
         )}

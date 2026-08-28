@@ -166,4 +166,24 @@ export const storage = {
       throw new Error('Failed to clear user data');
     }
   },
+
+  // Cosmetic-only preference picked during signup -- no payment gateway is
+  // integrated on the backend, so this never reaches the /register API. It
+  // only pre-selects a default choice on the order screen later.
+  async savePaymentPreference(method: 'card' | 'wallet' | 'cash'): Promise<void> {
+    try {
+      await AsyncStorage.setItem('paymentPreference', method);
+    } catch (error) {
+      // Non-critical -- ignore storage failures for a cosmetic preference.
+    }
+  },
+
+  async getPaymentPreference(): Promise<'card' | 'wallet' | 'cash' | null> {
+    try {
+      const value = await AsyncStorage.getItem('paymentPreference');
+      return (value as 'card' | 'wallet' | 'cash' | null) || null;
+    } catch (error) {
+      return null;
+    }
+  },
 };

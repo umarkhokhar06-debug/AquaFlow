@@ -92,14 +92,14 @@ export default function ForgotPasswordScreen() {
               </View>
               <Text style={styles.title}>Check Your Email</Text>
               <Text style={styles.subtitle}>
-                We've sent password reset instructions to{'\n'}
+                We&apos;ve sent password reset instructions to{'\n'}
                 <Text style={styles.emailText}>{email}</Text>
               </Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.instructionsContainer}>
-                <Text style={styles.instructionsTitle}>What's next?</Text>
+                <Text style={styles.instructionsTitle}>What&apos;s next?</Text>
                 <View style={styles.instructionItem}>
                   <Text style={styles.instructionNumber}>1</Text>
                   <Text style={styles.instructionText}>
@@ -165,7 +165,7 @@ export default function ForgotPasswordScreen() {
               </View>
               <Text style={styles.title}>Forgot Password?</Text>
               <Text style={styles.subtitle}>
-                No worries! Enter your email address and we'll send you a link
+                No worries! Enter your email address and we&apos;ll send you a link
                 to reset your password.
               </Text>
             </View>
@@ -217,7 +217,7 @@ export default function ForgotPasswordScreen() {
                 onPress={() => router.push('/auth/signup')}
               >
                 <Text style={styles.signupButtonText}>
-                  Don't have an account? Sign Up
+                  Don&apos;t have an account? Sign Up
                 </Text>
               </TouchableOpacity>
             </View>

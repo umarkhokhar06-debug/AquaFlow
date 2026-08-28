@@ -60,6 +60,8 @@ const TrackingMap = forwardRef<MapView, TrackingMapProps>(
   )
 );
 
+TrackingMap.displayName = 'TrackingMap';
+
 const styles = StyleSheet.create({
   driverMarkerContainer: {
     position: 'absolute',
