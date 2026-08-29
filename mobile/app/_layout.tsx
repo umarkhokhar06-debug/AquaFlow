@@ -62,14 +62,25 @@ export default function RootLayout() {
         await AsyncStorage.removeItem('token');
       } finally {
         setIsTokenChecked(true);
-        if (fontsLoaded) {
-          await SplashScreen.hideAsync();
-        }
       }
     };
 
     checkToken();
-  }, [fontsLoaded]);
+
+    // Safety net: never leave the app on a permanent blank screen if
+    // checkToken hangs for an unforeseen reason. axios.defaults.timeout
+    // covers the known case (a stuck getProfile call); this covers any
+    // other one by forcing the gate open after a hard ceiling.
+    const failSafe = setTimeout(() => setIsTokenChecked(true), 20000);
+
+    return () => clearTimeout(failSafe);
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && isTokenChecked) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, isTokenChecked]);
 
   // Wait until both fonts and token check are complete
   if (!fontsLoaded || !isTokenChecked) {

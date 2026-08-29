@@ -2,6 +2,12 @@ import axios from 'axios';
 import { config } from '../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Axios has no timeout by default -- a hung request (flaky connection, cold
+// backend) would otherwise wait forever. This matters most for getProfile,
+// which _layout.tsx awaits before rendering anything: without a timeout, a
+// stuck request there leaves returning users on a permanent blank screen.
+axios.defaults.timeout = 15000;
+
 export interface User {
   id: string;
   userType: 'customer' | 'driver' | 'admin';
