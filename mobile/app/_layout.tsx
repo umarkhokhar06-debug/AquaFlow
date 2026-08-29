@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleService } from '@/utils/scheduleService';
 import { authAPI } from '@/utils/auth';
+import ErrorBoundary from '@/app/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -88,7 +89,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
@@ -98,6 +99,6 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
-    </>
+    </ErrorBoundary>
   );
 }

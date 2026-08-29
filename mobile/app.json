@@ -19,13 +19,14 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#063B5C"
       },
-      "versionCode": 9
+      "versionCode": 10
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/f9a94d0b-f9e2-40d8-b936-f48add4cbf65"
+      "url": "https://u.expo.dev/f9a94d0b-f9e2-40d8-b936-f48add4cbf65",
+      "checkAutomatically": "NEVER"
     },
     "web": {
       "bundler": "metro",
