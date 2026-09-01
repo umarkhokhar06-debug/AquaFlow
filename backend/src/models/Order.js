@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ORDER_STATUSES } = require('../constants/orderStatus');
 
 const orderSchema = new mongoose.Schema({
   // Order identification
@@ -119,10 +120,24 @@ const orderSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'],
-    default: 'pending'
+    enum: ORDER_STATUSES,
+    default: 'order_created'
   },
-  
+  // Per-stage timeline -- one entry per status change, oldest first.
+  // Populated alongside `status` wherever it's updated (see orderService.js
+  // updateOrderStatus / driverAppController.js updateOrderStatus).
+  statusHistory: [{
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
   // Driver assignment
   driver: {
     type: mongoose.Schema.Types.ObjectId,
@@ -169,6 +184,23 @@ const orderSchema = new mongoose.Schema({
     default: 'immediate'
   },
   scheduledFor: {
+    type: Date,
+    default: null
+  },
+  // Snapshotted at order time -- a later admin fee change must not
+  // retroactively alter historical orders (same rationale as item pricing).
+  isExpress: {
+    type: Boolean,
+    default: false
+  },
+  expressFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Express fee cannot be negative']
+  },
+  // Set once a scheduled order's pre-delivery driver notification has been
+  // sent, so the notify loop doesn't re-notify on every tick.
+  notifiedAt: {
     type: Date,
     default: null
   },

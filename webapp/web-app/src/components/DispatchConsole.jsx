@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { dispatchAPI } from '../services/api'
-import { FiRefreshCw, FiAlertTriangle, FiClock, FiTruck, FiMapPin, FiUser } from 'react-icons/fi'
+import { FiRefreshCw, FiAlertTriangle, FiClock, FiTruck, FiMapPin, FiUser, FiZap } from 'react-icons/fi'
 
 const SECTIONS = [
   { key: 'exception', label: 'Exception', color: 'text-red-700 bg-red-50 border-red-200', icon: FiAlertTriangle },
@@ -145,7 +145,16 @@ const DispatchConsole = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {orders.map(order => (
                     <tr key={order._id}>
-                      <td className="px-6 py-3 text-sm font-medium text-gray-900">{order.orderNumber}</td>
+                      <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                        <div className="flex items-center">
+                          {order.orderNumber}
+                          {order.isExpress && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                              <FiZap className="mr-1 h-3 w-3" /> Express
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-3 text-sm text-gray-600">
                         {order.customer?.fullName || order.customer?.name}
                         <div className="text-xs text-gray-400 flex items-center"><FiMapPin className="mr-1" />{order.deliveryAddress?.address}</div>

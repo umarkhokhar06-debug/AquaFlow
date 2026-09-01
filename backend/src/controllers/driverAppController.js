@@ -9,6 +9,12 @@ const driverService = require('../services/driverService');
 const earningsService = require('../services/earningsService');
 const attendanceService = require('../services/attendanceService');
 const mongoose = require('mongoose');
+const { canTransition } = require('../constants/orderStatus');
+
+// Statuses a driver can set directly via this endpoint. 'driver_assigned' is
+// set automatically on assignment (see driverService.assignOrderToDriver),
+// and 'queued'/'order_created'/'cancelled' aren't driver-settable here.
+const DRIVER_SETTABLE_STATUSES = ['going_to_filling_station', 'water_filled', 'on_the_way', 'arrived', 'delivered'];
 
 const driverAppController = {
   // Authentication endpoints
@@ -192,7 +198,7 @@ const driverAppController = {
         },
         createdAt: order.createdAt,
         acceptedAt: order.orderDate,
-        pickedUpAt: order.status === 'out_for_delivery' || order.status === 'delivered' ? order.orderDate : null,
+        pickedUpAt: ['water_filled', 'on_the_way', 'arrived', 'delivered'].includes(order.status) ? order.orderDate : null,
         deliveredAt: order.deliveredAt,
         notes: order.notes || order.deliveryAddress.specialInstructions || 'Handle with care'
       }));
@@ -251,8 +257,7 @@ const driverAppController = {
       const { orderId } = req.params;
       const { status, notes, otp } = req.body;
 
-      const validStatuses = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'];
-      if (!validStatuses.includes(status)) {
+      if (!DRIVER_SETTABLE_STATUSES.includes(status)) {
         return res.status(400).json({
           success: false,
           message: 'Invalid status'
@@ -264,6 +269,13 @@ const driverAppController = {
         return res.status(404).json({
           success: false,
           message: 'Order not found'
+        });
+      }
+
+      if (!canTransition(order.status, status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot change status from ${order.status} to ${status}`
         });
       }
 
@@ -318,6 +330,7 @@ const driverAppController = {
 
       // Non-delivery transitions: simple direct status update, no queue implications
       order.status = status;
+      order.statusHistory.push({ status, changedAt: new Date() });
       if (notes) order.notes = notes;
       await order.save();
 
@@ -386,7 +399,7 @@ const driverAppController = {
       // Get pending orders count
       const pendingOrders = await Order.countDocuments({
         driver: driverId,
-        status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] }
+        status: { $in: ['driver_assigned', 'going_to_filling_station', 'water_filled', 'on_the_way', 'arrived'] }
       });
       
       // Get today's earnings
@@ -568,7 +581,7 @@ const driverAppController = {
       // Find all active orders for this driver and emit to customers
       const activeOrders = await Order.find({
         driver: driverId,
-        status: { $in: ['preparing', 'out_for_delivery'] }
+        status: { $in: ['going_to_filling_station', 'water_filled', 'on_the_way'] }
       }).select('customer');
 
       const customerIds = activeOrders.map(order => order.customer.toString());

@@ -1,5 +1,37 @@
 // Order Management Types
 
+// Single source of truth for the order status lifecycle -- other files
+// (driverAPI.ts, order screens, tracking) import this instead of
+// re-declaring the union, which is what let the driver app and customer
+// app drift out of sync with the backend before this rework.
+export const ORDER_STATUSES = [
+  'order_created',
+  'queued',
+  'driver_assigned',
+  'going_to_filling_station',
+  'water_filled',
+  'on_the_way',
+  'arrived',
+  'delivered',
+  'cancelled',
+] as const;
+
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
+// Human-readable label per status, for any screen that just needs to
+// display the current stage without a full step-by-step timeline.
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  order_created: 'Order Placed',
+  queued: 'In Queue',
+  driver_assigned: 'Driver Assigned',
+  going_to_filling_station: 'Going to Filling Station',
+  water_filled: 'Water Filled',
+  on_the_way: 'On the Way',
+  arrived: 'Arrived',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
 export interface Product {
   type: 'large_tanker' | 'small_tanker' | 'water_bottles';
   name: string;
@@ -58,11 +90,14 @@ export interface Order {
   tax: number;
   totalAmount: number;
   deliveryAddress: DeliveryAddress;
-  status: 'pending' | 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: OrderStatus;
+  statusHistory?: Array<{ status: OrderStatus; changedAt: string | { $date: string } }>;
   paymentStatus: 'pending' | 'paid' | 'failed';
   paymentMethod: 'cash' | 'card' | 'online';
   deliveryType?: 'immediate' | 'scheduled' | 'recurring';
   scheduledFor?: string | { $date: string } | null;
+  isExpress?: boolean;
+  expressFee?: number;
   orderDate: string | { $date: string };
   deliveryDate?: string | { $date: string } | null;
   deliveredAt?: string | { $date: string } | null;
@@ -83,6 +118,7 @@ export interface CreateOrderRequest {
   notes?: string;
   deliveryType?: 'immediate' | 'scheduled';
   scheduledFor?: string;
+  isExpress?: boolean;
 }
 
 export interface OrderResponse {
@@ -102,7 +138,7 @@ export interface ProductsResponse {
 }
 
 export interface OrderStatusUpdate {
-  status: 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: OrderStatus;
 }
 
 export interface QueueStatus {

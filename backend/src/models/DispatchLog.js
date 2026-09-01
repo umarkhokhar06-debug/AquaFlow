@@ -8,17 +8,23 @@ const dispatchLogSchema = new mongoose.Schema({
   action: {
     type: String,
     required: true,
-    enum: ['ORDER_ASSIGNED', 'ORDER_REASSIGNED']
+    enum: ['ORDER_ASSIGNED', 'ORDER_REASSIGNED', 'ORDER_AUTO_ASSIGNED']
   },
   order: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
     required: true
   },
+  // Not required: an automated express auto-assignment (see
+  // dispatchService.tryAutoAssignExpress) has no human dispatcher behind it.
   dispatcher: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
+  },
+  automated: {
+    type: Boolean,
+    default: false
   },
   assignedDriver: {
     type: mongoose.Schema.Types.ObjectId,

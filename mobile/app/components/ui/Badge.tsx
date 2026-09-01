@@ -36,10 +36,12 @@ export function orderStatusTone(status: string): BadgeTone {
       return 'success';
     case 'cancelled':
       return 'danger';
-    case 'out_for_delivery':
+    case 'on_the_way':
+    case 'arrived':
       return 'info';
-    case 'preparing':
-    case 'confirmed':
+    case 'going_to_filling_station':
+    case 'water_filled':
+    case 'driver_assigned':
       return 'warning';
     default:
       return 'neutral';

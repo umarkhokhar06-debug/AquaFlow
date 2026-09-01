@@ -114,11 +114,13 @@ export default function DriverDashboardScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed':
+      case 'driver_assigned':
         return '#FF6B35';
-      case 'preparing':
+      case 'going_to_filling_station':
+      case 'water_filled':
         return '#F59E0B';
-      case 'out_for_delivery':
+      case 'on_the_way':
+      case 'arrived':
         return '#087EA4';
       case 'delivered':
         return '#28A745';

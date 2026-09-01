@@ -3,7 +3,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, Clock, MapPin, Zap, Check } from 'lucide-react-native';
-import { ScreenHeader, Card, Button, Badge } from '@/app/components/ui';
+import { ScreenHeader, Card, Button } from '@/app/components/ui';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
 import CustomAlert from '@/app/components/CustomAlert';
 import { orderAPI } from '@/utils/orderAPI';
@@ -30,27 +30,48 @@ interface ScheduleSlot {
   date: Date;
 }
 
-function getScheduleSlots(): ScheduleSlot[] {
+// Fixed hourly slots, 9am-7pm with a 1-2pm break -- mirrors the server-side
+// source of truth in backend/src/constants/scheduleSlots.js. Kept as a
+// separate local copy (no shared package between mobile and backend); the
+// backend re-validates on submit regardless.
+const BOOKABLE_START_HOURS = [9, 10, 11, 12, 14, 15, 16, 17, 18];
+const SCHEDULING_WINDOW_DAYS = 30;
+const MIN_LEAD_TIME_MS = 30 * 60 * 1000;
+
+function formatHourLabel(hour: number): string {
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour > 12 ? hour - 12 : hour;
+  return `${displayHour}:00 ${period}`;
+}
+
+function getBookableDates(): Date[] {
   const now = new Date();
-  const slots: ScheduleSlot[] = [];
-
-  const todayEvening = new Date(now);
-  todayEvening.setHours(18, 0, 0, 0);
-  if (todayEvening.getTime() - now.getTime() > 60 * 60 * 1000) {
-    slots.push({ label: 'Today, 6–8 PM', date: todayEvening });
+  const dates: Date[] = [];
+  for (let i = 0; i < SCHEDULING_WINDOW_DAYS; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    dates.push(d);
   }
+  return dates;
+}
 
-  const tomorrowMorning = new Date(now);
-  tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);
-  tomorrowMorning.setHours(9, 0, 0, 0);
-  slots.push({ label: 'Tomorrow, 9–11 AM', date: tomorrowMorning });
+function formatDateLabel(date: Date): string {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (date.toDateString() === now.toDateString()) return 'Today';
+  if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
 
-  const tomorrowEvening = new Date(now);
-  tomorrowEvening.setDate(tomorrowEvening.getDate() + 1);
-  tomorrowEvening.setHours(18, 0, 0, 0);
-  slots.push({ label: 'Tomorrow, 6–8 PM', date: tomorrowEvening });
-
-  return slots;
+function getBookableSlotsForDate(date: Date): ScheduleSlot[] {
+  const now = new Date();
+  return BOOKABLE_START_HOURS.map((hour) => {
+    const slotDate = new Date(date);
+    slotDate.setHours(hour, 0, 0, 0);
+    return { label: `${formatHourLabel(hour)} – ${formatHourLabel(hour + 1)}`, date: slotDate };
+  }).filter((slot) => slot.date.getTime() - now.getTime() > MIN_LEAD_TIME_MS);
 }
 
 const PRODUCT_META: Record<string, { eta: string }> = {
@@ -67,8 +88,10 @@ export default function OrderScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(productType ?? null);
-  const [timing, setTiming] = useState<'standard' | 'schedule'>('standard');
+  const [timing, setTiming] = useState<'standard' | 'schedule' | 'express'>('standard');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<ScheduleSlot | null>(null);
+  const [expressFee, setExpressFee] = useState(300);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<SelectedAddress | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -87,6 +110,7 @@ export default function OrderScreen() {
         setLoading(false);
       }
     })();
+    orderAPI.getExpressFee().then(setExpressFee);
     storage.getPaymentPreference().then((pref) => {
       if (pref === 'card') setPaymentMethod('card');
       else if (pref === 'wallet') setPaymentMethod('online');
@@ -95,8 +119,8 @@ export default function OrderScreen() {
   }, []);
 
   const selectedProduct = products.find((p) => p.type === selectedType) || null;
-  const total = selectedProduct?.unitPrice ?? 0;
-  const canConfirm = !!selectedProduct && !!selectedAddress && (timing === 'standard' || !!selectedSlot);
+  const total = (selectedProduct?.unitPrice ?? 0) + (timing === 'express' ? expressFee : 0);
+  const canConfirm = !!selectedProduct && !!selectedAddress && (timing !== 'schedule' || !!selectedSlot);
 
   const handleConfirm = async () => {
     if (!selectedProduct || !selectedAddress) return;
@@ -120,11 +144,18 @@ export default function OrderScreen() {
         notes: `Direct order for ${selectedProduct.name}`,
         ...(timing === 'schedule' && selectedSlot
           ? { deliveryType: 'scheduled' as const, scheduledFor: selectedSlot.date.toISOString() }
+          : timing === 'express'
+          ? { deliveryType: 'immediate' as const, isExpress: true }
           : { deliveryType: 'immediate' as const }),
       };
 
       const order = await orderAPI.createOrder(orderData);
-      const whenText = timing === 'schedule' && selectedSlot ? ` for ${selectedSlot.label}` : '';
+      const whenText =
+        timing === 'schedule' && selectedSlot
+          ? ` for ${formatDateLabel(selectedDate ?? selectedSlot.date)}, ${selectedSlot.label}`
+          : timing === 'express'
+          ? ' (express delivery)'
+          : '';
 
       setResultAlert({
         title: 'Order placed',
@@ -194,31 +225,72 @@ export default function OrderScreen() {
                 <Text style={[styles.timingTitle, timing === 'schedule' && styles.timingTitleSelected]}>Schedule</Text>
                 <Text style={styles.timingSub}>Pick a time</Text>
               </Card>
-              <View style={[styles.timingCard, styles.timingCardDisabled]}>
-                <Zap size={16} color={colors.neutral[400]} />
-                <Text style={styles.timingTitleDisabled}>Express</Text>
-                <Badge label="Soon" tone="warning" />
-              </View>
+              <Card
+                onPress={() => setTiming('express')}
+                padded={false}
+                style={[styles.timingCard, timing === 'express' && styles.timingCardSelectedExpress]}
+              >
+                <Zap size={16} color={timing === 'express' ? colors.warning[700] : colors.neutral[400]} />
+                <Text style={[styles.timingTitle, timing === 'express' && styles.timingTitleSelectedExpress]}>Express</Text>
+                <Text style={styles.timingSub}>+Rs {expressFee}</Text>
+              </Card>
             </View>
 
-            {timing === 'schedule' && (
-              <View style={styles.scheduleList}>
-                {getScheduleSlots().map((slot) => {
-                  const selected = selectedSlot?.label === slot.label;
-                  return (
-                    <Card
-                      key={slot.label}
-                      onPress={() => setSelectedSlot(slot)}
-                      style={[styles.scheduleSlot, selected && styles.scheduleSlotSelected]}
-                    >
-                      <View style={styles.scheduleSlotRow}>
-                        <Text style={styles.scheduleSlotText}>{slot.label}</Text>
-                        {selected && <Check size={16} color={colors.primary[600]} strokeWidth={3} />}
-                      </View>
-                    </Card>
-                  );
-                })}
+            {timing === 'express' && (
+              <View style={styles.expressNote}>
+                <Zap size={14} color={colors.warning[700]} />
+                <Text style={styles.expressNoteText}>
+                  Priority delivery. We'll assign the nearest available driver right away.
+                </Text>
               </View>
+            )}
+
+            {timing === 'schedule' && (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateRow} contentContainerStyle={styles.dateRowContent}>
+                  {getBookableDates().map((date) => {
+                    const selected = selectedDate?.toDateString() === date.toDateString();
+                    return (
+                      <Card
+                        key={date.toISOString()}
+                        onPress={() => {
+                          setSelectedDate(date);
+                          setSelectedSlot(null);
+                        }}
+                        padded={false}
+                        style={[styles.dateChip, selected && styles.dateChipSelected]}
+                      >
+                        <Text style={[styles.dateChipText, selected && styles.dateChipTextSelected]}>
+                          {formatDateLabel(date)}
+                        </Text>
+                      </Card>
+                    );
+                  })}
+                </ScrollView>
+
+                {selectedDate && (
+                  <View style={styles.scheduleList}>
+                    {getBookableSlotsForDate(selectedDate).map((slot) => {
+                      const selected = selectedSlot?.label === slot.label;
+                      return (
+                        <Card
+                          key={slot.label}
+                          onPress={() => setSelectedSlot(slot)}
+                          style={[styles.scheduleSlot, selected && styles.scheduleSlotSelected]}
+                        >
+                          <View style={styles.scheduleSlotRow}>
+                            <Text style={styles.scheduleSlotText}>{slot.label}</Text>
+                            {selected && <Check size={16} color={colors.primary[600]} strokeWidth={3} />}
+                          </View>
+                        </Card>
+                      );
+                    })}
+                    {getBookableSlotsForDate(selectedDate).length === 0 && (
+                      <Text style={styles.noSlotsText}>No more slots available for this date.</Text>
+                    )}
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.sectionLabel}>Delivery address</Text>
@@ -235,7 +307,11 @@ export default function OrderScreen() {
           <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
             <View style={styles.bottomBarRow}>
               <Text style={styles.bottomBarNote} numberOfLines={1}>
-                {timing === 'schedule' && selectedSlot ? selectedSlot.label : 'Standard delivery'}
+                {timing === 'schedule' && selectedSlot
+                  ? `${formatDateLabel(selectedDate ?? selectedSlot.date)}, ${selectedSlot.label}`
+                  : timing === 'express'
+                  ? `Express · +Rs ${expressFee}`
+                  : 'Standard delivery'}
               </Text>
               <Text style={styles.bottomBarPrice}>Rs {total.toLocaleString()}</Text>
             </View>
@@ -308,27 +384,37 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timingCardSelected: { borderColor: colors.primary[300], backgroundColor: colors.primary[100] },
-  timingCardDisabled: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
-    borderRadius: radius.lg,
-    backgroundColor: colors.neutral[50],
-    gap: 4,
-    opacity: 0.7,
-  },
+  timingCardSelectedExpress: { borderColor: colors.warning[500], backgroundColor: colors.warning[100] },
   timingTitle: { fontFamily: typography.h3.fontFamily, fontSize: 12.5, color: colors.neutral[900] },
   timingTitleSelected: { color: colors.primary[700] },
-  timingTitleDisabled: { fontFamily: typography.h3.fontFamily, fontSize: 12.5, color: colors.neutral[400] },
+  timingTitleSelectedExpress: { color: colors.warning[700] },
   timingSub: { fontFamily: typography.caption.fontFamily, fontSize: 10.5, color: colors.neutral[500] },
+  expressNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.warning[50],
+  },
+  expressNoteText: { flex: 1, fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.warning[700] },
+  dateRow: { marginTop: spacing.sm },
+  dateRowContent: { gap: spacing.sm, paddingRight: spacing.lg },
+  dateChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderColor: colors.neutral[200],
+  },
+  dateChipSelected: { borderColor: colors.primary[500], backgroundColor: colors.primary[50] },
+  dateChipText: { fontFamily: typography.bodyMed.fontFamily, fontSize: 13, color: colors.neutral[900] },
+  dateChipTextSelected: { color: colors.primary[700] },
   scheduleList: { gap: spacing.sm, marginTop: spacing.sm },
   scheduleSlot: { borderColor: colors.neutral[200] },
   scheduleSlotSelected: { borderColor: colors.primary[500], backgroundColor: colors.primary[50] },
   scheduleSlotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   scheduleSlotText: { fontFamily: typography.bodyMed.fontFamily, fontSize: 14, color: colors.neutral[900] },
+  noSlotsText: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[400], textAlign: 'center', paddingVertical: spacing.md },
   addressCard: { borderColor: colors.neutral[200] },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   addressText: { flex: 1, fontFamily: typography.bodyMed.fontFamily, fontSize: 14, color: colors.neutral[900] },

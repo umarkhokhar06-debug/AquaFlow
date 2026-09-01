@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 import { config } from '../config';
+import { OrderStatus } from '@/types/order';
 
 // Types for Driver API
 export interface VehicleInfo {
@@ -82,7 +83,7 @@ export interface DriverOrder {
   customerName: string;
   customerAddress: string;
   customerPhone: string;
-  status: 'confirmed' | 'preparing' | 'out_for_delivery' | 'delivered';
+  status: OrderStatus;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   items: Array<{
     productId: string;
@@ -490,13 +491,13 @@ export const driverAPI = {
     }
   },
 
-  async updateOrderStatus(orderId: string, status: string, notes?: string): Promise<{ success: boolean; message: string }> {
+  async updateOrderStatus(orderId: string, status: OrderStatus, notes?: string, otp?: string): Promise<{ success: boolean; message: string }> {
     try {
       const token = await getAuthToken();
       if (!token) throw new Error('Authentication required');
 
       const api = createDriverAPIInstance();
-      const response = await api.put(`/orders/${orderId}/status`, { status, notes }, {
+      const response = await api.put(`/orders/${orderId}/status`, { status, notes, otp }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       return response.data;

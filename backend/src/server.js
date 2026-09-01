@@ -4,6 +4,7 @@ const socketService = require('./services/socketService');
 const iotSubscriber = require('./iotnode/fetchiotdata');
 const deviceSimulatorLoop = require('./services/deviceSimulatorLoop');
 const nightlyScanLoop = require('./services/nightlyScanLoop');
+const scheduledOrderNotifyLoop = require('./services/scheduledOrderNotifyLoop');
 
 const PORT = process.env.PORT || 5000;
 
@@ -32,6 +33,9 @@ const startServer = async () => {
 
     // Nightly IoT scan + consumption forecast (~2 AM server time)
     nightlyScanLoop.start();
+
+    // Surface scheduled orders 55-90 min from delivery that still have no driver
+    scheduledOrderNotifyLoop.start();
 
     // Connect to AWS IoT Core
     try {

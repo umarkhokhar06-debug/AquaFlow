@@ -315,6 +315,12 @@ export const promoAPI = {
   getUsageReport: (id) => api.get(`/promo-codes/${id}/usage`)
 }
 
+// System Configuration (Admin only)
+export const systemConfigAPI = {
+  getAllConfig: () => api.get('/config/admin'),
+  updateConfig: (key, value, description) => api.put('/config/admin', { key, value, description })
+}
+
 // Support / Complaints & AI (Admin, super_admin, call_center_agent, technician)
 export const supportAPI = {
   getTickets: (params = {}) => {

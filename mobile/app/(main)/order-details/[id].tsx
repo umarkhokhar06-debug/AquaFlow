@@ -27,7 +27,7 @@ import {
 } from 'lucide-react-native';
 import { globalstyles } from '@/app/commans/style';
 import { orderAPI } from '@/utils/orderAPI';
-import { Order, parseDate, getOrderId } from '@/types/order';
+import { Order, parseDate, getOrderId, OrderStatus, ORDER_STATUS_LABEL } from '@/types/order';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -85,15 +85,18 @@ export default function OrderDetailsScreen() {
     );
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case 'order_created':
+      case 'queued':
         return '#F59E0B';
-      case 'confirmed':
+      case 'driver_assigned':
         return '#087EA4';
-      case 'preparing':
+      case 'going_to_filling_station':
+      case 'water_filled':
         return '#8B5CF6';
-      case 'out_for_delivery':
+      case 'on_the_way':
+      case 'arrived':
         return '#FF6B35';
       case 'delivered':
         return '#28A745';
@@ -104,15 +107,18 @@ export default function OrderDetailsScreen() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case 'order_created':
+      case 'queued':
         return <Clock size={20} color="#F59E0B" />;
-      case 'confirmed':
+      case 'driver_assigned':
         return <CheckCircle size={20} color="#087EA4" />;
-      case 'preparing':
+      case 'going_to_filling_station':
+      case 'water_filled':
         return <Clock size={20} color="#8B5CF6" />;
-      case 'out_for_delivery':
+      case 'on_the_way':
+      case 'arrived':
         return <Truck size={20} color="#FF6B35" />;
       case 'delivered':
         return <CheckCircle size={20} color="#28A745" />;
@@ -123,24 +129,7 @@ export default function OrderDetailsScreen() {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'preparing':
-        return 'Preparing';
-      case 'out_for_delivery':
-        return 'Out for Delivery';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
-    }
-  };
+  const getStatusText = (status: OrderStatus) => ORDER_STATUS_LABEL[status] || status;
 
   const formatDate = (date: string | { $date: string }) => {
     const parsedDate = parseDate(date);
@@ -179,8 +168,10 @@ export default function OrderDetailsScreen() {
     }
   };
 
-  const canCancelOrder = (status: string) => {
-    return ['pending', 'confirmed', 'preparing'].includes(status);
+  // Matches the backend's isCancellable rule (orderStatus.js) -- cancellable
+  // any time before delivery actually completes.
+  const canCancelOrder = (status: OrderStatus) => {
+    return status !== 'delivered' && status !== 'cancelled';
   };
 
   if (loading) {
@@ -235,10 +226,10 @@ export default function OrderDetailsScreen() {
             </View>
           </View>
           <Text style={styles.statusDescription}>
-            {order.status === 'pending' && 'Your order is being processed'}
-            {order.status === 'confirmed' && 'Your order has been confirmed and is being prepared'}
-            {order.status === 'preparing' && 'Your order is being prepared for delivery'}
-            {order.status === 'out_for_delivery' && 'Your order is on its way to you'}
+            {(order.status === 'order_created' || order.status === 'queued') && 'Your order is being processed'}
+            {order.status === 'driver_assigned' && 'A driver has been assigned and is getting started'}
+            {(order.status === 'going_to_filling_station' || order.status === 'water_filled') && 'Your order is being prepared for delivery'}
+            {(order.status === 'on_the_way' || order.status === 'arrived') && 'Your order is on its way to you'}
             {order.status === 'delivered' && 'Your order has been delivered successfully'}
             {order.status === 'cancelled' && 'Your order has been cancelled'}
           </Text>

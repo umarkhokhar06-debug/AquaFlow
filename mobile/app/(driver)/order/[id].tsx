@@ -10,12 +10,36 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { driverAPI, DriverOrder } from '../../../utils/driverAPI';
+import { OrderStatus, ORDER_STATUS_LABEL } from '@/types/order';
 import { ArrowLeft, Navigation, Phone, MessageCircle, Clock, MapPin, Package, User, CheckCircle, AlertTriangle, Truck, DollarSign, Calendar } from 'lucide-react-native';
+
+// The order lifecycle a driver personally advances through, in order.
+// 'driver_assigned' is set automatically on assignment (not driver-tapped),
+// so it's the starting point here but never a "next status" target itself.
+const DRIVER_STEP_ORDER: OrderStatus[] = [
+  'driver_assigned',
+  'going_to_filling_station',
+  'water_filled',
+  'on_the_way',
+  'arrived',
+  'delivered',
+];
+
+const STATUS_COLORS: Partial<Record<OrderStatus, string>> = {
+  driver_assigned: '#FF6B35',
+  going_to_filling_station: '#F59E0B',
+  water_filled: '#F59E0B',
+  on_the_way: '#087EA4',
+  arrived: '#087EA4',
+  delivered: '#28A745',
+};
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +50,8 @@ export default function OrderDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [order, setOrder] = useState<DriverOrder | null>(null);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -48,22 +74,42 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const updateOrderStatus = async (newStatus: string) => {
+  const updateOrderStatus = async (newStatus: OrderStatus, otp?: string) => {
     if (!order) return;
 
     try {
       setUpdating(true);
-      await driverAPI.updateOrderStatus(order.id, newStatus);
-      
+      await driverAPI.updateOrderStatus(order.id, newStatus, undefined, otp);
+
       // Update local state
-      setOrder(prev => prev ? { ...prev, status: newStatus as any } : null);
-      Alert.alert('Success', `Order status updated to ${newStatus.replace('_', ' ')}`);
+      setOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      Alert.alert('Success', `Order status updated to ${ORDER_STATUS_LABEL[newStatus]}`);
     } catch (error) {
       console.error('Error updating order status:', error);
-      Alert.alert('Error', 'Failed to update order status');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update order status');
     } finally {
       setUpdating(false);
     }
+  };
+
+  // 'delivered' requires the OTP the customer reads out -- collect it via a
+  // small modal rather than calling updateOrderStatus directly.
+  const handleAdvance = (newStatus: OrderStatus) => {
+    if (newStatus === 'delivered') {
+      setOtpInput('');
+      setOtpModalVisible(true);
+      return;
+    }
+    updateOrderStatus(newStatus);
+  };
+
+  const confirmDelivery = async () => {
+    if (!otpInput.trim()) {
+      Alert.alert('OTP required', "Enter the code the customer read out to confirm delivery.");
+      return;
+    }
+    setOtpModalVisible(false);
+    await updateOrderStatus('delivered', otpInput.trim());
   };
 
   const handleCall = () => {
@@ -79,47 +125,14 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return '#FF6B35';
-      case 'preparing':
-        return '#F59E0B';
-      case 'out_for_delivery':
-        return '#087EA4';
-      case 'delivered':
-        return '#28A745';
-      default:
-        return '#6B7280';
-    }
-  };
+  const getStatusColor = (status: OrderStatus) => STATUS_COLORS[status] || '#6B7280';
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Order Confirmed';
-      case 'preparing':
-        return 'Preparing Order';
-      case 'out_for_delivery':
-        return 'Out for Delivery';
-      case 'delivered':
-        return 'Delivered';
-      default:
-        return 'Unknown Status';
-    }
-  };
+  const getStatusText = (status: OrderStatus) => ORDER_STATUS_LABEL[status] || 'Unknown Status';
 
-  const getNextStatus = (currentStatus: string) => {
-    switch (currentStatus) {
-      case 'confirmed':
-        return 'preparing';
-      case 'preparing':
-        return 'out_for_delivery';
-      case 'out_for_delivery':
-        return 'delivered';
-      default:
-        return null;
-    }
+  const getNextStatus = (currentStatus: OrderStatus): OrderStatus | null => {
+    const index = DRIVER_STEP_ORDER.indexOf(currentStatus);
+    if (index === -1 || index === DRIVER_STEP_ORDER.length - 1) return null;
+    return DRIVER_STEP_ORDER[index + 1];
   };
 
   if (loading) {
@@ -180,13 +193,13 @@ export default function OrderDetailScreen() {
               <Text style={styles.statusTitle}>{getStatusText(order.status)}</Text>
             </View>
             <Text style={styles.statusDescription}>
-              Order is currently {order.status.replace('_', ' ')}
+              Order is currently {ORDER_STATUS_LABEL[order.status]?.toLowerCase() || order.status}
             </Text>
             
             {nextStatus && order.status !== 'delivered' && (
               <TouchableOpacity
                 style={[styles.updateStatusButton, updating && styles.disabledButton]}
-                onPress={() => updateOrderStatus(nextStatus)}
+                onPress={() => handleAdvance(nextStatus)}
                 disabled={updating}
               >
                 {updating ? (
@@ -305,6 +318,32 @@ export default function OrderDetailScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      <Modal visible={otpModalVisible} transparent animationType="fade" onRequestClose={() => setOtpModalVisible(false)}>
+        <View style={styles.otpOverlay}>
+          <View style={styles.otpCard}>
+            <Text style={styles.otpTitle}>Confirm delivery</Text>
+            <Text style={styles.otpSubtitle}>Ask the customer for their delivery code and enter it below.</Text>
+            <TextInput
+              style={styles.otpInput}
+              value={otpInput}
+              onChangeText={setOtpInput}
+              placeholder="4-digit code"
+              keyboardType="number-pad"
+              maxLength={4}
+              autoFocus
+            />
+            <View style={styles.otpActions}>
+              <TouchableOpacity style={styles.otpCancelButton} onPress={() => setOtpModalVisible(false)}>
+                <Text style={styles.otpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.otpConfirmButton} onPress={confirmDelivery}>
+                <Text style={styles.otpConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -634,5 +673,70 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
+  },
+  otpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  otpCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+  },
+  otpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  otpSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 20,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  otpActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  otpCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  otpCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  otpConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#087EA4',
+  },
+  otpConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

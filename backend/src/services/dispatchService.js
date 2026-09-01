@@ -5,7 +5,7 @@ const DispatchLog = require('../models/DispatchLog');
 const driverService = require('./driverService');
 const auditLogService = require('./auditLogService');
 
-const DELAYED_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours out for delivery = delayed
+const DELAYED_THRESHOLD_MS = 60 * 60 * 1000; // >1hr on the way = delayed (SRS §5.6)
 const EXCEPTION_THRESHOLD_MS = 30 * 60 * 1000; // 30 min unassigned = exception
 // Heuristic weight: one additional queued order is treated as roughly
 // equivalent to this many km of extra distance when ranking drivers.
@@ -42,7 +42,7 @@ class DispatchService {
 
     for (const order of orders) {
       const ageMs = now - new Date(order.orderDate).getTime();
-      const isUnassignedPending = order.status === 'pending' && !order.driver;
+      const isUnassignedPending = ['order_created', 'queued'].includes(order.status) && !order.driver;
       const isScheduledFuture = order.deliveryType === 'scheduled' &&
         order.scheduledFor && new Date(order.scheduledFor).getTime() > now;
 
@@ -53,7 +53,7 @@ class DispatchService {
       } else if (isUnassignedPending) {
         queue.new.push(order);
       } else if (
-        order.status === 'out_for_delivery' &&
+        order.status === 'on_the_way' &&
         order.deliveryDate &&
         now - new Date(order.deliveryDate).getTime() > DELAYED_THRESHOLD_MS
       ) {
@@ -62,6 +62,12 @@ class DispatchService {
         queue.active.push(order);
       }
     }
+
+    // Unassigned express orders (auto-assignment found no en-route driver)
+    // need a human dispatcher's attention first -- surface them ahead of
+    // regular orders in both buckets they could land in.
+    queue.new.sort((a, b) => (b.isExpress ? 1 : 0) - (a.isExpress ? 1 : 0));
+    queue.exception.sort((a, b) => (b.isExpress ? 1 : 0) - (a.isExpress ? 1 : 0));
 
     return queue;
   }
@@ -86,7 +92,7 @@ class DispatchService {
 
     if (!order.driver) {
       const position = await Order.countDocuments({
-        status: { $in: ['pending', 'confirmed'] },
+        status: { $in: ['order_created', 'queued'] },
         driver: null,
         orderDate: { $lte: order.orderDate }
       });
@@ -164,6 +170,54 @@ class DispatchService {
       recommendations: scored,
       topRecommendation: scored[0] || null
     };
+  }
+
+  // Express auto-assignment (SRS express delivery + confirmed product
+  // decision): only ever assigns to a driver already "en route" -- busy
+  // with a currentOrder -- never to an idle driver. If no such driver is
+  // nearby, the order is left unassigned but flagged (isExpress + sorted
+  // first in getQueue()) for a human dispatcher to place manually.
+  async tryAutoAssignExpress(orderId) {
+    const order = await Order.findById(orderId);
+    if (!order || !order.isExpress) return { assigned: false, reason: 'not_express' };
+
+    const candidates = await User.find({
+      userType: 'driver',
+      status: 'active',
+      driverStatus: 'busy',
+      currentOrder: { $ne: null }
+    }).select('name email driverStatus location orderQueue maxQueueSize');
+
+    const destination = order.deliveryAddress;
+    const scored = candidates
+      .filter(d => d.orderQueue.length < d.maxQueueSize)
+      .map(d => {
+        const distanceKm = haversineKm(d.location, destination);
+        const workloadRatio = d.orderQueue.length / d.maxQueueSize;
+        const distanceComponent = distanceKm === null ? 9999 : distanceKm;
+        return { driverId: d._id, name: d.name, score: distanceComponent + workloadRatio * WORKLOAD_KM_EQUIVALENT };
+      })
+      .sort((a, b) => a.score - b.score);
+
+    const best = scored[0];
+    if (!best) {
+      return { assigned: false, reason: 'no_en_route_driver_available' };
+    }
+
+    const result = await driverService.insertExpressOrderIntoQueue(orderId, best.driverId);
+
+    await DispatchLog.create({
+      action: 'ORDER_AUTO_ASSIGNED',
+      order: order._id,
+      dispatcher: null,
+      automated: true,
+      assignedDriver: best.driverId,
+      recommendedDriver: best.driverId,
+      overrode: false,
+      reason: 'Express auto-assignment to nearest en-route driver'
+    }).catch(err => console.error('DispatchLog write failed (non-fatal):', err.message));
+
+    return { assigned: true, driverId: best.driverId, result };
   }
 
   // Assign (or reassign) a driver to an order, logging whether the

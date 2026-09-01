@@ -45,10 +45,13 @@ const OrderManagement = () => {
   const [selectedDriverId, setSelectedDriverId] = useState('')
 
   const statusOptions = [
-    { value: 'pending', label: 'Pending', color: 'yellow' },
-    { value: 'confirmed', label: 'Confirmed', color: 'blue' },
-    { value: 'preparing', label: 'Preparing', color: 'purple' },
-    { value: 'out_for_delivery', label: 'Out for Delivery', color: 'orange' },
+    { value: 'order_created', label: 'Order Placed', color: 'yellow' },
+    { value: 'queued', label: 'In Queue', color: 'yellow' },
+    { value: 'driver_assigned', label: 'Driver Assigned', color: 'blue' },
+    { value: 'going_to_filling_station', label: 'Going to Filling Station', color: 'purple' },
+    { value: 'water_filled', label: 'Water Filled', color: 'purple' },
+    { value: 'on_the_way', label: 'On the Way', color: 'orange' },
+    { value: 'arrived', label: 'Arrived', color: 'orange' },
     { value: 'delivered', label: 'Delivered', color: 'green' },
     { value: 'cancelled', label: 'Cancelled', color: 'red' }
   ]
@@ -177,9 +180,9 @@ const OrderManagement = () => {
           response = await orderManagementAPI.updateOrderStatus(orderId, newStatus)
           break
         case 'assignDriver':
+            // Assignment sets the order to 'driver_assigned' atomically
+            // server-side now -- no separate status-update call needed.
             response = await orderManagementAPI.assignDriver(orderId, selectedDriverId)
-            // Change status to confirmed when assigning driver
-            await orderManagementAPI.updateOrderStatus(orderId, 'confirmed')
             break
         case 'cancel':
           response = await orderManagementAPI.cancelOrder(orderId)
@@ -303,7 +306,10 @@ const OrderManagement = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Pending Orders</p>
               <p className="text-2xl font-bold text-gray-900">
-                {statistics.statusBreakdown?.find(s => s._id === 'pending')?.count || 0}
+                {(['order_created', 'queued'].reduce(
+                  (sum, id) => sum + (statistics.statusBreakdown?.find(s => s._id === id)?.count || 0),
+                  0
+                ))}
               </p>
             </div>
           </div>

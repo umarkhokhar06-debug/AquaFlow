@@ -4,6 +4,10 @@ const socketService = require('./socketService');
 const promoService = require('./promoService');
 const paymentService = require('./paymentService');
 const notificationService = require('./notificationService');
+const systemConfigService = require('./systemConfigService');
+const dispatchService = require('./dispatchService');
+const { canTransition, isCancellable } = require('../constants/orderStatus');
+const { isValidScheduleSlot } = require('../constants/scheduleSlots');
 
 // Product configuration
 const PRODUCT_CONFIG = {
@@ -34,10 +38,16 @@ const orderService = {
   // Create a new order
   createOrder: async (customerId, orderData) => {
     try {
-      const { items, deliveryAddress, paymentMethod, notes, deliveryType, scheduledFor, promoCode } = orderData;
+      const { items, deliveryAddress, paymentMethod, notes, deliveryType, scheduledFor, promoCode, isExpress } = orderData;
 
       if (deliveryType === 'scheduled' && !scheduledFor) {
         throw new Error('scheduledFor is required when deliveryType is scheduled');
+      }
+      if (deliveryType === 'scheduled' && !isValidScheduleSlot(new Date(scheduledFor))) {
+        throw new Error('scheduledFor must land on a bookable hourly slot (9am-7pm, no 1-2pm slot) within the next 30 days');
+      }
+      if (isExpress && deliveryType === 'scheduled') {
+        throw new Error('Express delivery cannot be scheduled -- it is always immediate');
       }
 
       // Validate customer exists and is a customer
@@ -93,17 +103,29 @@ const orderService = {
         });
       }
       const discountAmount = promoResult ? promoResult.discountAmount : 0;
-      const totalAmount = Math.max(0, subtotal + tax - discountAmount);
+      // Snapshotted at order time -- a later admin fee change must not
+      // retroactively alter historical orders (same rationale as item pricing).
+      const expressFee = isExpress ? await systemConfigService.get('expressFeeAmount', 300) : 0;
+      const totalAmount = Math.max(0, subtotal + tax + expressFee - discountAmount);
 
       // Generate order number
       const timestamp = Date.now();
       const random = Math.floor(Math.random() * 1000);
       const orderNumber = `ORD-${timestamp}-${String(random).padStart(3, '0')}`;
 
-      // Create order
+      // Create order -- there's no separate manual "confirm" step in this
+      // app, so a new order goes straight from order_created into the
+      // queued (unassigned, waiting for dispatch) state; both are recorded
+      // in statusHistory for an accurate timeline.
+      const now = new Date();
       const order = await Order.create({
         orderNumber,
         customer: customerId,
+        status: 'queued',
+        statusHistory: [
+          { status: 'order_created', changedAt: now },
+          { status: 'queued', changedAt: now }
+        ],
         items: processedItems,
         subtotal,
         tax,
@@ -123,7 +145,9 @@ const orderService = {
         paymentMethod: paymentMethod || 'cash',
         notes,
         deliveryType: deliveryType || 'immediate',
-        scheduledFor: deliveryType === 'scheduled' ? new Date(scheduledFor) : null
+        scheduledFor: deliveryType === 'scheduled' ? new Date(scheduledFor) : null,
+        isExpress: !!isExpress,
+        expressFee
       });
 
       // Populate customer information
@@ -155,11 +179,22 @@ const orderService = {
         orderDate: order.orderDate,
         notes: order.notes,
         deliveryType: order.deliveryType,
-        scheduledFor: order.scheduledFor
+        scheduledFor: order.scheduledFor,
+        isExpress: order.isExpress,
+        expressFee: order.expressFee
       };
 
       // Emit real-time event to admin room
       socketService.emitNewOrder(orderResponse);
+
+      // Only ever auto-assigns to a driver already en route nearby; if none
+      // qualifies, the order stays unassigned but flagged for a dispatcher
+      // (see dispatchService.tryAutoAssignExpress / getQueue's express sort).
+      if (order.isExpress) {
+        dispatchService.tryAutoAssignExpress(order._id).catch(err =>
+          console.error('Express auto-assignment failed (non-fatal):', err.message)
+        );
+      }
 
       notificationService.createNotification(
         customerId,
@@ -343,27 +378,19 @@ const orderService = {
       }
 
       // Validate status transition
-      const validTransitions = {
-        pending: ['confirmed', 'cancelled'],
-        confirmed: ['preparing', 'cancelled'],
-        preparing: ['out_for_delivery', 'cancelled'],
-        out_for_delivery: ['delivered'],
-        delivered: [],
-        cancelled: []
-      };
-
-      if (!validTransitions[order.status].includes(status)) {
+      if (!canTransition(order.status, status)) {
         throw new Error(`Cannot change status from ${order.status} to ${status}`);
       }
 
       // Update order
       order.status = status;
-      
+      order.statusHistory.push({ status, changedAt: new Date() });
+
       if (status === 'delivered') {
         order.deliveredAt = new Date();
       }
-      
-      if (status === 'out_for_delivery' && !order.deliveryDate) {
+
+      if (status === 'on_the_way' && !order.deliveryDate) {
         order.deliveryDate = new Date();
       }
 
@@ -433,11 +460,12 @@ const orderService = {
       }
 
       // Check if order can be cancelled
-      if (['delivered', 'cancelled'].includes(order.status)) {
+      if (!isCancellable(order.status)) {
         throw new Error('Order cannot be cancelled');
       }
 
       order.status = 'cancelled';
+      order.statusHistory.push({ status: 'cancelled', changedAt: new Date() });
       await order.save();
 
       return {

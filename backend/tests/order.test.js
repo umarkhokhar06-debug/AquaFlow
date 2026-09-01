@@ -40,7 +40,7 @@ describe('Order creation reaches dispatch', () => {
 
     const orderRes = await placeOrder(customer);
     expect(orderRes.status).toBe(201);
-    expect(orderRes.body.order.status).toBe('pending');
+    expect(orderRes.body.order.status).toBe('queued');
 
     const queueRes = await request(app)
       .get('/api/dispatch/queue')
@@ -78,8 +78,22 @@ describe('Delivery OTP', () => {
     return { customer, driver, orderId };
   }
 
+  // Delivered is only reachable via the full driver-facing lifecycle now
+  // (going_to_filling_station -> water_filled -> on_the_way -> arrived ->
+  // delivered) -- walk through each step, same as the real driver app does.
+  async function advanceToArrived(driver, orderId) {
+    for (const status of ['going_to_filling_station', 'water_filled', 'on_the_way', 'arrived']) {
+      const res = await request(app)
+        .put(`/api/driver/orders/${orderId}/status`)
+        .set('Authorization', `Bearer ${tokenFor(driver)}`)
+        .send({ status });
+      expect(res.status).toBe(200);
+    }
+  }
+
   it('rejects delivery completion with a wrong OTP', async () => {
     const { driver, orderId } = await placeAndAssign();
+    await advanceToArrived(driver, orderId);
 
     const res = await request(app)
       .put(`/api/driver/orders/${orderId}/status`)
@@ -92,6 +106,7 @@ describe('Delivery OTP', () => {
 
   it('completes delivery only with the correct OTP, and notifies the customer', async () => {
     const { customer, driver, orderId } = await placeAndAssign();
+    await advanceToArrived(driver, orderId);
 
     // The real OTP is select:false on the Order model -- fetch it the same
     // way the customer app does, via the dedicated endpoint.

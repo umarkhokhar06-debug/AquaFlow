@@ -14,6 +14,7 @@ import Finance from '../components/Finance'
 import ForecastReports from '../components/ForecastReports'
 import SupportTickets from '../components/SupportTickets'
 import NotificationSystem from '../components/NotificationSystem'
+import SystemSettings from '../components/SystemSettings'
 import { userManagementAPI, orderManagementAPI, dispatchAPI, forecastAPI, financeAPI } from '../services/api'
 import { FiUsers, FiPackage, FiDollarSign, FiTruck, FiWifi, FiWifiOff, FiAlertTriangle, FiMapPin } from 'react-icons/fi'
 
@@ -110,6 +111,9 @@ const AdminDashboard = () => {
       socket.on('system-notification', (data) => {
         addNotification({ id: Date.now(), message: data.data.message, type: data.data.notificationType, timestamp: data.data.timestamp })
       })
+      socket.on('scheduled-order-urgent', (data) => {
+        addNotification({ id: Date.now(), message: `Scheduled order ${data.data.orderNumber} needs a driver -- delivery window approaching`, type: 'warning', timestamp: data.timestamp })
+      })
 
       return () => {
         socket.off('new-order')
@@ -120,6 +124,7 @@ const AdminDashboard = () => {
         socket.off('driver-queue-update')
         socket.off('driver-location-update')
         socket.off('system-notification')
+        socket.off('scheduled-order-urgent')
       }
     }
   }, [socket, connected, user?.userType])
@@ -148,6 +153,7 @@ const AdminDashboard = () => {
     const { userStats, orderStats, pendingOrders, drivers, forecast, finance } = overview
     const trucksEnRoute = drivers.filter(d => d.driverStatus === 'busy')
     const statusCount = (status) => orderStats?.statusBreakdown?.find(s => s._id === status)?.count || 0
+    const pendingStatusCount = () => statusCount('order_created') + statusCount('queued')
 
     return (
       <div className="space-y-6">
@@ -245,7 +251,7 @@ const AdminDashboard = () => {
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Order Status</h3>
             <div className="space-y-3">
               <div className="flex justify-between"><span className="text-sm text-gray-600">Delivered</span><span className="text-sm font-medium text-green-600">{statusCount('delivered')}</span></div>
-              <div className="flex justify-between"><span className="text-sm text-gray-600">Pending</span><span className="text-sm font-medium text-yellow-600">{statusCount('pending')}</span></div>
+              <div className="flex justify-between"><span className="text-sm text-gray-600">Pending</span><span className="text-sm font-medium text-yellow-600">{pendingStatusCount()}</span></div>
               <div className="flex justify-between"><span className="text-sm text-gray-600">Cancelled</span><span className="text-sm font-medium text-red-600">{statusCount('cancelled')}</span></div>
               <div className="flex justify-between"><span className="text-sm text-gray-600">Total</span><span className="text-sm font-medium text-gray-900">{orderStats?.totalOrders || 0}</span></div>
             </div>
@@ -283,6 +289,7 @@ const AdminDashboard = () => {
       case 'finance': return <Finance />
       case 'forecast': return <ForecastReports />
       case 'support': return <SupportTickets />
+      case 'settings': return <SystemSettings />
       case 'profile': return <Profile />
       default:
         return (

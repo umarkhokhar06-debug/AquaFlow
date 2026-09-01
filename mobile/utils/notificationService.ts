@@ -139,10 +139,13 @@ class NotificationService {
   // Handle order notifications
   handleOrderNotification(orderNumber: string, status: string): void {
     const statusMessages = {
-      'pending': 'Your order has been received and is being processed',
-      'confirmed': 'Your order has been confirmed and is being prepared',
-      'preparing': 'Your order is being prepared for delivery',
-      'out_for_delivery': 'Your order is out for delivery',
+      'order_created': 'Your order has been received and is being processed',
+      'queued': 'Your order has been received and is being processed',
+      'driver_assigned': 'A driver has been assigned to your order',
+      'going_to_filling_station': 'Your order is being prepared for delivery',
+      'water_filled': 'Your order is being prepared for delivery',
+      'on_the_way': 'Your order is out for delivery',
+      'arrived': 'Your driver has arrived',
       'delivered': 'Your order has been delivered successfully',
       'cancelled': 'Your order has been cancelled',
     };

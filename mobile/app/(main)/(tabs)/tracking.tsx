@@ -36,32 +36,38 @@ import HeaderComponent from '@/app/components/Header';
 import { router } from 'expo-router';
 import { socketService, DriverLocationData } from '@/utils/socketService';
 import { orderAPI } from '@/utils/orderAPI';
-import { Order, QueueStatus, getOrderId } from '@/types/order';
+import { Order, QueueStatus, getOrderId, ORDER_STATUSES, ORDER_STATUS_LABEL, OrderStatus } from '@/types/order';
 import { Badge, orderStatusTone } from '@/app/components/ui';
 import StepStepper, { Step } from '@/app/components/StepStepper';
 import { colors, spacing, typography } from '@/theme';
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  out_for_delivery: 'Out for Delivery',
-  in_transit: 'In Transit',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled',
-};
+const STATUS_LABEL = ORDER_STATUS_LABEL;
+
+// ORDER_STATUSES is already in lifecycle order, so a status's index doubles
+// as its progress rank -- used below to derive each milestone's done /
+// active / pending state without hand-maintaining a parallel boolean set.
+function statusRank(status: OrderStatus | undefined): number {
+  if (!status) return -1;
+  return ORDER_STATUSES.indexOf(status);
+}
+
+function milestoneState(order: Order | null, atLeast: OrderStatus, activeWhile: OrderStatus[]): Step['state'] {
+  if (!order) return 'pending';
+  if (order.status === 'cancelled') return 'pending';
+  const rank = statusRank(order.status);
+  if (activeWhile.includes(order.status)) return 'active';
+  return rank >= statusRank(atLeast) ? 'done' : 'pending';
+}
 
 function buildTrackSteps(order: Order | null, queueStatus: QueueStatus | null): Step[] {
   const hasDriver = !!order?.driver;
-  const isOnWay = order?.status === 'out_for_delivery';
-  const isDelivered = order?.status === 'delivered';
 
   return [
     { key: 'confirmed', label: 'Order confirmed', state: 'done' },
     {
       key: 'driver',
       label: 'Driver assigned',
-      state: hasDriver ? 'done' : 'active',
+      state: milestoneState(order, 'driver_assigned', []),
       sublabel: !hasDriver
         ? queueStatus?.position != null
           ? `You're #${queueStatus.position} in line${queueStatus.etaMinutes != null ? ` · ~${queueStatus.etaMinutes} min` : ''}`
@@ -69,11 +75,16 @@ function buildTrackSteps(order: Order | null, queueStatus: QueueStatus | null): 
         : undefined,
     },
     {
+      key: 'filling',
+      label: 'Filling tanker',
+      state: milestoneState(order, 'water_filled', ['going_to_filling_station', 'water_filled']),
+    },
+    {
       key: 'onway',
       label: 'On the way',
-      state: isDelivered ? 'done' : isOnWay ? 'active' : hasDriver ? 'pending' : 'pending',
+      state: milestoneState(order, 'arrived', ['on_the_way', 'arrived']),
     },
-    { key: 'delivered', label: 'Delivered', state: isDelivered ? 'done' : 'pending' },
+    { key: 'delivered', label: 'Delivered', state: order?.status === 'delivered' ? 'done' : 'pending' },
   ];
 }
 
@@ -233,11 +244,11 @@ export default function TrackingScreen() {
         return;
       }
 
-      // Filter for active orders -- including pending/confirmed (not yet
+      // Filter for active orders -- including order_created/queued (not yet
       // assigned a driver) so a just-placed order shows up here immediately
       // with its queue position, not only once a driver is assigned.
       const activeOrders = allOrders.filter((order: Order) =>
-        ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(order.status)
+        (['order_created', 'queued', 'driver_assigned', 'going_to_filling_station', 'water_filled', 'on_the_way', 'arrived'] as const).includes(order.status as any)
       );
       console.log(`[TrackingScreen] Filtered ${activeOrders.length} active orders:`,
         activeOrders.map(o => ({ id: o._id, orderNumber: o.orderNumber, status: o.status })));
@@ -483,7 +494,7 @@ export default function TrackingScreen() {
             <View style={styles.panelHeader}>
               <View>
                 <Text style={styles.panelTitle}>
-                  {selectedOrder?.orderNumber} • {STATUS_LABEL[selectedOrder?.status || ''] || selectedOrder?.status}
+                  {selectedOrder?.orderNumber} • {(selectedOrder?.status && STATUS_LABEL[selectedOrder.status]) || selectedOrder?.status}
                 </Text>
                 <Text style={styles.panelSubtitle}>Active Orders ({orders.length})</Text>
               </View>

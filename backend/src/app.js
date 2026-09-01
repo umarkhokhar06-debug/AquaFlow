@@ -21,6 +21,7 @@ const financeRoutes = require('./routes/finance');
 const paymentRoutes = require('./routes/payments');
 const paymentController = require('./controllers/paymentController');
 const supportRoutes = require('./routes/support');
+const systemConfigRoutes = require('./routes/systemConfig');
 
 const app = express();
 
@@ -70,6 +71,7 @@ app.use('/api/promo-codes', promoCodeRoutes);
 app.use('/api/admin/finance', financeRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/support', supportRoutes);
+app.use('/api/config', systemConfigRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

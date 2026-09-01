@@ -12,6 +12,8 @@ import {
   ScrollView,
   ActivityIndicator,
   PanResponder,
+  Modal,
+  TextInput,
 } from 'react-native';
 import type MapView from 'react-native-maps';
 import DriverTrackingMap from '@/components/DriverTrackingMap';
@@ -35,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import { socketService } from '@/utils/socketService';
 import { driverAPI, DriverOrder } from '@/utils/driverAPI';
+import { ORDER_STATUSES, OrderStatus, ORDER_STATUS_LABEL } from '@/types/order';
 
 const { width, height } = Dimensions.get('window');
 
@@ -48,20 +51,20 @@ export default function DriverMapScreen() {
     // Handler for order status update event from socket
     const handleOrderStatusUpdate = (data: { orderId: string; status: string }) => {
       // Only allow valid statuses for DriverOrder
-      const validStatuses = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'] as const;
-      if (!validStatuses.includes(data.status as any)) return;
+      if (!(ORDER_STATUSES as readonly string[]).includes(data.status)) return;
+      const newStatus = data.status as OrderStatus;
       setOrders(prevOrders => {
         const found = prevOrders.find(o => o.id === data.orderId);
         if (!found) return prevOrders;
         // Update the order in the list
         return prevOrders.map(o =>
-          o.id === data.orderId ? { ...o, status: data.status as typeof validStatuses[number] } : o
+          o.id === data.orderId ? { ...o, status: newStatus } : o
         );
       });
       // If the selected order is updated, update its status as well
       setSelectedOrder(prev => {
         if (prev && prev.id === data.orderId) {
-          return { ...prev, status: data.status as typeof validStatuses[number] };
+          return { ...prev, status: newStatus };
         }
         return prev;
       });
@@ -87,6 +90,8 @@ export default function DriverMapScreen() {
   const [socketConnected, setSocketConnected] = useState(false);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [drawerHeight] = useState(new Animated.Value(120)); // Starting height for collapsed state
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
   const mapRef = useRef<MapView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
@@ -204,11 +209,11 @@ export default function DriverMapScreen() {
         return;
       }
 
-      const activeOrders = response.orders.filter((order: DriverOrder) => 
-        ['preparing', 'out_for_delivery'].includes(order.status)
+      const activeOrders = response.orders.filter((order: DriverOrder) =>
+        (['driver_assigned', 'going_to_filling_station', 'water_filled', 'on_the_way', 'arrived'] as const).includes(order.status as any)
       );
-      
-      console.log(`[DriverMapScreen] Filtered ${activeOrders.length} active orders (preparing, out_for_delivery):`, 
+
+      console.log(`[DriverMapScreen] Filtered ${activeOrders.length} active orders:`,
         activeOrders.map(o => ({ id: o.id, orderNumber: o.orderNumber, status: o.status })));
       
       setOrders(activeOrders);
@@ -381,29 +386,29 @@ export default function DriverMapScreen() {
       Alert.alert('No Order Selected', 'Please select an order first');
       return;
     }
-    
-    Alert.alert(
-      'Mark as Delivered',
-      'Are you sure you want to mark this order as delivered?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            try {
-              await driverAPI.updateOrderStatus(selectedOrder.id, 'delivered');
-              Alert.alert('Success', 'Order marked as delivered!');
-              setIsNavigating(false);
-              // Refresh orders
-              fetchActiveOrders();
-            } catch (error) {
-              console.error('[DriverMapScreen] Error marking order as delivered:', error);
-              Alert.alert('Error', 'Failed to update order status');
-            }
-          },
-        },
-      ]
-    );
+    // Delivered requires the OTP the customer reads out -- collect it via
+    // a modal rather than a plain confirm dialog.
+    setOtpInput('');
+    setOtpModalVisible(true);
+  };
+
+  const confirmDelivery = async () => {
+    if (!selectedOrder) return;
+    if (!otpInput.trim()) {
+      Alert.alert('OTP required', "Enter the code the customer read out to confirm delivery.");
+      return;
+    }
+    setOtpModalVisible(false);
+    try {
+      await driverAPI.updateOrderStatus(selectedOrder.id, 'delivered', undefined, otpInput.trim());
+      Alert.alert('Success', 'Order marked as delivered!');
+      setIsNavigating(false);
+      // Refresh orders
+      fetchActiveOrders();
+    } catch (error) {
+      console.error('[DriverMapScreen] Error marking order as delivered:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update order status');
+    }
   };
 
   const handleReportIssue = () => {
@@ -450,21 +455,18 @@ export default function DriverMapScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'preparing': return '#9333EA';
-      case 'out_for_delivery': return '#F97316';
+      case 'going_to_filling_station':
+      case 'water_filled':
+        return '#9333EA';
+      case 'on_the_way':
+      case 'arrived':
+        return '#F97316';
       case 'delivered': return '#10B981';
       default: return '#6B7280';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'preparing': return 'Preparing';
-      case 'out_for_delivery': return 'Out for Delivery';
-      case 'delivered': return 'Delivered';
-      default: return status;
-    }
-  };
+  const getStatusText = (status: string) => ORDER_STATUS_LABEL[status as OrderStatus] || status;
 
   const OrderCard = ({ order }: { order: DriverOrder }) => {
     const isSelected = selectedOrder?.id === order.id;
@@ -952,6 +954,32 @@ export default function DriverMapScreen() {
           )}
         </>
       )}
+
+      <Modal visible={otpModalVisible} transparent animationType="fade" onRequestClose={() => setOtpModalVisible(false)}>
+        <View style={styles.otpOverlay}>
+          <View style={styles.otpCard}>
+            <Text style={styles.otpTitle}>Confirm delivery</Text>
+            <Text style={styles.otpSubtitle}>Ask the customer for their delivery code and enter it below.</Text>
+            <TextInput
+              style={styles.otpInput}
+              value={otpInput}
+              onChangeText={setOtpInput}
+              placeholder="4-digit code"
+              keyboardType="number-pad"
+              maxLength={4}
+              autoFocus
+            />
+            <View style={styles.otpActions}>
+              <TouchableOpacity style={styles.otpCancelButton} onPress={() => setOtpModalVisible(false)}>
+                <Text style={styles.otpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.otpConfirmButton} onPress={confirmDelivery}>
+                <Text style={styles.otpConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1513,5 +1541,71 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
+  },
+  otpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  otpCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+  },
+  otpTitle: {
+    fontSize: 18,
+    fontFamily: 'Sora-Bold',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  otpSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Sora-Regular',
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 20,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  otpActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  otpCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  otpCancelText: {
+    fontSize: 15,
+    fontFamily: 'Sora-SemiBold',
+    color: '#374151',
+  },
+  otpConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#087EA4',
+  },
+  otpConfirmText: {
+    fontSize: 15,
+    fontFamily: 'Sora-SemiBold',
+    color: '#FFFFFF',
   },
 });

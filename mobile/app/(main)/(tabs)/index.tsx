@@ -28,20 +28,13 @@ import TankCapsule from '@/app/components/graphics/TankCapsule';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
-import { Order, Product, QueueStatus, parseDate, getOrderId } from '@/types/order';
+import { Order, Product, QueueStatus, parseDate, getOrderId, ORDER_STATUS_LABEL } from '@/types/order';
 import { orderStatusTone } from '@/app/components/ui/Badge';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
 import { colors, radius, spacing, typography } from '@/theme';
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  preparing: 'Preparing',
-  out_for_delivery: 'Out for Delivery',
-  delivered: 'Delivered',
-  cancelled: 'Cancelled',
-};
+const STATUS_LABEL = ORDER_STATUS_LABEL;
 
 function timeOfDayGreeting() {
   const hour = new Date().getHours();
@@ -89,7 +82,7 @@ function ActiveOrderCard({ order }: { order: Order }) {
     };
   }, [getOrderId(order)]);
 
-  const isOutForDelivery = order.status === 'out_for_delivery';
+  const isOutForDelivery = (['going_to_filling_station', 'water_filled', 'on_the_way', 'arrived'] as const).includes(order.status as any);
 
   return (
     <Card style={styles.activeCard}>
@@ -181,7 +174,9 @@ export default function OrdersScreen() {
     onOrderUpdate, onOrderStatusUpdate, removeOrderUpdateListener, removeOrderStatusUpdateListener,
   } = useSocket();
 
-  const activeOrders = orders.filter((o) => ['pending', 'confirmed', 'preparing', 'out_for_delivery'].includes(o.status));
+  const activeOrders = orders.filter((o) =>
+    (['order_created', 'queued', 'driver_assigned', 'going_to_filling_station', 'water_filled', 'on_the_way', 'arrived'] as const).includes(o.status as any)
+  );
   const historyOrders = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status));
   const hasActiveOrder = activeOrders.length > 0;
 

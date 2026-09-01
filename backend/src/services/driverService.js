@@ -2,6 +2,13 @@ const User = require('../models/User');
 const Order = require('../models/Order');
 const socketService = require('./socketService');
 const notificationService = require('./notificationService');
+const { isCancellable } = require('../constants/orderStatus');
+
+// Duplicated from dispatchService's own stand-in constant (same rationale:
+// no real routing/traffic provider yet, SRS §26) -- kept local here rather
+// than imported to avoid a circular require (dispatchService already
+// requires driverService).
+const AVG_MINUTES_PER_ORDER = 20;
 
 const driverService = {
   // ============ PROFILE MANAGEMENT ============
@@ -274,6 +281,8 @@ const driverService = {
       order.driverRejectionReason = undefined;
       order.deliveryOtp = String(Math.floor(1000 + Math.random() * 9000));
       order.deliveryOtpGeneratedAt = new Date();
+      order.status = 'driver_assigned';
+      order.statusHistory.push({ status: 'driver_assigned', changedAt: new Date() });
       await order.save();
 
       // Add to driver's queue
@@ -325,6 +334,95 @@ const driverService = {
 
     } catch (error) {
       console.error('Assign order to driver error:', error);
+      throw error;
+    }
+  },
+
+  // Express insertion: same core assignment steps as assignOrderToDriver,
+  // but unshifts onto the front of the queue instead of pushing -- queue
+  // order is the array position, not the (currently cosmetic) priority
+  // field, so this must literally splice to make the express order next.
+  // The driver's in-progress currentOrder is never touched: express becomes
+  // the *next* stop, not an interruption of what they're already doing.
+  insertExpressOrderIntoQueue: async (orderId, driverId) => {
+    try {
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      const driver = await User.findById(driverId);
+      if (!driver || driver.userType !== 'driver') {
+        throw new Error('Driver not found');
+      }
+      if (driver.driverStatus !== 'busy' || !driver.currentOrder) {
+        throw new Error('Express insertion requires a driver already en route on another order');
+      }
+      if (driver.orderQueue.length >= driver.maxQueueSize) {
+        throw new Error('Driver queue is full');
+      }
+
+      order.driver = driverId;
+      order.assignedAt = new Date();
+      order.driverResponseStatus = 'pending';
+      order.driverResponseAt = null;
+      order.driverRejectionReason = undefined;
+      order.deliveryOtp = String(Math.floor(1000 + Math.random() * 9000));
+      order.deliveryOtpGeneratedAt = new Date();
+      order.status = 'driver_assigned';
+      order.statusHistory.push({ status: 'driver_assigned', changedAt: new Date() });
+      await order.save();
+
+      const bumpedEntries = [...driver.orderQueue];
+      driver.orderQueue.unshift({
+        order: orderId,
+        assignedAt: new Date(),
+        priority: 1
+      });
+      await driver.save();
+
+      socketService.emitOrderAssignment(orderId, driverId, driver.name);
+      socketService.emitDriverQueueUpdate(driverId, driver.orderQueue);
+
+      notificationService.createNotification(
+        order.customer,
+        'Driver assigned',
+        `${driver.name} has been assigned to deliver your express order ${order.orderNumber}.`,
+        'driver_assigned',
+        { orderId: order._id, driverId: driver._id }
+      ).catch(() => {});
+
+      // Every order that was already queued behind this driver just got
+      // bumped back one slot -- let each affected customer know their new
+      // position/ETA rather than leaving their last-fetched status stale.
+      bumpedEntries.forEach((entry, index) => {
+        const newPosition = index + 2; // +1 for 1-indexing, +1 for the new express order ahead of it
+        Order.findById(entry.order).select('customer').then(bumpedOrder => {
+          if (!bumpedOrder) return;
+          socketService.emitOrderUpdateToCustomer(bumpedOrder.customer, entry.order, 'queue_position_changed', {
+            position: newPosition,
+            etaMinutes: newPosition * AVG_MINUTES_PER_ORDER
+          });
+        }).catch(() => {});
+      });
+
+      return {
+        success: true,
+        message: 'Express order inserted at the front of the driver\'s queue',
+        order: {
+          id: order._id,
+          orderNumber: order.orderNumber,
+          driver: { id: driver._id, name: driver.name, email: driver.email }
+        },
+        driver: {
+          id: driver._id,
+          name: driver.name,
+          driverStatus: driver.driverStatus,
+          queueLength: driver.orderQueue.length
+        }
+      };
+    } catch (error) {
+      console.error('Insert express order into queue error:', error);
       throw error;
     }
   },
@@ -404,6 +502,7 @@ const driverService = {
       const order = await Order.findById(driver.currentOrder);
       if (order) {
         order.status = 'delivered';
+        order.statusHistory.push({ status: 'delivered', changedAt: new Date() });
         order.deliveredAt = new Date();
         // Cash is collected by the driver at the point of delivery; non-cash
         // orders are marked paid separately, only once Stripe confirms the
@@ -543,8 +642,19 @@ const driverService = {
 
       await driver.save();
 
-      // Update order to remove driver assignment
-      await Order.findByIdAndUpdate(orderId, { driver: null });
+      // Update order to remove driver assignment. Also revert status back
+      // to 'queued' (unassigned, waiting) unless it's already terminal --
+      // otherwise a rejected/reassigned order would keep showing whatever
+      // driver-facing status it had (e.g. still "on the way") with no driver.
+      const orderToUpdate = await Order.findById(orderId);
+      if (orderToUpdate && isCancellable(orderToUpdate.status)) {
+        orderToUpdate.driver = null;
+        orderToUpdate.status = 'queued';
+        orderToUpdate.statusHistory.push({ status: 'queued', changedAt: new Date() });
+        await orderToUpdate.save();
+      } else {
+        await Order.findByIdAndUpdate(orderId, { driver: null });
+      }
 
       // Emit real-time events
       socketService.emitDriverQueueUpdate(driverId, driver.orderQueue);

@@ -41,6 +41,26 @@ export const orderAPI = {
     }
   },
 
+  // Get the current admin-configured express delivery fee
+  async getExpressFee(): Promise<number> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.get<{ success: boolean; expressFeeAmount: number }>(
+        `${config.apiUrl}/config/express-fee`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      return response.data.expressFeeAmount;
+    } catch (error) {
+      console.error('Error fetching express fee:', error);
+      return 300; // fallback to the documented default if the request fails
+    }
+  },
+
   // Create a new order
   async createOrder(orderData: CreateOrderRequest): Promise<Order> {
     try {

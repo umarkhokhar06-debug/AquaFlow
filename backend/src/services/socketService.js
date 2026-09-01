@@ -82,7 +82,7 @@ const socketService = {
           // Find all active orders for this driver
           const activeOrders = await Order.find({
             driver: driverId,
-            status: { $in: ['preparing', 'out_for_delivery'] }
+            status: { $in: ['going_to_filling_station', 'water_filled', 'on_the_way'] }
           }).select('customer');
 
           // Emit location update to all customers with active orders from this driver
@@ -155,6 +155,20 @@ const socketService = {
         timestamp: new Date().toISOString()
       });
       console.log('New order emitted to admin room');
+    }
+  },
+
+  // Emit a scheduled order approaching its delivery window with no driver
+  // assigned yet -- surfaces it to the dispatch console with urgency
+  // (SRS §5.3, driven by scheduledOrderNotifyLoop.js).
+  emitScheduledOrderUrgent(order) {
+    if (this.io) {
+      this.io.to('admin-room').emit('scheduled-order-urgent', {
+        type: 'scheduled-order-urgent',
+        data: order,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`Scheduled order urgent alert emitted: ${order.orderNumber || order._id}`);
     }
   },
 

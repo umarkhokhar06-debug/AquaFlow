@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { driverAPI, DriverOrder } from '../../../utils/driverAPI';
+import { OrderStatus, ORDER_STATUS_LABEL } from '@/types/order';
 import { useSocket } from '../../../hooks/useSocket';
 import {
   Search,
@@ -33,7 +34,7 @@ export default function DriverDeliveriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('confirmed');
+  const [filterStatus, setFilterStatus] = useState<OrderStatus | 'all'>('driver_assigned');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deliveries, setDeliveries] = useState<DriverOrder[]>([]);
@@ -81,11 +82,13 @@ export default function DriverDeliveriesScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed':
+      case 'driver_assigned':
         return '#FF6B35';
-      case 'preparing':
+      case 'going_to_filling_station':
+      case 'water_filled':
         return '#F59E0B';
-      case 'out_for_delivery':
+      case 'on_the_way':
+      case 'arrived':
         return '#087EA4';
       case 'delivered':
         return '#28A745';
@@ -97,11 +100,13 @@ export default function DriverDeliveriesScreen() {
   const getStatusIcon = (status: string) => {
     const color = getStatusColor(status);
     switch (status) {
-      case 'confirmed':
+      case 'driver_assigned':
         return <Clock size={12} color={color} />;
-      case 'preparing':
+      case 'going_to_filling_station':
+      case 'water_filled':
         return <Package size={12} color={color} />;
-      case 'out_for_delivery':
+      case 'on_the_way':
+      case 'arrived':
         return <MapPin size={12} color={color} />;
       case 'delivered':
         return <CheckCircle size={12} color={color} />;
@@ -170,7 +175,7 @@ export default function DriverDeliveriesScreen() {
               { color: getStatusColor(delivery.status) },
             ]}
           >
-            {delivery.status}
+            {ORDER_STATUS_LABEL[delivery.status] || delivery.status}
           </Text>
         </View>
       </View>
@@ -252,7 +257,7 @@ export default function DriverDeliveriesScreen() {
           showsHorizontalScrollIndicator={false}
           style={styles.filterTabs}
         >
-          {['all', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'].map(
+          {(['all', 'driver_assigned', 'going_to_filling_station', 'water_filled', 'on_the_way', 'arrived', 'delivered', 'cancelled'] as const).map(
             (status) => (
               <TouchableOpacity
                 key={status}
@@ -268,11 +273,7 @@ export default function DriverDeliveriesScreen() {
                     filterStatus === status && styles.activeFilterTabText,
                   ]}
                 >
-                  {status === 'all'
-                    ? 'All'
-                    : status === 'inprogress'
-                    ? 'In Progress'
-                    : status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === 'all' ? 'All' : ORDER_STATUS_LABEL[status]}
                 </Text>
               </TouchableOpacity>
             )

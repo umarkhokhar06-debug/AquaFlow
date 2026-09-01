@@ -79,7 +79,9 @@ const DriverManagement = () => {
 
   const fetchAvailableOrders = useCallback(async () => {
     try {
-      const response = await orderManagementAPI.getAllOrders({ status: 'confirmed' })
+      // 'queued' = unassigned, waiting for a driver -- these are the orders
+      // that should actually be assignable here.
+      const response = await orderManagementAPI.getAllOrders({ status: 'queued' })
       setAvailableOrders(response.data.orders || [])
     } catch (err) {
       console.error('Error fetching available orders:', err)
