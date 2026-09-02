@@ -3,7 +3,7 @@ import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Package, MapPin, Settings, Bell, CircleHelp as HelpCircle, LogOut, X, Truck, DollarSign } from 'lucide-react-native';
+import { User, Package, MapPin, Settings, Bell, CircleHelp as HelpCircle, LogOut, X, Truck, DollarSign, Coffee } from 'lucide-react-native';
 
 function CustomDriverDrawerContent(props: any) {
   const router = useRouter();
@@ -47,6 +47,14 @@ function CustomDriverDrawerContent(props: any) {
           label="My Earnings"
           icon={({ color, size }) => <DollarSign size={size} color={color} />}
           onPress={() => router.push('./earnings')}
+          labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
+          activeBackgroundColor="#F0F8FF"
+          activeTintColor="#087EA4"
+        />
+        <DrawerItem
+          label="Daily Closing"
+          icon={({ color, size }) => <Coffee size={size} color={color} />}
+          onPress={() => router.push('./daily-closing')}
           labelStyle={[styles.drawerLabel, { marginLeft: 8 }]}
           activeBackgroundColor="#F0F8FF"
           activeTintColor="#087EA4"
@@ -98,6 +106,7 @@ export default function DriverLayout() {
         <Drawer.Screen name="deliveries" />
         <Drawer.Screen name="vehicle" />
         <Drawer.Screen name="earnings" />
+        <Drawer.Screen name="daily-closing" />
         <Drawer.Screen name="settings" />
         <Drawer.Screen name="notifications" />
         <Drawer.Screen name="help" />

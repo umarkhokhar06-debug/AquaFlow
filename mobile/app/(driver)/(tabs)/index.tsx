@@ -28,7 +28,8 @@ import {
   DollarSign,
   ArrowRight,
   User,
-  Phone
+  Phone,
+  Coffee
 } from 'lucide-react-native';
 
 export default function DriverDashboardScreen() {
@@ -49,6 +50,8 @@ export default function DriverDashboardScreen() {
   const [todayOrders, setTodayOrders] = useState<DriverOrder[]>([]);
   const [driverStatus, setDriverStatus] = useState<'free' | 'busy' | 'offline'>('offline');
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [breakStatus, setBreakStatus] = useState<'none' | 'requested' | 'on_break'>('none');
+  const [breakUpdating, setBreakUpdating] = useState(false);
 
   const { connect, onNewOrder, onOrderStatusUpdate, onOrderUpdate } = useSocket();
 
@@ -82,6 +85,7 @@ export default function DriverDashboardScreen() {
       // Orders are already mapped in driverAPI.getOrders
       setTodayOrders(ordersRes.orders);
       setDriverStatus(profile.status);
+      setBreakStatus(profile.driverBreakStatus || 'none');
     } catch (error) {
       console.error('Error loading dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -101,6 +105,23 @@ export default function DriverDashboardScreen() {
       Alert.alert('Error', 'Failed to update your status. Please try again.');
     } finally {
       setStatusUpdating(false);
+    }
+  };
+
+  const toggleBreak = async () => {
+    setBreakUpdating(true);
+    try {
+      if (breakStatus === 'on_break') {
+        const res = await driverAPI.endBreak();
+        setBreakStatus(res.data.driverBreakStatus as 'none');
+      } else {
+        const res = await driverAPI.requestBreak();
+        setBreakStatus(res.data.driverBreakStatus as 'on_break');
+      }
+    } catch (error) {
+      Alert.alert('Could not update break', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setBreakUpdating(false);
     }
   };
 
@@ -280,6 +301,34 @@ export default function DriverDashboardScreen() {
               />
             )}
           </View>
+
+          {/* Break */}
+          {driverStatus !== 'offline' && (
+            <View style={[styles.statusCard, breakStatus === 'on_break' && styles.breakCardActive]}>
+              <View style={styles.statusInfo}>
+                <Coffee size={20} color={breakStatus === 'on_break' ? '#B45309' : '#9CA3AF'} />
+                <View style={{ marginLeft: 8 }}>
+                  <Text style={styles.statusTitle}>{breakStatus === 'on_break' ? 'On break' : 'Take a break'}</Text>
+                  <Text style={styles.statusSubtitle}>
+                    {breakStatus === 'on_break' ? "Dispatch has been notified" : 'Available from 1pm, between deliveries'}
+                  </Text>
+                </View>
+              </View>
+              {breakUpdating ? (
+                <ActivityIndicator size="small" color="#087EA4" />
+              ) : (
+                <TouchableOpacity
+                  onPress={toggleBreak}
+                  disabled={driverStatus === 'busy' && breakStatus !== 'on_break'}
+                  style={[styles.breakButton, breakStatus === 'on_break' && styles.breakButtonActive]}
+                >
+                  <Text style={[styles.breakButtonText, breakStatus === 'on_break' && styles.breakButtonTextActive]}>
+                    {breakStatus === 'on_break' ? 'End break' : 'Start break'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -658,5 +707,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Sora-Regular',
     color: '#6B7280',
+  },
+  breakCardActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  breakButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  breakButtonActive: {
+    backgroundColor: '#B45309',
+    borderColor: '#B45309',
+  },
+  breakButtonText: {
+    fontSize: 13,
+    fontFamily: 'Sora-Medium',
+    color: '#6B7280',
+  },
+  breakButtonTextActive: {
+    color: '#FFFFFF',
   },
 });

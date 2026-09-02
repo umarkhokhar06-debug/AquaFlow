@@ -126,6 +126,24 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  // SRS §4.5: driver-initiated breaks (post-1pm, dispatcher-approved), kept
+  // separate from driverStatus (free/busy/offline is availability for
+  // assignment; a break is a distinct, opt-in unavailability window).
+  driverBreakStatus: {
+    type: String,
+    enum: ['none', 'requested', 'on_break'],
+    default: 'none'
+  },
+  driverBreakHistory: [{
+    status: {
+      type: String,
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   currentOrder: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
@@ -288,6 +306,13 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', function(next) {
   if (this.userType === 'driver' && (this.isNew || this.isModified('driverStatus'))) {
     this.driverStatusHistory.push({ status: this.driverStatus, changedAt: new Date() });
+  }
+  next();
+});
+
+userSchema.pre('save', function(next) {
+  if (this.userType === 'driver' && this.isModified('driverBreakStatus')) {
+    this.driverBreakHistory.push({ status: this.driverBreakStatus, changedAt: new Date() });
   }
   next();
 });

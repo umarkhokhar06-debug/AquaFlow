@@ -26,6 +26,7 @@ export interface DriverProfile {
   rating: number;
   totalRatings: number;
   status: 'free' | 'busy' | 'offline';
+  driverBreakStatus?: 'none' | 'requested' | 'on_break';
 }
 
 export interface DriverRegisterRequest {
@@ -603,6 +604,37 @@ export const driverAPI = {
       console.error('Error updating driver status:', error);
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || 'Failed to update status');
+      }
+      throw new Error('Network error');
+    }
+  },
+
+  // Break management
+  async requestBreak(): Promise<{ success: boolean; data: { driverBreakStatus: string } }> {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+      const api = createDriverAPIInstance();
+      const response = await api.post('/break/start', {}, { headers: { Authorization: `Bearer ${token}` } });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to start break');
+      }
+      throw new Error('Network error');
+    }
+  },
+
+  async endBreak(): Promise<{ success: boolean; data: { driverBreakStatus: string } }> {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+      const api = createDriverAPIInstance();
+      const response = await api.post('/break/end', {}, { headers: { Authorization: `Bearer ${token}` } });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to end break');
       }
       throw new Error('Network error');
     }

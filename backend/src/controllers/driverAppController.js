@@ -882,6 +882,25 @@ const driverAppController = {
     }
   },
 
+  // Break management (SRS §4.5)
+  requestBreak: async (req, res) => {
+    try {
+      const result = await driverService.requestBreak(req.user.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to start break' });
+    }
+  },
+
+  endBreak: async (req, res) => {
+    try {
+      const result = await driverService.endBreak(req.user.id);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to end break' });
+    }
+  },
+
   // ============ ATTENDANCE (SRS §5: "attendance/operational records") ============
 
   clockIn: async (req, res) => {

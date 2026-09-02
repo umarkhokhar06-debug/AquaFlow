@@ -357,7 +357,12 @@ const DriverManagement = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <div className="mt-1">{getStatusBadge(selectedDriver.driverStatus)}</div>
+                  <div className="mt-1 flex items-center space-x-2">
+                    {getStatusBadge(selectedDriver.driverStatus)}
+                    {selectedDriver.driverBreakStatus === 'on_break' && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800">On break</span>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
@@ -845,6 +850,9 @@ const DriverManagement = () => {
                         <p className="text-sm font-medium text-gray-900">{driver.name}</p>
                         <div className="ml-2 flex space-x-1">
                           {getStatusBadge(driver.driverStatus)}
+                          {driver.driverBreakStatus === 'on_break' && (
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800">On break</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 mt-1">

@@ -15,7 +15,8 @@ import {
   FiTag,
   FiDollarSign,
   FiMap,
-  FiHeadphones
+  FiHeadphones,
+  FiCheckCircle
 } from 'react-icons/fi'
 
 const ADMIN_TABS = [
@@ -29,6 +30,7 @@ const ADMIN_TABS = [
   { id: 'installations', label: 'Installations', icon: FiHome },
   { id: 'promo', label: 'Promo Codes', icon: FiTag },
   { id: 'finance', label: 'Finance', icon: FiDollarSign },
+  { id: 'daily-closings', label: 'Daily Closings', icon: FiCheckCircle },
   { id: 'forecast', label: 'Forecast & Reports', icon: FiTrendingUp },
   { id: 'support', label: 'Support / Complaints', icon: FiHeadphones },
   { id: 'device-simulator', label: 'Device Simulator', icon: FiSliders, external: true },
@@ -42,6 +44,7 @@ const DISPATCHER_TABS = [
   { id: 'drivers', label: 'Drivers', icon: FiTruck },
   { id: 'dispatch', label: 'Dispatch', icon: FiMap },
   { id: 'installations', label: 'Installations', icon: FiHome },
+  { id: 'daily-closings', label: 'Daily Closings', icon: FiCheckCircle },
   { id: 'forecast', label: 'Forecast & Reports', icon: FiTrendingUp },
   { id: 'profile', label: 'Profile', icon: FiUser }
 ]

@@ -74,6 +74,10 @@ router.get('/earnings', driverAppController.getEarnings);
 // Driver status
 router.put('/status', driverAppController.updateDriverStatus);
 
+// Break management
+router.post('/break/start', driverAppController.requestBreak);
+router.post('/break/end', driverAppController.endBreak);
+
 // Attendance
 router.post('/attendance/clock-in', driverAppController.clockIn);
 router.post('/attendance/clock-out', driverAppController.clockOut);

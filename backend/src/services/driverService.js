@@ -100,6 +100,7 @@ const driverService = {
           name: driver.name,
           email: driver.email,
           driverStatus: driver.driverStatus,
+          driverBreakStatus: driver.driverBreakStatus,
           currentOrder: driver.currentOrder,
           orderQueue: driver.orderQueue,
           maxQueueSize: driver.maxQueueSize,
@@ -142,6 +143,7 @@ const driverService = {
           name: driver.name,
           email: driver.email,
           driverStatus: driver.driverStatus,
+          driverBreakStatus: driver.driverBreakStatus,
           currentOrder: driver.currentOrder,
           orderQueue: driver.orderQueue,
           maxQueueSize: driver.maxQueueSize,
@@ -235,6 +237,63 @@ const driverService = {
       console.error('Update driver status error:', error);
       throw error;
     }
+  },
+
+  // SRS §4.5: driver-initiated break, self-service (not an approval
+  // workflow) but gated and surfaced to dispatch for awareness -- only
+  // available from 1pm onward, and only when the driver has no delivery
+  // actively in progress (queued-but-not-started orders are fine; those
+  // just wait).
+  requestBreak: async (driverId) => {
+    const driver = await User.findById(driverId);
+    if (!driver || driver.userType !== 'driver') {
+      throw new Error('Driver not found');
+    }
+    if (driver.driverBreakStatus === 'on_break') {
+      throw new Error('Already on a break');
+    }
+    if (new Date().getHours() < 13) {
+      const err = new Error('Breaks are only available from 1pm onward');
+      err.status = 400;
+      throw err;
+    }
+    if (driver.currentOrder) {
+      const err = new Error('Cannot take a break with a delivery in progress');
+      err.status = 400;
+      throw err;
+    }
+
+    driver.driverBreakStatus = 'on_break';
+    await driver.save();
+
+    socketService.emitSystemNotification(
+      `${driver.name} is now on a break.`,
+      'info',
+      'admin-room'
+    );
+
+    return { id: driver._id, driverBreakStatus: driver.driverBreakStatus };
+  },
+
+  endBreak: async (driverId) => {
+    const driver = await User.findById(driverId);
+    if (!driver || driver.userType !== 'driver') {
+      throw new Error('Driver not found');
+    }
+    if (driver.driverBreakStatus !== 'on_break') {
+      throw new Error('Not currently on a break');
+    }
+
+    driver.driverBreakStatus = 'none';
+    await driver.save();
+
+    socketService.emitSystemNotification(
+      `${driver.name} is back from their break.`,
+      'info',
+      'admin-room'
+    );
+
+    return { id: driver._id, driverBreakStatus: driver.driverBreakStatus };
   },
 
   // Assign order to driver
@@ -549,6 +608,7 @@ const driverService = {
           id: driver._id,
           name: driver.name,
           driverStatus: driver.driverStatus,
+          driverBreakStatus: driver.driverBreakStatus,
           currentOrder: driver.currentOrder,
           queueLength: driver.orderQueue.length
         }
@@ -667,6 +727,7 @@ const driverService = {
           id: driver._id,
           name: driver.name,
           driverStatus: driver.driverStatus,
+          driverBreakStatus: driver.driverBreakStatus,
           currentOrder: driver.currentOrder,
           queueLength: driver.orderQueue.length
         }
@@ -785,6 +846,7 @@ const driverService = {
           name: driver.name,
           email: driver.email,
           driverStatus: driver.driverStatus,
+          driverBreakStatus: driver.driverBreakStatus,
           currentOrder: driver.currentOrder,
           queueLength: driver.orderQueue.length,
           vehicleInfo: driver.vehicleInfo

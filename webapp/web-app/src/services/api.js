@@ -322,6 +322,12 @@ export const installationAPI = {
   assignInstaller: (id, installerId) => api.put(`/installations/${id}/assign`, { installerId })
 }
 
+// Daily Closings (Admin/Dispatcher reconciliation)
+export const dailyClosingAPI = {
+  getAll: (status) => api.get(`/daily-closings${status ? `?status=${status}` : ''}`),
+  reconcile: (id) => api.put(`/daily-closings/${id}/reconcile`)
+}
+
 // System Configuration (Admin only)
 export const systemConfigAPI = {
   getAllConfig: () => api.get('/config/admin'),
