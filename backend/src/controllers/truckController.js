@@ -103,6 +103,42 @@ class TruckController {
     }
   }
 
+  async addFuelLog(req, res) {
+    try {
+      const fuelLog = await truckService.addFuelLog(req.params.id, req.body, req.user.id);
+      res.status(201).json({ success: true, fuelLog });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to add fuel/mileage entry'
+      });
+    }
+  }
+
+  async getFuelLogs(req, res) {
+    try {
+      const fuelLogs = await truckService.getFuelLogs(req.params.id);
+      res.status(200).json({ success: true, fuelLogs });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to fetch fuel/mileage entries'
+      });
+    }
+  }
+
+  async getFleetMileageSummary(req, res) {
+    try {
+      const summary = await truckService.getFleetMileageSummary();
+      res.status(200).json({ success: true, summary });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to compute fleet mileage summary'
+      });
+    }
+  }
+
   async getUtilization(req, res) {
     try {
       const { from, to } = req.query;

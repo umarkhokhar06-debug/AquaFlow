@@ -6,6 +6,7 @@ const EarningsRecord = require('../models/EarningsRecord');
 const authService = require('../services/authService');
 const socketService = require('../services/socketService');
 const driverService = require('../services/driverService');
+const dispatchService = require('../services/dispatchService');
 const earningsService = require('../services/earningsService');
 const attendanceService = require('../services/attendanceService');
 const mongoose = require('mongoose');
@@ -576,28 +577,23 @@ const driverAppController = {
           'location.lastUpdated': new Date()
         },
         { new: true }
-      ).select('location');
-      
-      // Find all active orders for this driver and emit to customers
-      const activeOrders = await Order.find({
-        driver: driverId,
-        status: { $in: ['going_to_filling_station', 'water_filled', 'on_the_way'] }
-      }).select('customer');
+      ).select('location currentOrder');
 
-      const customerIds = activeOrders.map(order => order.customer.toString());
-      const uniqueCustomerIds = [...new Set(customerIds)];
+      // Broadcasts to admin room, the driver's own room, and (internally,
+      // via driver.currentOrder) that order's customer -- previously this
+      // called socketService.emitToAdmins, which doesn't exist, so this
+      // endpoint 500'd on every single call.
+      socketService.emitDriverLocationUpdate(driverId, driver.location);
 
-      // Emit to each customer with active orders
-      uniqueCustomerIds.forEach(customerId => {
-        socketService.emitDriverLocationUpdate(driverId, driver.location);
-      });
-      
-      // Emit location update to admin dashboard
-      socketService.emitToAdmins('driverLocationUpdate', {
-        driverId,
-        location: driver.location
-      });
-      
+      // Automatic arrival + route-deviation checks (SRS §4.4, §5.5) only
+      // apply to the order actively being delivered right now, not any
+      // other order still queued behind it.
+      if (driver.currentOrder) {
+        dispatchService.checkDriverProgress(driver.currentOrder, { latitude, longitude }).catch(err =>
+          console.error('Driver progress check failed (non-fatal):', err.message)
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: 'Location updated successfully',

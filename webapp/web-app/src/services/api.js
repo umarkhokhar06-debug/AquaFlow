@@ -253,7 +253,10 @@ export const truckAPI = {
     const q = new URLSearchParams(params)
     return api.get(`/admin/trucks/${id}/utilization?${q.toString()}`)
   },
-  getUtilizationReport: () => api.get('/admin/trucks/utilization-report')
+  getUtilizationReport: () => api.get('/admin/trucks/utilization-report'),
+  addFuelLog: (id, data) => api.post(`/admin/trucks/${id}/fuel-logs`, data),
+  getFuelLogs: (id) => api.get(`/admin/trucks/${id}/fuel-logs`),
+  getFleetMileageSummary: () => api.get('/admin/trucks/fuel-summary')
 }
 
 // Dispatch console (Admin/Dispatcher)

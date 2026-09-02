@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { truckAPI, driverManagementAPI } from '../services/api'
-import { FiPlus, FiTruck, FiTrash2, FiRefreshCw, FiUserCheck, FiUserX, FiTool } from 'react-icons/fi'
+import { FiPlus, FiTruck, FiTrash2, FiRefreshCw, FiUserCheck, FiUserX, FiTool, FiDroplet, FiAlertTriangle } from 'react-icons/fi'
 
 const STATUS_COLORS = {
   active: 'bg-green-100 text-green-800',
@@ -21,17 +21,22 @@ const FleetManagement = () => {
   const [form, setForm] = useState({ plateNumber: '', capacity: '', registrationNumber: '', registrationExpiry: '', insurancePolicyNumber: '', insuranceExpiry: '' })
   const [maintenanceForm, setMaintenanceForm] = useState({ category: 'oil_tuning', description: '', cost: '' })
   const [actionLoading, setActionLoading] = useState(false)
+  const [fuelTruck, setFuelTruck] = useState(null)
+  const [fuelForm, setFuelForm] = useState({ date: '', fuelQuantityLiters: '', fuelCost: '', kmDriven: '' })
+  const [mileageSummary, setMileageSummary] = useState(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [trucksRes, driversRes] = await Promise.all([
+      const [trucksRes, driversRes, mileageRes] = await Promise.all([
         truckAPI.getTrucks({ limit: 100 }),
-        driverManagementAPI.getDrivers({ limit: 200 })
+        driverManagementAPI.getDrivers({ limit: 200 }),
+        truckAPI.getFleetMileageSummary()
       ])
       setTrucks(trucksRes.data.trucks || [])
       setDrivers(driversRes.data.drivers || [])
+      setMileageSummary(mileageRes.data.summary || null)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load fleet data')
     } finally {
@@ -112,6 +117,29 @@ const FleetManagement = () => {
     }
   }
 
+  const handleAddFuelLog = async (e) => {
+    e.preventDefault()
+    if (!fuelTruck) return
+    setActionLoading(true)
+    try {
+      await truckAPI.addFuelLog(fuelTruck._id, {
+        date: fuelForm.date || undefined,
+        fuelQuantityLiters: Number(fuelForm.fuelQuantityLiters),
+        fuelCost: fuelForm.fuelCost ? Number(fuelForm.fuelCost) : undefined,
+        kmDriven: Number(fuelForm.kmDriven)
+      })
+      setFuelTruck(null)
+      setFuelForm({ date: '', fuelQuantityLiters: '', fuelCost: '', kmDriven: '' })
+      fetchData()
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add fuel/mileage entry')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const mileageFor = (truckId) => mileageSummary?.trucks?.find(t => t.truckId === truckId)
+
   const inputClass = 'mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500'
 
   if (loading) {
@@ -149,6 +177,7 @@ const FleetManagement = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Capacity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned Driver</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Insurance Expiry</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mileage</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
@@ -170,6 +199,19 @@ const FleetManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {truck.insuranceExpiry ? new Date(truck.insuranceExpiry).toLocaleDateString() : '-'}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {(() => {
+                    const m = mileageFor(truck._id)
+                    if (!m || m.kmPerLiter === null) return '-'
+                    const isLowest = mileageSummary?.lowestPerformingTruckId === truck._id
+                    return (
+                      <span className={`inline-flex items-center ${isLowest ? 'text-red-600 font-medium' : ''}`}>
+                        {isLowest && <FiAlertTriangle className="mr-1 h-3 w-3" title="Lowest-performing truck" />}
+                        {m.kmPerLiter} km/L
+                      </span>
+                    )
+                  })()}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
                   {truck.assignedDriver ? (
                     <button onClick={() => handleUnassign(truck)} className="text-yellow-600 hover:text-yellow-800" title="Unassign driver">
@@ -180,6 +222,9 @@ const FleetManagement = () => {
                       <FiUserCheck className="inline h-4 w-4" />
                     </button>
                   )}
+                  <button onClick={() => setFuelTruck(truck)} className="text-teal-600 hover:text-teal-800" title="Log fuel/mileage">
+                    <FiDroplet className="inline h-4 w-4" />
+                  </button>
                   <button onClick={() => setMaintenanceTruck(truck)} className="text-purple-600 hover:text-purple-800" title="Add maintenance record">
                     <FiTool className="inline h-4 w-4" />
                   </button>
@@ -292,6 +337,39 @@ const FleetManagement = () => {
                 <button type="button" onClick={() => setMaintenanceTruck(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Cancel</button>
                 <button type="submit" disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
                   {actionLoading ? 'Saving...' : 'Save Record'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {fuelTruck && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Log Fuel / Mileage: {fuelTruck.plateNumber}</h3>
+            <form onSubmit={handleAddFuelLog} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" value={fuelForm.date} onChange={e => setFuelForm(p => ({ ...p, date: e.target.value }))} className={inputClass} />
+                <p className="text-xs text-gray-500 mt-1">Defaults to today. One entry per truck per day.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel Quantity (liters)</label>
+                <input type="number" required min="0" step="0.1" value={fuelForm.fuelQuantityLiters} onChange={e => setFuelForm(p => ({ ...p, fuelQuantityLiters: e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Fuel Cost (optional)</label>
+                <input type="number" min="0" value={fuelForm.fuelCost} onChange={e => setFuelForm(p => ({ ...p, fuelCost: e.target.value }))} className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kilometers Driven</label>
+                <input type="number" required min="0" value={fuelForm.kmDriven} onChange={e => setFuelForm(p => ({ ...p, kmDriven: e.target.value }))} className={inputClass} />
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button type="button" onClick={() => setFuelTruck(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Cancel</button>
+                <button type="submit" disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700 disabled:opacity-50">
+                  {actionLoading ? 'Saving...' : 'Save Entry'}
                 </button>
               </div>
             </form>

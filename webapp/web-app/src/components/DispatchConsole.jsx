@@ -1,6 +1,56 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import 'leaflet/dist/leaflet.css'
 import { dispatchAPI } from '../services/api'
 import { FiRefreshCw, FiAlertTriangle, FiClock, FiTruck, FiMapPin, FiUser, FiZap } from 'react-icons/fi'
+
+// CRA/webpack doesn't resolve Leaflet's default marker image paths on its
+// own -- without this the pins render as broken images.
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({ iconUrl: markerIcon, shadowUrl: markerShadow })
+
+const DRIVER_STATUS_COLOR = { free: '#16a34a', busy: '#2563eb', offline: '#9ca3af' }
+
+// SRS §5.1: live operations map -- every driver with a known location,
+// their availability/break status, and (if they have one) their current
+// delivery.
+function LiveOpsMap({ drivers }) {
+  const withLocation = drivers.filter(d => typeof d.location?.latitude === 'number' && typeof d.location?.longitude === 'number')
+
+  if (withLocation.length === 0) {
+    return (
+      <div className="h-80 flex items-center justify-center text-sm text-gray-400 bg-gray-50 rounded-lg">
+        No drivers have reported a location yet.
+      </div>
+    )
+  }
+
+  const center = [withLocation[0].location.latitude, withLocation[0].location.longitude]
+
+  return (
+    <MapContainer center={center} zoom={12} style={{ height: '320px', width: '100%', borderRadius: '0.5rem' }}>
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {withLocation.map(d => (
+        <Marker key={d.driverId} position={[d.location.latitude, d.location.longitude]}>
+          <Popup>
+            <div className="text-sm">
+              <p className="font-medium">{d.name}</p>
+              <p style={{ color: DRIVER_STATUS_COLOR[d.driverStatus] || '#6b7280' }} className="capitalize">{d.driverStatus}</p>
+              {d.currentOrder && <p>Order: {d.currentOrder.orderNumber} ({d.currentOrder.status})</p>}
+              {d.truck?.plateNumber && <p className="text-gray-500">Truck: {d.truck.plateNumber}</p>}
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </MapContainer>
+  )
+}
 
 const SECTIONS = [
   { key: 'exception', label: 'Exception', color: 'text-red-700 bg-red-50 border-red-200', icon: FiAlertTriangle },
@@ -97,6 +147,12 @@ const DispatchConsole = () => {
         </button>
       </div>
 
+      {/* Live operations map */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Live Operations Map</h3>
+        <LiveOpsMap drivers={drivers} />
+      </div>
+
       {/* Live drivers out delivering */}
       {busyDrivers.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
@@ -151,6 +207,11 @@ const DispatchConsole = () => {
                           {order.isExpress && (
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
                               <FiZap className="mr-1 h-3 w-3" /> Express
+                            </span>
+                          )}
+                          {order.deviationFlaggedAt && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded-full" title="No progress toward the delivery address in 10+ minutes">
+                              <FiAlertTriangle className="mr-1 h-3 w-3" /> Deviation
                             </span>
                           )}
                         </div>

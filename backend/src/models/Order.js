@@ -204,6 +204,20 @@ const orderSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // SRS §5.5 route-deviation monitoring. No turn-by-turn routing provider
+  // is configured (mobile map.tsx falls back to a straight line without a
+  // real Google Maps key), so this tracks net progress toward the
+  // destination over rolling windows rather than literal path-following --
+  // a driver whose distance-to-destination isn't shrinking is flagged,
+  // regardless of the exact road they're on.
+  deliveryProgress: {
+    lastDistanceKm: { type: Number, default: null },
+    lastCheckedAt: { type: Date, default: null }
+  },
+  deviationFlaggedAt: {
+    type: Date,
+    default: null
+  },
   rating: {
     score: {
       type: Number,

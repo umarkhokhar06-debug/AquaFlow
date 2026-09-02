@@ -1,5 +1,6 @@
 const Truck = require('../models/Truck');
 const User = require('../models/User');
+const FuelLog = require('../models/FuelLog');
 
 class TruckService {
   async createTruck(payload, createdBy) {
@@ -119,6 +120,85 @@ class TruckService {
 
     await truck.save();
     return this.getTruckById(truck._id);
+  }
+
+  // SRS §8.7: one fuel/mileage entry per truck per day.
+  async addFuelLog(truckId, { date, fuelQuantityLiters, fuelCost, kmDriven }, recordedBy) {
+    const truck = await Truck.findById(truckId);
+    if (!truck) {
+      const err = new Error('Truck not found');
+      err.status = 404;
+      throw err;
+    }
+    if (typeof fuelQuantityLiters !== 'number' || fuelQuantityLiters < 0) {
+      const err = new Error('fuelQuantityLiters is required and must be a non-negative number');
+      err.status = 400;
+      throw err;
+    }
+    if (typeof kmDriven !== 'number' || kmDriven < 0) {
+      const err = new Error('kmDriven is required and must be a non-negative number');
+      err.status = 400;
+      throw err;
+    }
+
+    const entryDate = date ? new Date(date) : new Date();
+    entryDate.setHours(0, 0, 0, 0);
+
+    try {
+      return await FuelLog.create({
+        truck: truckId,
+        date: entryDate,
+        fuelQuantityLiters,
+        fuelCost,
+        kmDriven,
+        recordedBy
+      });
+    } catch (error) {
+      if (error.code === 11000) {
+        const err = new Error('A fuel/mileage entry already exists for this truck on this date');
+        err.status = 409;
+        throw err;
+      }
+      throw error;
+    }
+  }
+
+  async getFuelLogs(truckId, { limit = 60 } = {}) {
+    return FuelLog.find({ truck: truckId }).sort({ date: -1 }).limit(limit);
+  }
+
+  // SRS §8.7: average mileage/fuel efficiency and cost/km per truck, with
+  // the lowest-performing truck flagged for investigation.
+  async getFleetMileageSummary() {
+    const trucks = await Truck.find({}).select('plateNumber');
+    const summaries = await Promise.all(trucks.map(async (truck) => {
+      const logs = await FuelLog.find({ truck: truck._id });
+      const totalKm = logs.reduce((sum, l) => sum + l.kmDriven, 0);
+      const totalFuel = logs.reduce((sum, l) => sum + l.fuelQuantityLiters, 0);
+      const totalCost = logs.reduce((sum, l) => sum + (l.fuelCost || 0), 0);
+      const kmPerLiter = totalFuel > 0 ? Math.round((totalKm / totalFuel) * 100) / 100 : null;
+      const costPerKm = totalKm > 0 && totalCost > 0 ? Math.round((totalCost / totalKm) * 100) / 100 : null;
+      return {
+        truckId: truck._id,
+        plateNumber: truck.plateNumber,
+        entryCount: logs.length,
+        totalKm,
+        totalFuel,
+        totalCost,
+        kmPerLiter,
+        costPerKm
+      };
+    }));
+
+    const withMileage = summaries.filter(s => s.kmPerLiter !== null);
+    const lowestPerforming = withMileage.length
+      ? withMileage.reduce((worst, s) => (s.kmPerLiter < worst.kmPerLiter ? s : worst))
+      : null;
+
+    return {
+      trucks: summaries,
+      lowestPerformingTruckId: lowestPerforming?.truckId || null
+    };
   }
 
   // Walks statusHistory and sums how long the truck spent in each status

@@ -4,6 +4,18 @@ const Truck = require('../models/Truck');
 const DispatchLog = require('../models/DispatchLog');
 const driverService = require('./driverService');
 const auditLogService = require('./auditLogService');
+const socketService = require('./socketService');
+const notificationService = require('./notificationService');
+const { canTransition } = require('../constants/orderStatus');
+
+// SRS §4.4 automatic arrival trigger: auto-transition on_the_way -> arrived
+// once the driver's live location is this close to the delivery address.
+const ARRIVAL_RADIUS_KM = 0.1; // 100m
+// SRS §5.5 route deviation: how often to re-check net progress toward the
+// destination, and how much closer the driver must have gotten in that
+// window to count as "still making progress."
+const PROGRESS_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 min
+const PROGRESS_MARGIN_KM = 0.3; // must close at least 300m in that window
 
 const DELAYED_THRESHOLD_MS = 60 * 60 * 1000; // >1hr on the way = delayed (SRS §5.6)
 const EXCEPTION_THRESHOLD_MS = 30 * 60 * 1000; // 30 min unassigned = exception
@@ -54,8 +66,7 @@ class DispatchService {
         queue.new.push(order);
       } else if (
         order.status === 'on_the_way' &&
-        order.deliveryDate &&
-        now - new Date(order.deliveryDate).getTime() > DELAYED_THRESHOLD_MS
+        ((order.deliveryDate && now - new Date(order.deliveryDate).getTime() > DELAYED_THRESHOLD_MS) || order.deviationFlaggedAt)
       ) {
         queue.delayed.push(order);
       } else if (order.driver) {
@@ -70,6 +81,58 @@ class DispatchService {
     queue.exception.sort((a, b) => (b.isExpress ? 1 : 0) - (a.isExpress ? 1 : 0));
 
     return queue;
+  }
+
+  // Called on every driver location ping for whichever order they're
+  // actively delivering (SRS §4.4 automatic arrival, §5.5 route deviation).
+  // No-ops quietly whenever there's nothing to check (order not on_the_way,
+  // or no delivery-address GPS on file) -- this runs on every location
+  // update, so it must never throw or block that request.
+  async checkDriverProgress(orderId, driverLocation) {
+    const order = await Order.findById(orderId).select('status statusHistory deliveryAddress deliveryProgress deviationFlaggedAt driver customer orderNumber');
+    if (!order || order.status !== 'on_the_way') return;
+
+    const destination = order.deliveryAddress;
+    if (typeof destination?.latitude !== 'number' || typeof destination?.longitude !== 'number') return;
+
+    const distanceKm = haversineKm(driverLocation, destination);
+    if (distanceKm === null) return;
+
+    if (distanceKm <= ARRIVAL_RADIUS_KM) {
+      if (canTransition(order.status, 'arrived')) {
+        order.status = 'arrived';
+        order.statusHistory.push({ status: 'arrived', changedAt: new Date() });
+        await order.save();
+        socketService.emitOrderUpdateToCustomer(order.customer, order._id, 'status-update', { status: 'arrived' });
+        socketService.emitOrderStatusUpdate(order._id, 'arrived', 'system');
+        notificationService.createNotification(
+          order.customer,
+          'Driver has arrived',
+          `Your driver has arrived for order ${order.orderNumber}.`,
+          'system_update',
+          { orderId: order._id }
+        ).catch(() => {});
+      }
+      return;
+    }
+
+    const { lastDistanceKm, lastCheckedAt } = order.deliveryProgress || {};
+    const now = Date.now();
+    if (lastDistanceKm == null || !lastCheckedAt || now - new Date(lastCheckedAt).getTime() >= PROGRESS_CHECK_INTERVAL_MS) {
+      const madeProgress = lastDistanceKm == null || lastDistanceKm - distanceKm >= PROGRESS_MARGIN_KM;
+      if (!madeProgress && !order.deviationFlaggedAt) {
+        order.deviationFlaggedAt = new Date();
+        socketService.emitSystemNotification(
+          `${order.orderNumber} hasn't made progress toward the delivery address in the last 10+ minutes -- possible route deviation or stall.`,
+          'warning',
+          'admin-room'
+        );
+      } else if (madeProgress && order.deviationFlaggedAt) {
+        order.deviationFlaggedAt = null; // back on track -- clear the flag
+      }
+      order.deliveryProgress = { lastDistanceKm: distanceKm, lastCheckedAt: new Date() };
+      await order.save();
+    }
   }
 
   // Customer-facing queue position + rough ETA for one order. Position
