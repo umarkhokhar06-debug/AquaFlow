@@ -48,6 +48,13 @@
         {
           "locationWhenInUsePermission": "AabRahat uses your location to set accurate delivery addresses and, for drivers, to share live location during deliveries."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0E93A6"
+        }
       ]
     ],
     "experiments": {

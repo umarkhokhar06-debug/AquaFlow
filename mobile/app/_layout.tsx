@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleService } from '@/utils/scheduleService';
 import { authAPI } from '@/utils/auth';
+import { registerForPushNotificationsAsync } from '@/utils/pushNotifications';
 import ErrorBoundary from '@/app/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
@@ -47,6 +48,7 @@ export default function RootLayout() {
           // token-validity check.
           const response = await authAPI.getProfile(token);
           if (response.success && response.user) {
+            registerForPushNotificationsAsync(token);
             if (response.user.userType === 'driver') {
               router.replace('/(driver)/(tabs)');
             } else if (response.user.userType === 'customer') {

@@ -11,6 +11,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock } from 'lucide-react-native';
 import { authAPI, storage } from '../../utils/auth';
+import { registerForPushNotificationsAsync } from '../../utils/pushNotifications';
 import CustomAlert from '../components/CustomAlert';
 import BrandMark from '@/app/components/graphics/BrandMark';
 import { Button, TextField } from '../components/ui';
@@ -58,6 +59,7 @@ export default function LoginScreen() {
 
       if (response.success && response.token && response.user) {
         await storage.saveUserData(response.token, response.user);
+        registerForPushNotificationsAsync(response.token);
 
         setEmail('');
         setPassword('');

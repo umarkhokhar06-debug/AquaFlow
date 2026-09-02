@@ -17,6 +17,7 @@ import {
 import HeaderComponent from '@/app/components/Header';
 import { storage, User as UserType } from '@/utils/auth';
 import { getMyDevices } from '@/utils/iotAPI';
+import { clearPushToken } from '@/utils/pushNotifications';
 import { colors, radius, spacing, typography } from '@/theme';
 
 export default function AccountScreen() {
@@ -49,6 +50,8 @@ export default function AccountScreen() {
   };
 
   const handleLogout = async () => {
+    const data = await storage.getUserData();
+    if (data?.token) clearPushToken(data.token);
     await storage.clearUserData();
     router.replace('/auth/login');
   };

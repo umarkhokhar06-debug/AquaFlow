@@ -113,6 +113,18 @@ const authController = {
     }
   },
 
+  // Register (or clear) this device's Expo push token
+  updatePushToken: async (req, res) => {
+    try {
+      const { expoPushToken } = req.body;
+      const result = await authService.updatePushToken(req.user.id, expoPushToken);
+      res.status(200).json({ success: true, ...result });
+    } catch (error) {
+      console.error('Update push token error:', error);
+      res.status(500).json({ success: false, message: 'Server error updating push token' });
+    }
+  },
+
   // Change password
   changePassword: async (req, res) => {
     try {

@@ -206,6 +206,21 @@ const authService = {
     }
   },
 
+  // Register (or clear, on logout) this device's Expo push token.
+  // Lightweight and called frequently (on login/app-open), so it's a
+  // dedicated endpoint rather than going through the general profile update.
+  updatePushToken: async (userId, expoPushToken) => {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { expoPushToken: expoPushToken || null },
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      throw new Error('User not found');
+    }
+    return { id: user._id, expoPushToken: user.expoPushToken };
+  },
+
   // Change password
   changePassword: async (userId, currentPassword, newPassword) => {
     try {
