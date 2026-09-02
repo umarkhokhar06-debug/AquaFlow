@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supportAPI } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
-import { FiSearch, FiRefreshCw, FiMessageSquare, FiCheckCircle, FiTool, FiCpu, FiX } from 'react-icons/fi'
+import { FiSearch, FiRefreshCw, FiMessageSquare, FiCheckCircle, FiTool, FiCpu, FiX, FiUser, FiMapPin, FiDroplet, FiPackage } from 'react-icons/fi'
 
 const STATUS_COLORS = {
   open: 'bg-blue-100 text-blue-800',
@@ -31,6 +31,26 @@ const SupportTickets = () => {
   const [aiGuidance, setAiGuidance] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [showAiPanel, setShowAiPanel] = useState(false)
+
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [customerProfile, setCustomerProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState('')
+
+  const openCustomerProfile = async (customerId) => {
+    setShowProfileModal(true)
+    setProfileLoading(true)
+    setProfileError('')
+    setCustomerProfile(null)
+    try {
+      const res = await supportAPI.getCustomerProfile(customerId)
+      setCustomerProfile(res.data.profile)
+    } catch (err) {
+      setProfileError(err.response?.data?.message || 'Failed to load customer profile')
+    } finally {
+      setProfileLoading(false)
+    }
+  }
 
   const fetchTickets = useCallback(async () => {
     setLoading(true)
@@ -184,7 +204,11 @@ const SupportTickets = () => {
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <div>
                 <h5 className="font-medium text-gray-700 mb-1">Customers ({searchResults.customers.length})</h5>
-                {searchResults.customers.map(c => <div key={c._id} className="text-gray-600 py-0.5">{c.name} - {c.email}</div>)}
+                {searchResults.customers.map(c => (
+                  <button key={c._id} onClick={() => openCustomerProfile(c._id)} className="block text-blue-600 hover:underline py-0.5 text-left">
+                    {c.name} - {c.email}
+                  </button>
+                ))}
               </div>
               <div>
                 <h5 className="font-medium text-gray-700 mb-1">Devices ({searchResults.devices.length})</h5>
@@ -356,6 +380,71 @@ const SupportTickets = () => {
                     <p className="text-gray-500 text-xs">{aiGuidance.reasoning}</p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Customer profile drill-in */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-6 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center"><FiUser className="mr-2 text-blue-600" />Customer Profile</h3>
+              <button onClick={() => { setShowProfileModal(false); setCustomerProfile(null) }} className="text-gray-400 hover:text-gray-600"><FiX className="w-6 h-6" /></button>
+            </div>
+
+            {profileLoading && <div className="py-8 text-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div></div>}
+            {profileError && <p className="text-sm text-red-600">{profileError}</p>}
+
+            {customerProfile && !profileLoading && (
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-md p-4">
+                  <p className="font-medium text-gray-900">{customerProfile.customer.fullName || customerProfile.customer.name}</p>
+                  <p className="text-sm text-gray-600">{customerProfile.customer.email}</p>
+                  {customerProfile.customer.phoneNumber && <p className="text-sm text-gray-600">{customerProfile.customer.phoneNumber}</p>}
+                  <p className="text-sm text-gray-500 flex items-center mt-1"><FiMapPin className="mr-1" />{customerProfile.customer.address || 'No address on file'}{customerProfile.customer.houseNumber ? `, House ${customerProfile.customer.houseNumber}` : ''}</p>
+                  <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded-full ${customerProfile.customer.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{customerProfile.customer.status}</span>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center"><FiDroplet className="mr-2" />Devices ({customerProfile.devices.length})</h4>
+                  {customerProfile.devices.length === 0 && <p className="text-sm text-gray-400">No devices linked.</p>}
+                  <div className="space-y-2">
+                    {customerProfile.devices.map(d => (
+                      <div key={d.deviceId} className="border rounded-md p-3 text-sm flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-900">{d.name} <span className="text-gray-400 font-normal">({d.deviceId})</span></p>
+                          <p className="text-gray-500">{d.houseLabel} &middot; {d.isOwner ? 'Owner' : 'Tenant'}{d.tenants?.length ? ` &middot; ${d.tenants.length} member(s)` : ''}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">{d.tankLevel !== null ? `${Math.round(d.tankLevel)}%` : 'No reading'}</p>
+                          <p className="text-xs text-gray-400">{d.status}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2 flex items-center"><FiPackage className="mr-2" />Recent Orders ({customerProfile.recentOrders.length})</h4>
+                  {customerProfile.recentOrders.length === 0 && <p className="text-sm text-gray-400">No orders yet.</p>}
+                  <div className="space-y-2">
+                    {customerProfile.recentOrders.map(o => (
+                      <div key={o.id} className="border rounded-md p-3 text-sm flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-900">{o.orderNumber}</p>
+                          <p className="text-gray-500">{new Date(o.orderDate).toLocaleDateString()} &middot; Rs {o.totalAmount}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900 capitalize">{o.status.replace(/_/g, ' ')}</p>
+                          {o.position !== null && <p className="text-xs text-gray-400">#{o.position} in queue &middot; ~{o.etaMinutes}min</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -21,6 +21,7 @@ router.post('/tickets/:id/messages', supportController.addMessage);
 router.get('/tickets', requireAnyRole([...STAFF, 'technician']), supportController.getAllTickets);
 router.get('/stats', requireAnyRole(STAFF), supportController.getStats);
 router.get('/search', requireAnyRole(STAFF), supportController.search);
+router.get('/customers/:customerId/profile', requireAnyRole(STAFF), supportController.getCustomerProfile);
 router.put('/tickets/:id/status', requireAnyRole(STAFF), supportController.updateStatus);
 router.put('/tickets/:id/resolve', requireAnyRole(STAFF), supportController.resolveTicket);
 router.put('/tickets/:id/assign', requireAnyRole(STAFF), supportController.assignTicket);

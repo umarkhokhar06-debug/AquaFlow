@@ -125,6 +125,15 @@ class SupportController {
     }
   }
 
+  async getCustomerProfile(req, res) {
+    try {
+      const profile = await searchService.getCustomerProfile(req.params.customerId);
+      res.status(200).json({ success: true, profile });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to fetch customer profile' });
+    }
+  }
+
   async troubleshoot(req, res) {
     try {
       const { context } = req.body;

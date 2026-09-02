@@ -349,6 +349,7 @@ export const supportAPI = {
   getStats: () => api.get('/support/stats'),
   getFAQs: () => api.get('/support/faqs'),
   search: (q) => api.get(`/support/search?q=${encodeURIComponent(q)}`),
+  getCustomerProfile: (customerId) => api.get(`/support/customers/${customerId}/profile`),
   troubleshoot: (context) => api.post('/support/ai/troubleshoot', { context }),
   parseOrderIntent: (description) => api.post('/support/ai/order-intent', { description }),
   placeOrderForCustomer: (data) => api.post('/support/ai/place-order', data)
