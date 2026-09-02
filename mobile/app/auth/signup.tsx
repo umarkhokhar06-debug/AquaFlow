@@ -7,11 +7,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Mail, Home, MapPin, User, Lock, CreditCard, Smartphone, Banknote, Check } from 'lucide-react-native';
-import { authAPI, storage } from '../../utils/auth';
+import { ArrowLeft, Mail, Home, MapPin, User, Lock, CreditCard, Smartphone, Banknote, Check, Phone, ShieldCheck } from 'lucide-react-native';
+import { authAPI, storage, PhoneVerificationNotConfiguredError } from '../../utils/auth';
 import CustomAlert from '../components/CustomAlert';
 import { Button, TextField, Card } from '../components/ui';
 import { colors, radius, spacing, typography } from '@/theme';
@@ -39,10 +42,18 @@ export default function SignupScreen() {
     houseNumber: '',
     portion: 'upper' as 'upper' | 'lower',
     address: '',
+    phoneNumber: '',
   });
   const [paymentPreference, setPaymentPreference] = useState<PaymentPreference>('cash');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // Additive phone/OTP verification -- optional, never blocks signup.
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
@@ -56,6 +67,45 @@ export default function SignupScreen() {
 
   const updateFormData = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'phoneNumber') setPhoneVerified(false);
+  };
+
+  const handleSendOtp = async () => {
+    if (!formData.phoneNumber.trim()) {
+      showError('Enter a phone number first');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      await authAPI.sendPhoneOtp(formData.phoneNumber.trim());
+      setOtpCode('');
+      setOtpModalVisible(true);
+    } catch (error) {
+      if (error instanceof PhoneVerificationNotConfiguredError) {
+        showError('Phone verification isn’t available yet. You can still create your account without it.');
+      } else {
+        showError(error instanceof Error ? error.message : 'Failed to send verification code');
+      }
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleConfirmOtp = async () => {
+    if (!otpCode.trim()) {
+      showError('Enter the code we sent you');
+      return;
+    }
+    setVerifyingOtp(true);
+    try {
+      await authAPI.verifyPhoneOtp(formData.phoneNumber.trim(), otpCode.trim());
+      setPhoneVerified(true);
+      setOtpModalVisible(false);
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to verify code');
+    } finally {
+      setVerifyingOtp(false);
+    }
   };
 
   const goToAddressStep = () => {
@@ -103,6 +153,7 @@ export default function SignupScreen() {
         houseNumber: formData.houseNumber.trim(),
         portion: formData.portion,
         address: formData.address.trim(),
+        ...(formData.phoneNumber.trim() && { phoneNumber: formData.phoneNumber.trim() }),
       };
 
       const response = await authAPI.register(requestData);
@@ -124,7 +175,9 @@ export default function SignupScreen() {
           houseNumber: '',
           portion: 'upper',
           address: '',
+          phoneNumber: '',
         });
+        setPhoneVerified(false);
         setStep('account');
 
         setTimeout(() => {
@@ -230,6 +283,33 @@ export default function SignupScreen() {
                   autoCorrect={false}
                 />
 
+                <TextField
+                  icon={Phone}
+                  label="Phone Number (optional)"
+                  labelColor="rgba(255, 255, 255, 0.85)"
+                  placeholder="e.g. +923001234567"
+                  value={formData.phoneNumber}
+                  onChangeText={(value) => updateFormData('phoneNumber', value)}
+                  keyboardType="phone-pad"
+                />
+
+                {formData.phoneNumber.trim() !== '' && (
+                  phoneVerified ? (
+                    <View style={styles.phoneVerifiedRow}>
+                      <ShieldCheck size={16} color={colors.neutral[0]} />
+                      <Text style={styles.phoneVerifiedText}>Phone verified</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.verifyPhoneButton} onPress={handleSendOtp} disabled={sendingOtp}>
+                      {sendingOtp ? (
+                        <ActivityIndicator size="small" color={colors.neutral[0]} />
+                      ) : (
+                        <Text style={styles.verifyPhoneText}>Verify phone number</Text>
+                      )}
+                    </TouchableOpacity>
+                  )
+                )}
+
                 <Button label="Continue" onPress={goToAddressStep} variant="secondary" size="lg" style={styles.signupButton} />
               </>
             )}
@@ -326,6 +406,32 @@ export default function SignupScreen() {
         message={alertMessage}
         onClose={() => setShowAlert(false)}
       />
+
+      <Modal visible={otpModalVisible} transparent animationType="fade" onRequestClose={() => setOtpModalVisible(false)}>
+        <View style={styles.otpOverlay}>
+          <View style={styles.otpCard}>
+            <Text style={styles.otpTitle}>Verify your phone</Text>
+            <Text style={styles.otpSubtitle}>Enter the code we sent to {formData.phoneNumber}.</Text>
+            <TextInput
+              style={styles.otpInput}
+              value={otpCode}
+              onChangeText={setOtpCode}
+              placeholder="6-digit code"
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+            />
+            <View style={styles.otpActions}>
+              <TouchableOpacity style={styles.otpCancelButton} onPress={() => setOtpModalVisible(false)}>
+                <Text style={styles.otpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.otpConfirmButton} onPress={handleConfirmOtp} disabled={verifyingOtp}>
+                {verifyingOtp ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.otpConfirmText}>Confirm</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -463,5 +569,98 @@ const styles = StyleSheet.create({
     fontFamily: typography.body.fontFamily,
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.85)',
+  },
+  verifyPhoneButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    marginTop: -spacing.sm,
+  },
+  verifyPhoneText: {
+    fontFamily: typography.bodyMed.fontFamily,
+    fontSize: 13,
+    color: colors.neutral[0],
+  },
+  phoneVerifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+    marginTop: -spacing.sm,
+  },
+  phoneVerifiedText: {
+    fontFamily: typography.bodyMed.fontFamily,
+    fontSize: 13,
+    color: colors.neutral[0],
+  },
+  otpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  otpCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+  },
+  otpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  otpSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 20,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  otpActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  otpCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  otpCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  otpConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#087EA4',
+  },
+  otpConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

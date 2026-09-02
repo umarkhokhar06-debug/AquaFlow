@@ -63,6 +63,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Set at registration time when the signup form's optional phone/OTP step
+  // was completed (see otpService.isPhoneRecentlyVerified). Never required
+  // -- email/password accounts with no phone stay unverified and that's fine.
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
   // Customer-specific fields
   fullName: {
     type: String,

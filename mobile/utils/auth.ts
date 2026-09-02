@@ -41,7 +41,12 @@ export interface RegisterRequest {
   houseNumber?: string;
   portion?: 'upper' | 'lower';
   address?: string;
+  phoneNumber?: string;
 }
+
+// Thrown when the server has no Twilio credentials configured -- phone/OTP
+// signup verification is built but inert until real credentials are added.
+export class PhoneVerificationNotConfiguredError extends Error {}
 
 // API functions
 export const authAPI = {
@@ -72,6 +77,35 @@ export const authAPI = {
       console.error('Register error:', error);
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || 'Registration failed');
+      }
+      throw new Error('Network error');
+    }
+  },
+
+  // Additive phone verification (optional signup step) -- see
+  // authService.registerUser's phoneVerified handling on the backend.
+  async sendPhoneOtp(phoneNumber: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await axios.post(`${config.authUrl}/phone/send-otp`, { phoneNumber });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 503) {
+          throw new PhoneVerificationNotConfiguredError(error.response?.data?.message || 'Phone verification is not available yet');
+        }
+        throw new Error(error.response?.data?.message || 'Failed to send verification code');
+      }
+      throw new Error('Network error');
+    }
+  },
+
+  async verifyPhoneOtp(phoneNumber: string, code: string): Promise<{ success: boolean; verified: boolean }> {
+    try {
+      const response = await axios.post(`${config.authUrl}/phone/verify-otp`, { phoneNumber, code });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to verify code');
       }
       throw new Error('Network error');
     }

@@ -3,6 +3,7 @@ const tokenService = require('./tokenService');
 const bcrypt = require('bcryptjs');
 const { STAFF_ROLES } = require('../constants/roles');
 const auditLogService = require('./auditLogService');
+const otpService = require('./otpService');
 
 const authService = {
   // Register user with user type support
@@ -31,12 +32,21 @@ const authService = {
         }
       }
 
+      // Additive phone verification (SRS OTP enhancement): if the signup
+      // form completed the optional phone/OTP step, carry the verified flag
+      // onto the new account. Untouched when no phoneNumber was submitted --
+      // existing email/password signup behaves exactly as before.
+      const phoneVerified = additionalFields.phoneNumber
+        ? await otpService.isPhoneRecentlyVerified(additionalFields.phoneNumber)
+        : false;
+
       // Create user object
       const userObject = {
         userType,
         name,
         email,
         password,
+        phoneVerified,
         ...(userType === 'customer' && additionalFields)
       };
 
@@ -58,6 +68,7 @@ const authService = {
           portion: user.portion,
           address: user.address
         }),
+        phoneVerified: user.phoneVerified,
         createdAt: user.createdAt
       };
 
