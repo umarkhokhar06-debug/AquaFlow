@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - 'mobile/**'
+  workflow_dispatch: {}
 
 jobs:
   update:
