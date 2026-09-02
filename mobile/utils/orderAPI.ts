@@ -285,6 +285,34 @@ export const orderAPI = {
     }
   },
 
+  // Rate a delivered order's driver
+  async rateOrder(orderId: string, score: number, comment?: string): Promise<{ score: number; comment?: string; ratedAt: string }> {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await axios.post<{ success: boolean; message: string; rating: { score: number; comment?: string; ratedAt: string } }>(
+        `${config.apiUrl}/orders/${orderId}/rating`,
+        { score, comment },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to submit rating');
+      }
+
+      return response.data.rating;
+    } catch (error) {
+      console.error('Error rating order:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Failed to submit rating');
+      }
+      throw new Error('Network error');
+    }
+  },
+
   // Get order statistics (admin only)
   async getOrderStatistics(): Promise<OrderStatistics> {
     try {

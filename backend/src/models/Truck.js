@@ -39,6 +39,15 @@ const truckSchema = new mongoose.Schema({
     type: Date
   },
   maintenanceHistory: [{
+    // SRS §8.8: "track oil/tuning and major repair categories separately"
+    // and "use maintenance records when determining the driver's monthly
+    // maintenance-care bonus" (§4.8) -- a major repair suppresses that
+    // driver's bonus for the month it falls in.
+    category: {
+      type: String,
+      enum: ['oil_tuning', 'major_repair'],
+      required: true
+    },
     description: {
       type: String,
       required: true,

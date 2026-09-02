@@ -8,22 +8,24 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { 
-  ArrowLeft, 
-  Clock, 
-  CircleCheck as CheckCircle, 
-  Truck, 
-  Droplets, 
-  Calendar, 
-  MapPin, 
+  ArrowLeft,
+  Clock,
+  CircleCheck as CheckCircle,
+  Truck,
+  Droplets,
+  Calendar,
+  MapPin,
   User,
   Phone,
   CreditCard,
   FileText,
-  X
+  X,
+  Star
 } from 'lucide-react-native';
 import { globalstyles } from '@/app/commans/style';
 import { orderAPI } from '@/utils/orderAPI';
@@ -36,6 +38,9 @@ export default function OrderDetailsScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [selectedStars, setSelectedStars] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -83,6 +88,20 @@ export default function OrderDetailsScreen() {
         }
       ]
     );
+  };
+
+  const handleSubmitRating = async () => {
+    if (!order || selectedStars === 0) return;
+    setSubmittingRating(true);
+    try {
+      const rating = await orderAPI.rateOrder(getOrderId(order), selectedStars, ratingComment.trim() || undefined);
+      setOrder({ ...order, rating });
+      Alert.alert('Thank you!', 'Your rating has been submitted.');
+    } catch (error) {
+      Alert.alert('Could not submit rating', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
   const getStatusColor = (status: OrderStatus) => {
@@ -234,6 +253,54 @@ export default function OrderDetailsScreen() {
             {order.status === 'cancelled' && 'Your order has been cancelled'}
           </Text>
         </View>
+
+        {/* Rating prompt */}
+        {order.status === 'delivered' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Rate your delivery</Text>
+            {order.rating?.score ? (
+              <View style={styles.ratingSubmittedCard}>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      size={22}
+                      color="#F59E0B"
+                      fill={n <= order.rating!.score ? '#F59E0B' : 'transparent'}
+                    />
+                  ))}
+                </View>
+                {order.rating.comment ? <Text style={styles.ratingCommentText}>"{order.rating.comment}"</Text> : null}
+              </View>
+            ) : (
+              <View style={styles.ratingCard}>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <TouchableOpacity key={n} onPress={() => setSelectedStars(n)} hitSlop={6}>
+                      <Star size={30} color="#F59E0B" fill={n <= selectedStars ? '#F59E0B' : 'transparent'} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {selectedStars > 0 && (
+                  <TextInput
+                    style={styles.ratingCommentInput}
+                    placeholder="Add a comment (optional)"
+                    placeholderTextColor="#9CA3AF"
+                    value={ratingComment}
+                    onChangeText={setRatingComment}
+                  />
+                )}
+                <TouchableOpacity
+                  style={[styles.ratingSubmitButton, selectedStars === 0 && styles.ratingSubmitButtonDisabled]}
+                  onPress={handleSubmitRating}
+                  disabled={selectedStars === 0 || submittingRating}
+                >
+                  <Text style={styles.ratingSubmitText}>{submittingRating ? 'Submitting...' : 'Submit Rating'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Order Items */}
         <View style={styles.section}>
@@ -475,6 +542,54 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
     marginBottom: 12,
+  },
+  ratingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  ratingSubmittedCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  starRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  ratingCommentText: {
+    fontSize: 13,
+    fontFamily: 'Sora-Regular',
+    color: '#6B7280',
+    fontStyle: 'italic',
+  },
+  ratingCommentInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#1F2937',
+    marginBottom: 14,
+  },
+  ratingSubmitButton: {
+    backgroundColor: '#087EA4',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  ratingSubmitButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
+  ratingSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Sora-SemiBold',
   },
   itemCard: {
     backgroundColor: '#FFFFFF',

@@ -24,6 +24,7 @@ const supportRoutes = require('./routes/support');
 const systemConfigRoutes = require('./routes/systemConfig');
 const installationRoutes = require('./routes/installations');
 const dailyClosingRoutes = require('./routes/dailyClosings');
+const driverBonusRoutes = require('./routes/driverBonuses');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/config', systemConfigRoutes);
 app.use('/api/installations', installationRoutes);
 app.use('/api/daily-closings', dailyClosingRoutes);
+app.use('/api/driver-bonuses', driverBonusRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

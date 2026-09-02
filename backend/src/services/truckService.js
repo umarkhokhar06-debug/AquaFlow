@@ -90,7 +90,7 @@ class TruckService {
     return this.getTruckById(truck._id);
   }
 
-  async addMaintenanceRecord(truckId, { description, cost, performedAt }, recordedBy) {
+  async addMaintenanceRecord(truckId, { category, description, cost, performedAt }, recordedBy) {
     const truck = await Truck.findById(truckId);
     if (!truck) {
       const err = new Error('Truck not found');
@@ -103,8 +103,14 @@ class TruckService {
       err.status = 400;
       throw err;
     }
+    if (!['oil_tuning', 'major_repair'].includes(category)) {
+      const err = new Error('category must be oil_tuning or major_repair');
+      err.status = 400;
+      throw err;
+    }
 
     truck.maintenanceHistory.push({
+      category,
       description,
       cost,
       performedAt: performedAt || new Date(),

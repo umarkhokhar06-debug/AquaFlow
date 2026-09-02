@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { driverManagementAPI, orderManagementAPI } from '../services/api'
+import { driverManagementAPI, orderManagementAPI, driverBonusAPI } from '../services/api'
 import { useSocket } from '../hooks/useSocket'
 import { useAuth } from '../hooks/useAuth'
 import RealtimeIndicator from './RealtimeIndicator'
@@ -40,6 +40,11 @@ const DriverManagement = () => {
   })
   const [selectedDriver, setSelectedDriver] = useState(null)
   const [showDriverModal, setShowDriverModal] = useState(false)
+  const [bonusSummary, setBonusSummary] = useState(null)
+  const [bonusLoading, setBonusLoading] = useState(false)
+  const [bonusAwarding, setBonusAwarding] = useState(false)
+  const now = new Date()
+  const [bonusPeriod, setBonusPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 })
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [showQueueModal, setShowQueueModal] = useState(false)
@@ -216,6 +221,31 @@ const DriverManagement = () => {
   const openDriverModal = (driver) => {
     setSelectedDriver(driver)
     setShowDriverModal(true)
+    setBonusSummary(null)
+  }
+
+  const fetchBonusPreview = async (driverId) => {
+    setBonusLoading(true)
+    try {
+      const res = await driverBonusAPI.preview(driverId, bonusPeriod.year, bonusPeriod.month)
+      setBonusSummary(res.data.summary)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to load bonus preview')
+    } finally {
+      setBonusLoading(false)
+    }
+  }
+
+  const handleAwardBonuses = async (driverId) => {
+    setBonusAwarding(true)
+    try {
+      await driverBonusAPI.award(driverId, bonusPeriod.year, bonusPeriod.month)
+      await fetchBonusPreview(driverId)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to award bonuses')
+    } finally {
+      setBonusAwarding(false)
+    }
   }
 
   const openStatusModal = (driver) => {
@@ -385,7 +415,7 @@ const DriverManagement = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Current Location</label>
-                  {selectedDriver.location ? (
+                  {selectedDriver.location?.latitude != null && selectedDriver.location?.longitude != null ? (
                     <div className="mt-1">
                       <p className="text-sm text-gray-900">
                         {selectedDriver.location.latitude.toFixed(6)}, {selectedDriver.location.longitude.toFixed(6)}
@@ -458,6 +488,75 @@ const DriverManagement = () => {
               </div>
             )}
             
+            {/* Monthly Bonuses (SRS §4.7-4.8) */}
+            <div className="mt-6 border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-md font-medium text-gray-900">Monthly Bonuses</h4>
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={bonusPeriod.month}
+                    onChange={e => setBonusPeriod(p => ({ ...p, month: Number(e.target.value) }))}
+                    className="border-gray-300 rounded-md text-sm"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('default', { month: 'long' })}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={bonusPeriod.year}
+                    onChange={e => setBonusPeriod(p => ({ ...p, year: Number(e.target.value) }))}
+                    className="border-gray-300 rounded-md text-sm"
+                  >
+                    {[bonusPeriod.year - 1, bonusPeriod.year, bonusPeriod.year + 1].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => fetchBonusPreview(selectedDriver.id)}
+                    disabled={bonusLoading}
+                    className="px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    {bonusLoading ? 'Loading...' : 'Preview'}
+                  </button>
+                </div>
+              </div>
+
+              {bonusSummary && (
+                <div className="space-y-2">
+                  {[
+                    { key: 'deliveryTier', label: 'Per-delivery tiering' },
+                    { key: 'punctuality', label: 'Punctuality' },
+                    { key: 'rating', label: 'No negative reviews' },
+                    { key: 'maintenance', label: 'Maintenance-care' }
+                  ].map(({ key, label }) => {
+                    const b = bonusSummary[key]
+                    return (
+                      <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm">
+                        <span className="text-gray-700">{label}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-900 font-medium">Rs {b.amount.toLocaleString()}</span>
+                          {b.awarded ? (
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">Awarded</span>
+                          ) : b.eligible ? (
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">Eligible</span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500">Not eligible</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <button
+                    onClick={() => handleAwardBonuses(selectedDriver.id)}
+                    disabled={bonusAwarding}
+                    className="w-full mt-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {bonusAwarding ? 'Awarding...' : 'Award Eligible Bonuses'}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end space-x-2 mt-6">
               <button
                 onClick={() => setShowDriverModal(false)}

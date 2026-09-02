@@ -322,6 +322,16 @@ export const installationAPI = {
   assignInstaller: (id, installerId) => api.put(`/installations/${id}/assign`, { installerId })
 }
 
+// Driver Monthly Bonuses (Admin only)
+export const driverBonusAPI = {
+  preview: (driverId, year, month) => api.get(`/driver-bonuses/${driverId}/preview?year=${year}&month=${month}`),
+  award: (driverId, year, month) => api.post('/driver-bonuses/award', { driverId, year, month }),
+  getAll: (params = {}) => {
+    const q = new URLSearchParams(params)
+    return api.get(`/driver-bonuses?${q.toString()}`)
+  }
+}
+
 // Daily Closings (Admin/Dispatcher reconciliation)
 export const dailyClosingAPI = {
   getAll: (status) => api.get(`/daily-closings${status ? `?status=${status}` : ''}`),

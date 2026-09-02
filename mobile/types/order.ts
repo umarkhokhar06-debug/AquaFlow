@@ -102,6 +102,7 @@ export interface Order {
   deliveryDate?: string | { $date: string } | null;
   deliveredAt?: string | { $date: string } | null;
   driver?: Driver | null;
+  rating?: { score: number; comment?: string; ratedAt: string | { $date: string } } | null;
   notes?: string;
   createdAt: string | { $date: string };
   updatedAt: string | { $date: string };

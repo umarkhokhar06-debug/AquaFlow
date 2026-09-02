@@ -19,7 +19,7 @@ const FleetManagement = () => {
   const [assigningTruck, setAssigningTruck] = useState(null)
   const [maintenanceTruck, setMaintenanceTruck] = useState(null)
   const [form, setForm] = useState({ plateNumber: '', capacity: '', registrationNumber: '', registrationExpiry: '', insurancePolicyNumber: '', insuranceExpiry: '' })
-  const [maintenanceForm, setMaintenanceForm] = useState({ description: '', cost: '' })
+  const [maintenanceForm, setMaintenanceForm] = useState({ category: 'oil_tuning', description: '', cost: '' })
   const [actionLoading, setActionLoading] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -98,11 +98,12 @@ const FleetManagement = () => {
     setActionLoading(true)
     try {
       await truckAPI.addMaintenanceRecord(maintenanceTruck._id, {
+        category: maintenanceForm.category,
         description: maintenanceForm.description,
         cost: maintenanceForm.cost ? Number(maintenanceForm.cost) : undefined
       })
       setMaintenanceTruck(null)
-      setMaintenanceForm({ description: '', cost: '' })
+      setMaintenanceForm({ category: 'oil_tuning', description: '', cost: '' })
       fetchData()
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to add maintenance record')
@@ -269,6 +270,16 @@ const FleetManagement = () => {
           <div className="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-md bg-white">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Add Maintenance Record: {maintenanceTruck.plateNumber}</h3>
             <form onSubmit={handleAddMaintenance} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Category</label>
+                <select value={maintenanceForm.category} onChange={e => setMaintenanceForm(p => ({ ...p, category: e.target.value }))} className={inputClass}>
+                  <option value="oil_tuning">Oil / Tuning</option>
+                  <option value="major_repair">Major Repair</option>
+                </select>
+                {maintenanceForm.category === 'major_repair' && (
+                  <p className="text-xs text-amber-600 mt-1">A major repair suppresses this driver's maintenance-care bonus for the month.</p>
+                )}
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>
                 <textarea required rows={3} value={maintenanceForm.description} onChange={e => setMaintenanceForm(p => ({ ...p, description: e.target.value }))} className={inputClass} />

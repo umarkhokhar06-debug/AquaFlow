@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { ArrowLeft, DollarSign, Calendar, TrendingUp, Package, Filter } from 'lucide-react-native';
 import { driverAPI, Earnings, EarningsSummary } from '../../utils/driverAPI';
+import { getMyDriverBonuses, DriverBonus, BONUS_TYPE_LABEL } from '../../utils/driverBonusAPI';
 
 interface EarningsFilter {
   year?: number;
@@ -32,9 +33,11 @@ export default function EarningsScreen() {
   });
   const [filter, setFilter] = useState<EarningsFilter>({});
   const [showFilter, setShowFilter] = useState(false);
+  const [bonuses, setBonuses] = useState<DriverBonus[]>([]);
 
   useEffect(() => {
     loadEarnings();
+    getMyDriverBonuses().then(setBonuses).catch((err) => console.error('Error loading bonuses:', err));
   }, [filter]);
 
   const loadEarnings = async () => {
@@ -212,6 +215,22 @@ export default function EarningsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Monthly Bonuses */}
+        {bonuses.length > 0 && (
+          <View style={styles.paymentStatusContainer}>
+            <Text style={styles.sectionTitle}>Monthly Bonuses</Text>
+            {bonuses.map((b) => (
+              <View key={b._id} style={styles.bonusRow}>
+                <View>
+                  <Text style={styles.bonusType}>{BONUS_TYPE_LABEL[b.type]}</Text>
+                  <Text style={styles.bonusPeriod}>{new Date(b.year, b.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
+                </View>
+                <Text style={styles.bonusAmount}>{formatCurrency(b.amount)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Earnings History */}
         <View style={styles.historyContainer}>
@@ -395,6 +414,29 @@ const styles = StyleSheet.create({
   paymentValue: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  bonusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  bonusType: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  bonusPeriod: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  bonusAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#10B981',
   },
   historyContainer: {
     backgroundColor: '#FFFFFF',
