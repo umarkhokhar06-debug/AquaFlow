@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const Payment = require('../models/Payment');
 const Order = require('../models/Order');
+const User = require('../models/User');
 const notificationService = require('./notificationService');
 const socketService = require('./socketService');
 
@@ -159,6 +160,76 @@ class PaymentService {
 
   async getPaymentForOrder(orderId) {
     return Payment.findOne({ order: orderId }).sort({ createdAt: -1 });
+  }
+
+  // ============ Saved payment methods ============
+  // A Stripe Customer is created lazily, on the first time a user actually
+  // tries to save a card -- not at signup, where most users never will.
+  async _getOrCreateStripeCustomer(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      const err = new Error('User not found');
+      err.status = 404;
+      throw err;
+    }
+    if (user.stripeCustomerId) return user.stripeCustomerId;
+
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.fullName || user.name,
+      metadata: { userId: user._id.toString() }
+    });
+    user.stripeCustomerId = customer.id;
+    await user.save();
+    return customer.id;
+  }
+
+  // Starts the flow for saving a new card: the mobile app confirms this
+  // SetupIntent client-side with Stripe's SDK, which attaches the card to
+  // the customer without charging anything.
+  async createSetupIntent(userId) {
+    requireStripeConfigured();
+    const customerId = await this._getOrCreateStripeCustomer(userId);
+    const setupIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ['card']
+    });
+    return { clientSecret: setupIntent.client_secret };
+  }
+
+  async listPaymentMethods(userId) {
+    requireStripeConfigured();
+    const user = await User.findById(userId);
+    if (!user?.stripeCustomerId) return [];
+
+    const methods = await stripe.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card' });
+    return methods.data.map(m => ({
+      id: m.id,
+      brand: m.card.brand,
+      last4: m.card.last4,
+      expMonth: m.card.exp_month,
+      expYear: m.card.exp_year
+    }));
+  }
+
+  async detachPaymentMethod(userId, paymentMethodId) {
+    requireStripeConfigured();
+    const user = await User.findById(userId);
+    if (!user?.stripeCustomerId) {
+      const err = new Error('No saved payment methods for this account');
+      err.status = 404;
+      throw err;
+    }
+
+    const method = await stripe.paymentMethods.retrieve(paymentMethodId);
+    if (method.customer !== user.stripeCustomerId) {
+      const err = new Error('This payment method does not belong to your account');
+      err.status = 403;
+      throw err;
+    }
+
+    await stripe.paymentMethods.detach(paymentMethodId);
+    return { success: true };
   }
 
   async getTransactions({ from, to, status, page = 1, limit = 50 } = {}) {

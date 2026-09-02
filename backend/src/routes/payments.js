@@ -12,6 +12,13 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/transactions', requireAdmin, paymentController.getTransactions);
+
+// Saved payment methods -- must come before '/:orderId' so 'methods' isn't
+// parsed as an orderId.
+router.post('/methods/setup-intent', paymentController.createSetupIntent);
+router.get('/methods', paymentController.listPaymentMethods);
+router.delete('/methods/:paymentMethodId', paymentController.detachPaymentMethod);
+
 router.get('/:orderId', paymentController.getPaymentStatus);
 router.post('/:orderId/reconcile', paymentController.reconcile);
 router.post('/:orderId/create-intent', paymentController.createIntent);

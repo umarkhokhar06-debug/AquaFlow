@@ -8,15 +8,59 @@ import {
   StatusBar,
   Alert,
   Linking,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Phone, Mail, MessageCircle, CircleHelp as HelpCircle, FileText, Star, ChevronRight, Clock, MapPin, Users } from 'lucide-react-native';
+import { supportAPI, SupportTicket } from '@/utils/supportAPI';
+
+const TICKET_CATEGORIES: { value: SupportTicket['category']; label: string }[] = [
+  { value: 'order_issue', label: 'Order Issue' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'account', label: 'Account' },
+  { value: 'technical', label: 'Technical' },
+  { value: 'general', label: 'General' },
+];
+
+const TICKET_PRIORITIES: { value: SupportTicket['priority']; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
 
 export default function HelpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+  const [showTicketForm, setShowTicketForm] = useState(false);
+  const [ticketForm, setTicketForm] = useState<SupportTicket>({
+    subject: '',
+    description: '',
+    category: 'general',
+    priority: 'medium',
+  });
+  const [submittingTicket, setSubmittingTicket] = useState(false);
+
+  const handleSubmitTicket = async () => {
+    if (!ticketForm.subject.trim() || !ticketForm.description.trim()) {
+      Alert.alert('Missing Info', 'Please fill in a subject and description.');
+      return;
+    }
+    setSubmittingTicket(true);
+    try {
+      await supportAPI.createTicket(ticketForm);
+      Alert.alert('Ticket Submitted', 'Our support team will get back to you soon.');
+      setShowTicketForm(false);
+      setTicketForm({ subject: '', description: '', category: 'general', priority: 'medium' });
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to submit ticket');
+    } finally {
+      setSubmittingTicket(false);
+    }
+  };
 
   const contactMethods = [
     {
@@ -37,10 +81,10 @@ export default function HelpScreen() {
     },
     {
       id: '3',
-      title: 'Live Chat',
-      subtitle: 'Chat with our team',
+      title: 'Submit a Ticket',
+      subtitle: 'Message our support team',
       icon: <MessageCircle size={20} color="#F59E0B" />,
-      action: () => Alert.alert('Live Chat', 'Live chat feature would be implemented here.'),
+      action: () => setShowTicketForm(prev => !prev),
       color: '#F59E0B',
     },
   ];
@@ -189,6 +233,85 @@ export default function HelpScreen() {
             <ContactCard key={method.id} method={method} />
           ))}
         </View>
+
+        {/* Ticket Form */}
+        {showTicketForm && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Submit a Support Ticket</Text>
+            <View style={styles.ticketForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Subject *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={ticketForm.subject}
+                  onChangeText={(text) => setTicketForm(prev => ({ ...prev, subject: text }))}
+                  placeholder="Brief description of your issue"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Category</Text>
+                <View style={styles.pickerContainer}>
+                  {TICKET_CATEGORIES.map((category) => (
+                    <TouchableOpacity
+                      key={category.value}
+                      style={[styles.pickerOption, ticketForm.category === category.value && styles.pickerOptionSelected]}
+                      onPress={() => setTicketForm(prev => ({ ...prev, category: category.value }))}
+                    >
+                      <Text style={[styles.pickerOptionText, ticketForm.category === category.value && styles.pickerOptionTextSelected]}>
+                        {category.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Priority</Text>
+                <View style={styles.pickerContainer}>
+                  {TICKET_PRIORITIES.map((priority) => (
+                    <TouchableOpacity
+                      key={priority.value}
+                      style={[styles.pickerOption, ticketForm.priority === priority.value && styles.pickerOptionSelected]}
+                      onPress={() => setTicketForm(prev => ({ ...prev, priority: priority.value }))}
+                    >
+                      <Text style={[styles.pickerOptionText, ticketForm.priority === priority.value && styles.pickerOptionTextSelected]}>
+                        {priority.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description *</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={ticketForm.description}
+                  onChangeText={(text) => setTicketForm(prev => ({ ...prev, description: text }))}
+                  placeholder="Detailed description of your issue"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.submitTicketButton, submittingTicket && styles.submitTicketButtonDisabled]}
+                onPress={handleSubmitTicket}
+                disabled={submittingTicket}
+              >
+                {submittingTicket ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitTicketButtonText}>Submit Ticket</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.section}>
@@ -342,6 +465,78 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Sora-Regular',
     color: '#6B7280',
+  },
+  ticketForm: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontFamily: 'Sora-Medium',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: 'Sora-Regular',
+    color: '#1F2937',
+    backgroundColor: '#FFFFFF',
+  },
+  textArea: {
+    height: 100,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pickerOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+  },
+  pickerOptionSelected: {
+    borderColor: '#087EA4',
+    backgroundColor: '#F0F8FF',
+  },
+  pickerOptionText: {
+    fontSize: 13,
+    fontFamily: 'Sora-Regular',
+    color: '#6B7280',
+  },
+  pickerOptionTextSelected: {
+    color: '#087EA4',
+    fontFamily: 'Sora-SemiBold',
+  },
+  submitTicketButton: {
+    backgroundColor: '#087EA4',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+  },
+  submitTicketButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitTicketButtonText: {
+    fontSize: 14,
+    fontFamily: 'Sora-SemiBold',
+    color: '#FFFFFF',
   },
   quickActionCard: {
     flexDirection: 'row',

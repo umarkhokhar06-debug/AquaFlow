@@ -56,6 +56,13 @@ const userSchema = new mongoose.Schema({
     push: { type: Boolean, default: true },
     sms: { type: Boolean, default: true }
   },
+  // Stripe Customer object backing this user's saved payment methods.
+  // Created lazily on first use, not at signup -- most users never save a
+  // card, so there's no reason to call Stripe for every registration.
+  stripeCustomerId: {
+    type: String,
+    default: null
+  },
   // Customer-specific fields
   fullName: {
     type: String,

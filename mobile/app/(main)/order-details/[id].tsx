@@ -25,7 +25,8 @@ import {
   CreditCard,
   FileText,
   X,
-  Star
+  Star,
+  RotateCcw
 } from 'lucide-react-native';
 import { globalstyles } from '@/app/commans/style';
 import { orderAPI } from '@/utils/orderAPI';
@@ -191,6 +192,15 @@ export default function OrderDetailsScreen() {
   // any time before delivery actually completes.
   const canCancelOrder = (status: OrderStatus) => {
     return status !== 'delivered' && status !== 'cancelled';
+  };
+
+  const canReorder = (status: OrderStatus) => {
+    return status === 'delivered' || status === 'cancelled';
+  };
+
+  const handleReorder = () => {
+    if (!order || order.items.length === 0) return;
+    router.push({ pathname: '/(main)/order', params: { productType: order.items[0].type } });
   };
 
   if (loading) {
@@ -411,6 +421,16 @@ export default function OrderDetailsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Reorder Button */}
+        {canReorder(order.status) && (
+          <View style={styles.cancelSection}>
+            <TouchableOpacity style={styles.reorderButton} onPress={handleReorder}>
+              <RotateCcw size={20} color="#FFFFFF" />
+              <Text style={styles.reorderButtonText}>Reorder</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Cancel Order Button */}
         {canCancelOrder(order.status) && (
@@ -777,6 +797,20 @@ const styles = StyleSheet.create({
   },
   cancelButtonDisabled: {
     opacity: 0.6,
+  },
+  reorderButton: {
+    backgroundColor: '#087EA4',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderButtonText: {
+    fontSize: 16,
+    fontFamily: 'Sora-SemiBold',
+    color: '#FFFFFF',
+    marginLeft: 8,
   },
   cancelButtonText: {
     fontSize: 16,

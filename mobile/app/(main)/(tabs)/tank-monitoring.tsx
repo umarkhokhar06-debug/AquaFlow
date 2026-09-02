@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Droplets,
   Thermometer,
-  Battery,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -32,7 +31,9 @@ import {
   getLatestIoTData,
   getAllIoTData,
   getMyDevices,
+  getDeviceForecast,
   Device,
+  DeviceForecast,
 } from '@/utils/iotAPI';
 import { storage } from '@/utils/auth';
 import { useSocket } from '@/hooks/useSocket';
@@ -50,9 +51,7 @@ export default function TankMonitoringScreen() {
   const [isOnline, setIsOnline] = useState(false);
   const [temperature, setTemperature] = useState(0);
   const [humidity, setHumidity] = useState(0);
-  const [batteryLevel, setBatteryLevel] = useState(85);
-  const [todayUsage, setTodayUsage] = useState(0);
-  const [weeklyUsage, setWeeklyUsage] = useState(0);
+  const [forecast, setForecast] = useState<DeviceForecast | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState('');
   const [weeklyData, setWeeklyData] = useState<
@@ -185,24 +184,13 @@ export default function TankMonitoringScreen() {
           };
         });
         setWeeklyData(weeklyDataProcessed);
+      }
 
-        // Calculate usage (simple calculation based on level differences)
-        if (allDataResponse.data.length >= 2) {
-          const today = allDataResponse.data[0];
-          const yesterday = allDataResponse.data[1];
-          const dailyUsage = Math.abs(yesterday.tankLevel - today.tankLevel) * 10; // Rough estimate
-          setTodayUsage(Math.round(dailyUsage));
-          
-          // Weekly usage
-          const weekData = allDataResponse.data.slice(0, 7);
-          const weeklyUsageCalc = weekData.reduce((acc, curr, idx) => {
-            if (idx < weekData.length - 1) {
-              return acc + Math.abs(curr.tankLevel - weekData[idx + 1].tankLevel) * 10;
-            }
-            return acc;
-          }, 0);
-          setWeeklyUsage(Math.round(weeklyUsageCalc));
-        }
+      // Real day-over-day consumption average + days-remaining, computed
+      // server-side off the nightly DailyConsumption snapshots.
+      const forecastResponse = await getDeviceForecast(deviceId);
+      if (forecastResponse.success) {
+        setForecast(forecastResponse.forecast);
       }
     } catch (error) {
       console.error('Error fetching IoT data:', error);
@@ -210,29 +198,66 @@ export default function TankMonitoringScreen() {
     }
   };
 
-  const alerts = [
-    {
-      id: '1',
-      type: 'warning',
-      title: 'Low Water Level',
-      message: 'Tank is at 25%. Consider refilling soon.',
-      time: '2 hours ago',
-    },
-    {
-      id: '2',
-      type: 'info',
-      title: 'Usage Pattern Alert',
-      message: 'Higher than usual consumption detected today.',
-      time: '4 hours ago',
-    },
-    {
-      id: '3',
+  const TREND_LABEL: Record<DeviceForecast['trend'], string> = {
+    insufficient_data: 'Not enough data yet',
+    stable: 'Stable usage',
+    high_consumption: 'Higher than usual',
+    low_consumption: 'Lower than usual',
+    rapidly_changing: 'Changing quickly',
+  };
+
+  const alerts = (() => {
+    const list: { id: string; type: 'warning' | 'info' | 'success'; title: string; message: string; time: string }[] = [];
+    const time = lastUpdate || 'just now';
+
+    if (isOnline && tankLevel < 20) {
+      list.push({
+        id: 'low-water',
+        type: 'warning',
+        title: 'Low Water Level',
+        message: `Tank is at ${Math.round(tankLevel)}%. Consider refilling soon.`,
+        time,
+      });
+    }
+
+    if (forecast?.daysRemaining !== null && forecast?.daysRemaining !== undefined && forecast.daysRemaining <= 3) {
+      list.push({
+        id: 'days-remaining',
+        type: 'warning',
+        title: 'Running Out Soon',
+        message: `At the current usage rate, this tank has about ${forecast.daysRemaining} day(s) left.`,
+        time,
+      });
+    }
+
+    if (forecast?.trend === 'high_consumption' || forecast?.trend === 'rapidly_changing') {
+      list.push({
+        id: 'usage-pattern',
+        type: 'info',
+        title: 'Usage Pattern Alert',
+        message: forecast.trend === 'high_consumption'
+          ? 'Higher than usual consumption detected recently.'
+          : 'Consumption has been changing quickly the past few days.',
+        time,
+      });
+    }
+
+    list.push(isOnline ? {
+      id: 'sensor-status',
       type: 'success',
       title: 'Sensor Online',
-      message: 'All sensors are functioning normally.',
-      time: '1 day ago',
-    },
-  ];
+      message: `Last reading received ${time}.`,
+      time,
+    } : {
+      id: 'sensor-status',
+      type: 'warning',
+      title: 'Sensor Offline',
+      message: 'No live reading yet for this device.',
+      time,
+    });
+
+    return list;
+  })();
 
   const handleRefresh = async () => {
     if (!selectedDeviceId) return;
@@ -418,9 +443,11 @@ export default function TankMonitoringScreen() {
               <Text style={styles.sensorLabel}>Humidity</Text>
             </View>
             <View style={styles.sensorItem}>
-              <Battery size={16} color={colors.success[500]} />
-              <Text style={styles.sensorValue}>{batteryLevel}%</Text>
-              <Text style={styles.sensorLabel}>Sensor Battery</Text>
+              <Calendar size={16} color={colors.success[500]} />
+              <Text style={styles.sensorValue}>
+                {forecast?.daysRemaining !== null && forecast?.daysRemaining !== undefined ? `${forecast.daysRemaining}d` : '—'}
+              </Text>
+              <Text style={styles.sensorLabel}>Days Remaining</Text>
             </View>
           </View>
         </View>
@@ -429,23 +456,31 @@ export default function TankMonitoringScreen() {
         <View style={styles.usageCard}>
           <View style={styles.usageItem}>
             <View style={styles.usageIcon}>
-              <TrendingUp size={20} color={colors.primary[500]} />
+              {forecast?.trend === 'low_consumption' ? (
+                <TrendingDown size={20} color={colors.success[500]} />
+              ) : (
+                <TrendingUp size={20} color={colors.primary[500]} />
+              )}
             </View>
             <View style={styles.usageContent}>
-              <Text style={styles.usageValue}>{todayUsage}L</Text>
-              <Text style={styles.usageLabel}>Today&apos;s Usage</Text>
-              <Text style={styles.usageChange}>+5% from yesterday</Text>
+              <Text style={styles.usageValue}>
+                {forecast?.avgDailyConsumptionLiters !== null && forecast?.avgDailyConsumptionLiters !== undefined ? `${forecast.avgDailyConsumptionLiters}L` : '—'}
+              </Text>
+              <Text style={styles.usageLabel}>Avg. Daily Usage</Text>
+              <Text style={styles.usageChange}>{forecast ? TREND_LABEL[forecast.trend] : 'Loading...'}</Text>
             </View>
           </View>
 
           <View style={styles.usageItem}>
             <View style={styles.usageIcon}>
-              <Calendar size={20} color={colors.success[500]} />
+              <Droplets size={20} color={colors.success[500]} />
             </View>
             <View style={styles.usageContent}>
-              <Text style={styles.usageValue}>{weeklyUsage}L</Text>
-              <Text style={styles.usageLabel}>This Week</Text>
-              <Text style={[styles.usageChange, { color: colors.danger[500] }]}>-2% from last week</Text>
+              <Text style={styles.usageValue}>
+                {forecast?.currentLiters !== null && forecast?.currentLiters !== undefined ? `${Math.round(forecast.currentLiters)}L` : '—'}
+              </Text>
+              <Text style={styles.usageLabel}>Remaining Now</Text>
+              <Text style={styles.usageChange}>{forecast?.historyDays ? `${forecast.historyDays} day(s) of history` : 'Awaiting first snapshot'}</Text>
             </View>
           </View>
         </View>

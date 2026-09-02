@@ -85,6 +85,34 @@ class PaymentController {
     }
   }
 
+  // ============ Saved payment methods ============
+  async createSetupIntent(req, res) {
+    try {
+      const result = await paymentService.createSetupIntent(req.user.id);
+      res.status(200).json({ success: true, ...result });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to start card setup' });
+    }
+  }
+
+  async listPaymentMethods(req, res) {
+    try {
+      const methods = await paymentService.listPaymentMethods(req.user.id);
+      res.status(200).json({ success: true, methods });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to fetch payment methods' });
+    }
+  }
+
+  async detachPaymentMethod(req, res) {
+    try {
+      const result = await paymentService.detachPaymentMethod(req.user.id, req.params.paymentMethodId);
+      res.status(200).json({ success: true, ...result });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to remove payment method' });
+    }
+  }
+
   async getTransactions(req, res) {
     try {
       const { from, to, status, page, limit } = req.query;

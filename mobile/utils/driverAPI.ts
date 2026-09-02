@@ -706,7 +706,7 @@ export const driverAPI = {
     try {
   const api = createDriverAPIInstance();
   const response = await api.get('/support/faqs');
-      return response.data.data;
+      return response.data.faqs;
     } catch (error) {
       console.error('Error fetching FAQs:', error);
       if (axios.isAxiosError(error)) {

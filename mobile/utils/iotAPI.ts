@@ -113,6 +113,32 @@ export const getIoTStatus = async (): Promise<IoTStatusResponse> => {
   return response.json();
 };
 
+export interface DeviceForecast {
+  deviceId: string;
+  name: string;
+  houseLabel: string;
+  currentLevelPercent: number | null;
+  currentLiters: number | null;
+  avgDailyConsumptionLiters: number | null;
+  daysRemaining: number | null;
+  trend: 'insufficient_data' | 'stable' | 'high_consumption' | 'low_consumption' | 'rapidly_changing';
+  historyDays: number;
+}
+
+// Real consumption trend/forecast for one device, computed server-side off
+// the nightly DailyConsumption snapshots -- backs the tank-monitoring
+// screen's usage-comparison and smart-alert cards.
+export const getDeviceForecast = async (deviceId: string): Promise<{ success: boolean; forecast: DeviceForecast }> => {
+  const response = await fetch(`${config.apiUrl}/forecast/devices/${deviceId}`, {
+    method: 'GET',
+    headers: await authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+};
+
 // --- Devices ---
 
 export const getMyDevices = async (): Promise<{ success: boolean; devices: Device[] }> => {

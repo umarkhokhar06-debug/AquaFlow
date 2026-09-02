@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,172 +7,126 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  Plus, 
-  CreditCard, 
-  Smartphone, 
-  Banknote, 
-  Edit3, 
-  Trash2, 
-  Star,
+import {
+  ArrowLeft,
+  Plus,
+  CreditCard,
+  Banknote,
+  Trash2,
   Shield,
-  CheckCircle
 } from 'lucide-react-native';
+import {
+  SavedPaymentMethod,
+  PaymentsNotConfiguredError,
+  createSetupIntent,
+  getSavedPaymentMethods,
+  deleteSavedPaymentMethod,
+} from '../../utils/paymentAPI';
 
 export default function PaymentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [paymentMethods, setPaymentMethods] = useState([
-    {
-      id: '1',
-      type: 'easypaisa',
-      title: 'EasyPaisa',
-      details: '+92 300 1234567',
-      isDefault: true,
-      verified: false,
-    },
-    {
-      id: '2',
-      type: 'card',
-      title: 'Visa Card',
-      details: '**** **** **** 1234',
-      expiry: '12/26',
-      isDefault: false,
-      verified: false,
-    },
-    {
-      id: '3',
-      type: 'jazzcash',
-      title: 'JazzCash',
-      details: '+92 301 9876543',
-      isDefault: false,
-      verified: false,
-    },
-  ]);
+  const [savedMethods, setSavedMethods] = useState<SavedPaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [configured, setConfigured] = useState(true);
+  const [addingCard, setAddingCard] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleEditPayment = (paymentId: string) => {
-    Alert.alert('Edit Payment Method', 'Edit payment method functionality would be implemented here.');
-  };
+  const loadMethods = useCallback(async () => {
+    setLoading(true);
+    try {
+      const methods = await getSavedPaymentMethods();
+      setSavedMethods(methods);
+      setConfigured(true);
+    } catch (error) {
+      if (error instanceof PaymentsNotConfiguredError) {
+        setSavedMethods([]);
+        setConfigured(false);
+      } else {
+        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to load payment methods');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleDeletePayment = (paymentId: string) => {
+  useFocusEffect(
+    useCallback(() => {
+      loadMethods();
+    }, [loadMethods])
+  );
+
+  const handleDeletePayment = (method: SavedPaymentMethod) => {
     Alert.alert(
-      'Delete Payment Method',
-      'Are you sure you want to delete this payment method?',
+      'Remove Card',
+      `Remove ${method.brand.toUpperCase()} ending in ${method.last4}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setPaymentMethods(prev => prev.filter(payment => payment.id !== paymentId));
-          }
-        }
+          onPress: async () => {
+            setDeletingId(method.id);
+            try {
+              await deleteSavedPaymentMethod(method.id);
+              setSavedMethods(prev => prev.filter(m => m.id !== method.id));
+            } catch (error) {
+              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to remove payment method');
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
       ]
     );
   };
 
-  const handleSetDefault = (paymentId: string) => {
-    setPaymentMethods(prev => 
-      prev.map(payment => ({
-        ...payment,
-        isDefault: payment.id === paymentId
-      }))
-    );
-  };
-
-  const handleVerifyPayment = (paymentId: string) => {
-    Alert.alert('Verify Payment Method', 'Verification process would be implemented here.');
-  };
-
-  const handleAddPayment = () => {
-    Alert.alert('Add Payment Method', 'Add new payment method functionality would be implemented here.');
-  };
-
-  const getPaymentIcon = (type: string) => {
-    switch (type) {
-      case 'easypaisa':
-        return <Smartphone size={20} color="#10B981" />;
-      case 'card':
-        return <CreditCard size={20} color="#087EA4" />;
-      case 'jazzcash':
-        return <Smartphone size={20} color="#F59E0B" />;
-      default:
-        return <CreditCard size={20} color="#6B7280" />;
+  const handleAddPayment = async () => {
+    setAddingCard(true);
+    try {
+      await createSetupIntent();
+      Alert.alert(
+        'Almost there',
+        'Card setup is ready on our end, but in-app card entry is coming in a future update. Cash on Delivery is available meanwhile.'
+      );
+    } catch (error) {
+      if (error instanceof PaymentsNotConfiguredError) {
+        Alert.alert('Not Available Yet', 'Online card payments aren’t enabled yet. Cash on Delivery is available meanwhile.');
+      } else {
+        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to start card setup');
+      }
+    } finally {
+      setAddingCard(false);
     }
   };
 
-  const getPaymentIconBg = (type: string) => {
-    switch (type) {
-      case 'easypaisa':
-        return '#F0FDF4';
-      case 'card':
-        return '#F0F8FF';
-      case 'jazzcash':
-        return '#FFFBEB';
-      default:
-        return '#F9FAFB';
-    }
-  };
-
-  const PaymentCard = ({ payment }: { payment: any }) => (
+  const CardMethodRow = ({ method }: { method: SavedPaymentMethod }) => (
     <View style={styles.paymentCard}>
       <View style={styles.paymentHeader}>
         <View style={styles.paymentTypeContainer}>
-          <View style={[styles.paymentIcon, { backgroundColor: getPaymentIconBg(payment.type) }]}>
-            {getPaymentIcon(payment.type)}
+          <View style={[styles.paymentIcon, { backgroundColor: '#F0F8FF' }]}>
+            <CreditCard size={20} color="#087EA4" />
           </View>
           <View style={styles.paymentInfo}>
-            <View style={styles.paymentTitleRow}>
-              <Text style={styles.paymentTitle}>{payment.title}</Text>
-              {payment.isDefault && (
-                <View style={styles.defaultBadge}>
-                  <Star size={12} color="#F59E0B" fill="#F59E0B" />
-                  <Text style={styles.defaultText}>Default</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.paymentDetails}>{payment.details}</Text>
-            {payment.expiry && (
-              <Text style={styles.paymentExpiry}>Expires: {payment.expiry}</Text>
-            )}
+            <Text style={styles.paymentTitle}>{method.brand.charAt(0).toUpperCase() + method.brand.slice(1)} Card</Text>
+            <Text style={styles.paymentDetails}>**** **** **** {method.last4}</Text>
+            <Text style={styles.paymentExpiry}>Expires {String(method.expMonth).padStart(2, '0')}/{String(method.expYear).slice(-2)}</Text>
           </View>
         </View>
-        <View style={styles.paymentActions}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => handleEditPayment(payment.id)}
-          >
-            <Edit3 size={16} color="#6B7280" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => handleDeletePayment(payment.id)}
-          >
-            <Trash2 size={16} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.paymentFooter}>
-        {!payment.isDefault && (
-          <TouchableOpacity 
-            style={styles.setDefaultButton}
-            onPress={() => handleSetDefault(payment.id)}
-          >
-            <Star size={16} color="#6B7280" />
-            <Text style={styles.setDefaultText}>Set as Default</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity 
-          style={styles.verifyButton}
-          onPress={() => handleVerifyPayment(payment.id)}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteButton]}
+          onPress={() => handleDeletePayment(method)}
+          disabled={deletingId === method.id}
         >
-          <Shield size={16} color="#087EA4" />
-          <Text style={styles.verifyText}>Verify</Text>
+          {deletingId === method.id ? (
+            <ActivityIndicator size="small" color="#EF4444" />
+          ) : (
+            <Trash2 size={16} color="#EF4444" />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -181,31 +135,29 @@ export default function PaymentsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Header */}
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Payment Methods</Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={handleAddPayment}
-        >
-          <Plus size={24} color="#087EA4" />
-          <Text style={styles.addButtonText}>Add Payment</Text>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddPayment} disabled={addingCard}>
+          {addingCard ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Plus size={24} color="#087EA4" />
+              <Text style={styles.addButtonText}>Add Card</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Cash on Delivery */}
         <View style={styles.cashCard}>
           <View style={styles.cashIcon}>
             <Banknote size={20} color="#10B981" />
@@ -219,34 +171,52 @@ export default function PaymentsScreen() {
           </View>
         </View>
 
-        {/* Payment Methods */}
-        {paymentMethods.map((payment) => (
-          <PaymentCard key={payment.id} payment={payment} />
-        ))}
-
-        {/* Security Notice */}
-        <View style={styles.securityNotice}>
-          <Shield size={20} color="#087EA4" />
-          <View style={styles.securityContent}>
-            <Text style={styles.securityTitle}>Your payments are secure</Text>
-            <Text style={styles.securityText}>
-              All payment information is encrypted and stored securely. We never store your CVV or PIN.
-            </Text>
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#087EA4" />
           </View>
-        </View>
+        ) : (
+          <>
+            {savedMethods.map(method => (
+              <CardMethodRow key={method.id} method={method} />
+            ))}
 
-        {paymentMethods.length === 0 && (
-          <View style={styles.emptyState}>
-            <CreditCard size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No Payment Methods</Text>
-            <Text style={styles.emptyText}>
-              Add your payment methods for faster checkout
-            </Text>
-            <TouchableOpacity style={styles.emptyAddButton} onPress={handleAddPayment}>
-              <Plus size={20} color="#FFFFFF" />
-              <Text style={styles.emptyAddButtonText}>Add Payment Method</Text>
-            </TouchableOpacity>
-          </View>
+            {!configured && (
+              <View style={styles.securityNotice}>
+                <Shield size={20} color="#087EA4" />
+                <View style={styles.securityContent}>
+                  <Text style={styles.securityTitle}>Online card payments coming soon</Text>
+                  <Text style={styles.securityText}>
+                    We're finishing setup for online card payments. Cash on Delivery works for every order in the meantime.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {configured && savedMethods.length === 0 && (
+              <View style={styles.emptyState}>
+                <CreditCard size={48} color="#D1D5DB" />
+                <Text style={styles.emptyTitle}>No Saved Cards</Text>
+                <Text style={styles.emptyText}>Add a card for faster checkout next time</Text>
+                <TouchableOpacity style={styles.emptyAddButton} onPress={handleAddPayment} disabled={addingCard}>
+                  <Plus size={20} color="#FFFFFF" />
+                  <Text style={styles.emptyAddButtonText}>Add Payment Method</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {configured && savedMethods.length > 0 && (
+              <View style={styles.securityNotice}>
+                <Shield size={20} color="#087EA4" />
+                <View style={styles.securityContent}>
+                  <Text style={styles.securityTitle}>Your payments are secure</Text>
+                  <Text style={styles.securityText}>
+                    All payment information is encrypted and stored securely. We never store your CVV or PIN.
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </View>
@@ -288,6 +258,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   addButtonText: {
     fontSize: 14,
@@ -301,6 +273,10 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
+  },
+  loadingBox: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
   cashCard: {
     flexDirection: 'row',
@@ -364,7 +340,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
   },
   paymentTypeContainer: {
     flexDirection: 'row',
@@ -382,30 +357,11 @@ const styles = StyleSheet.create({
   paymentInfo: {
     flex: 1,
   },
-  paymentTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
   paymentTitle: {
     fontSize: 16,
     fontFamily: 'Sora-SemiBold',
     color: '#1F2937',
-    marginRight: 8,
-  },
-  defaultBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  defaultText: {
-    fontSize: 10,
-    fontFamily: 'Sora-SemiBold',
-    color: '#92400E',
-    marginLeft: 4,
+    marginBottom: 4,
   },
   paymentDetails: {
     fontSize: 14,
@@ -418,10 +374,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora-Regular',
     color: '#9CA3AF',
   },
-  paymentActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   actionButton: {
     width: 32,
     height: 32,
@@ -432,34 +384,6 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#FEF2F2',
-  },
-  paymentFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  setDefaultButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  setDefaultText: {
-    fontSize: 12,
-    fontFamily: 'Sora-Medium',
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  verifyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  verifyText: {
-    fontSize: 12,
-    fontFamily: 'Sora-Medium',
-    color: '#087EA4',
-    marginLeft: 4,
   },
   securityNotice: {
     flexDirection: 'row',
