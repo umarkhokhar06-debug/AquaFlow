@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Device = require('../models/Device');
 const User = require('../models/User');
 const auditLogService = require('./auditLogService');
+const systemConfigService = require('./systemConfigService');
 
 const INVITE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -48,6 +49,7 @@ class DeviceService {
       throw err;
     }
 
+    const defaultLowWaterThreshold = await systemConfigService.get('lowWaterThresholdDefaultPercent', 20);
     const device = new Device({
       deviceId: deviceId.trim().toUpperCase(),
       name,
@@ -55,7 +57,7 @@ class DeviceService {
       owner: owner._id,
       calibration: { tank_depth, tank_full_distance },
       tankCapacityLiters: tankCapacityLiters || 1000,
-      lowWaterThreshold: typeof lowWaterThreshold === 'number' ? lowWaterThreshold : 20,
+      lowWaterThreshold: typeof lowWaterThreshold === 'number' ? lowWaterThreshold : defaultLowWaterThreshold,
       isSimulated: !!isSimulated,
       createdBy,
       history: [{

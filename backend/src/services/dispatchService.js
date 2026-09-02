@@ -6,6 +6,7 @@ const driverService = require('./driverService');
 const auditLogService = require('./auditLogService');
 const socketService = require('./socketService');
 const notificationService = require('./notificationService');
+const systemConfigService = require('./systemConfigService');
 const { canTransition } = require('../constants/orderStatus');
 
 // SRS §4.4 automatic arrival trigger: auto-transition on_the_way -> arrived
@@ -17,7 +18,10 @@ const ARRIVAL_RADIUS_KM = 0.1; // 100m
 const PROGRESS_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 min
 const PROGRESS_MARGIN_KM = 0.3; // must close at least 300m in that window
 
-const DELAYED_THRESHOLD_MS = 60 * 60 * 1000; // >1hr on the way = delayed (SRS §5.6)
+// SRS §5.6 delay threshold, SRS §8.10 "notification thresholds" -- admin
+// configurable via SystemConfig's 'delayedThresholdMinutes', defaulting to
+// the original >1hr rule.
+const DEFAULT_DELAYED_THRESHOLD_MINUTES = 60;
 const EXCEPTION_THRESHOLD_MS = 30 * 60 * 1000; // 30 min unassigned = exception
 // Heuristic weight: one additional queued order is treated as roughly
 // equivalent to this many km of extra distance when ranking drivers.
@@ -45,6 +49,7 @@ class DispatchService {
   // Live queue, categorized per SRS §6.
   async getQueue() {
     const now = Date.now();
+    const delayedThresholdMs = (await systemConfigService.get('delayedThresholdMinutes', DEFAULT_DELAYED_THRESHOLD_MINUTES)) * 60 * 1000;
     const orders = await Order.find({ status: { $nin: ['delivered', 'cancelled'] } })
       .populate('customer', 'name email fullName houseNumber portion address')
       .populate('driver', 'name email driverStatus')
@@ -66,7 +71,7 @@ class DispatchService {
         queue.new.push(order);
       } else if (
         order.status === 'on_the_way' &&
-        ((order.deliveryDate && now - new Date(order.deliveryDate).getTime() > DELAYED_THRESHOLD_MS) || order.deviationFlaggedAt)
+        ((order.deliveryDate && now - new Date(order.deliveryDate).getTime() > delayedThresholdMs) || order.deviationFlaggedAt)
       ) {
         queue.delayed.push(order);
       } else if (order.driver) {

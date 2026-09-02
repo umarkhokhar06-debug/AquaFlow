@@ -9,7 +9,10 @@ const dispatchService = require('./dispatchService');
 const { canTransition, isCancellable } = require('../constants/orderStatus');
 const { isValidScheduleSlot } = require('../constants/scheduleSlots');
 
-// Product configuration
+// Product configuration. Unit prices are admin-configurable (SRS §8.10
+// "normal tanker delivery price") via SystemConfig's 'productPricing' key --
+// these are just the fallback defaults for whichever product types aren't
+// overridden there.
 const PRODUCT_CONFIG = {
   large_tanker: {
     name: 'Large Tanker',
@@ -33,6 +36,15 @@ const PRODUCT_CONFIG = {
     description: 'Individual water bottles for personal use'
   }
 };
+
+const DEFAULT_PRODUCT_PRICING = Object.fromEntries(
+  Object.entries(PRODUCT_CONFIG).map(([type, config]) => [type, config.unitPrice])
+);
+
+async function getProductPricing() {
+  const overrides = await systemConfigService.get('productPricing', {});
+  return { ...DEFAULT_PRODUCT_PRICING, ...overrides };
+}
 
 const orderService = {
   // Create a new order
@@ -59,25 +71,42 @@ const orderService = {
         throw new Error('Only customers can place orders');
       }
 
+      // SRS §8.10 "delivery/service areas" -- soft validation, not real
+      // geofencing (no boundary/polygon data anywhere in this system): if
+      // the admin has configured a service-area list, the delivery address
+      // text must mention at least one of them. Skipped entirely when the
+      // list is empty (default), so this is a no-op until an admin opts in.
+      const serviceAreas = await systemConfigService.get('serviceAreas', []);
+      if (serviceAreas.length > 0) {
+        const addressText = (deliveryAddress?.address || customer.address || '').toLowerCase();
+        const withinServiceArea = serviceAreas.some(area => addressText.includes(area.toLowerCase()));
+        if (!withinServiceArea) {
+          const err = new Error(`Sorry, we don't currently deliver to this address. We serve: ${serviceAreas.join(', ')}`);
+          err.status = 400;
+          throw err;
+        }
+      }
+
       // Validate items
       if (!items || items.length === 0) {
         throw new Error('Order must contain at least one item');
       }
 
       // Process items and calculate prices
+      const pricing = await getProductPricing();
       const processedItems = items.map(item => {
         if (!PRODUCT_CONFIG[item.type]) {
           throw new Error(`Invalid product type: ${item.type}`);
         }
-        
+
         const product = PRODUCT_CONFIG[item.type];
-        
+
         // Check availability
         if (!product.availability) {
           throw new Error(`Product ${product.name} is currently unavailable`);
         }
-        
-        const unitPrice = product.unitPrice;
+
+        const unitPrice = pricing[item.type];
         const totalPrice = unitPrice * item.quantity;
         
         return {
@@ -425,11 +454,12 @@ const orderService = {
   // Get available products with prices
   getAvailableProducts: async () => {
     try {
+      const pricing = await getProductPricing();
       const products = Object.entries(PRODUCT_CONFIG).map(([type, config]) => ({
         type,
         name: config.name,
         size: config.size,
-        unitPrice: config.unitPrice,
+        unitPrice: pricing[type],
         availability: config.availability,
         description: config.description
       }));
