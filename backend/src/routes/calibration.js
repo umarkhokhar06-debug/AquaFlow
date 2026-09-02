@@ -1,9 +1,14 @@
 const express = require('express');
 const Calibration = require('../models/Calibration');
+const authMiddleware = require('../middlewares/authMiddleware');
+const { requireAnyRole } = require('../middlewares/authorizationMiddleware');
 const router = express.Router();
 
+router.use(authMiddleware);
+const requireAdminOrTechnician = requireAnyRole(['admin', 'super_admin', 'technician']);
+
 // Set calibration values (create or update latest)
-router.post('/', async (req, res) => {
+router.post('/', requireAdminOrTechnician, async (req, res) => {
   try {
     const { tank_depth, tank_full_distance } = req.body;
     if (typeof tank_depth !== 'number' || typeof tank_full_distance !== 'number') {

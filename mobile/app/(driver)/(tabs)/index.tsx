@@ -202,7 +202,7 @@ export default function DriverDashboardScreen() {
       </View>
 
       <View style={styles.orderFooter}>
-        <Text style={styles.orderAmount}>${order.totalAmount}</Text>
+        <Text style={styles.orderAmount}>Rs. {order.totalAmount}</Text>
         <ArrowRight size={16} color="#6B7280" />
       </View>
     </TouchableOpacity>
@@ -297,7 +297,7 @@ export default function DriverDashboardScreen() {
           />
           <StatCard
             title="Today's Earnings"
-            value={`$${driverStats.todayEarnings?.toFixed(2)}`}
+            value={`Rs. ${driverStats.todayEarnings?.toFixed(2)}`}
             icon={<DollarSign size={20} color="#087EA4" />}
             color="#087EA4"
           />

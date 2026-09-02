@@ -260,7 +260,7 @@ export default function OrderDetailScreen() {
                   <Text style={styles.itemName}>{item.productName}</Text>
                   <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
                 </View>
-                <Text style={styles.itemPrice}>${item.price}</Text>
+                <Text style={styles.itemPrice}>Rs. {item.price}</Text>
               </View>
             ))}
           </View>
@@ -272,15 +272,15 @@ export default function OrderDetailScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>${order.totalAmount}</Text>
+              <Text style={styles.summaryValue}>Rs. {order.totalAmount}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Delivery Fee</Text>
-              <Text style={styles.summaryValue}>${order.deliveryFee}</Text>
+              <Text style={styles.summaryValue}>Rs. {order.deliveryFee}</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalValue}>${order.totalAmount + order.deliveryFee}</Text>
+              <Text style={styles.totalValue}>Rs. {order.totalAmount + order.deliveryFee}</Text>
             </View>
           </View>
         </View>

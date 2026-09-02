@@ -83,12 +83,14 @@ const PRODUCT_META: Record<string, { eta: string }> = {
 export default function OrderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { productType } = useLocalSearchParams<{ productType?: string }>();
+  const { productType, timing: initialTiming } = useLocalSearchParams<{ productType?: string; timing?: string }>();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(productType ?? null);
-  const [timing, setTiming] = useState<'standard' | 'schedule' | 'express'>('standard');
+  const [timing, setTiming] = useState<'standard' | 'schedule' | 'express'>(
+    initialTiming === 'express' ? 'express' : 'standard'
+  );
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<ScheduleSlot | null>(null);
   const [expressFee, setExpressFee] = useState(300);

@@ -167,6 +167,7 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loginRequired, setLoginRequired] = useState(false);
+  const [expressFee, setExpressFee] = useState(300);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const {
@@ -206,6 +207,7 @@ export default function OrdersScreen() {
 
         const [productsData] = await Promise.all([orderAPI.getProducts(), fetchOrders()]);
         setProducts(productsData);
+        orderAPI.getExpressFee().then(setExpressFee);
 
         try {
           const devicesRes = await getMyDevices();
@@ -414,18 +416,20 @@ export default function OrdersScreen() {
               })}
             </View>
 
-            <Card style={styles.expressCard}>
+            <Card
+              style={styles.expressCard}
+              onPress={() => router.push({ pathname: '/(main)/order', params: { timing: 'express' } })}
+            >
               <View style={styles.expressRow}>
                 <View style={styles.expressIcon}>
                   <Zap size={24} color={colors.warning[500]} />
                 </View>
                 <View style={styles.expressContent}>
                   <Text style={styles.expressTitle}>Express Delivery</Text>
-                  <Text style={styles.expressSubtitle}>Get water delivered within 1 hour</Text>
+                  <Text style={styles.expressSubtitle}>Priority delivery, nearest available driver</Text>
                 </View>
                 <View style={styles.expressPricing}>
-                  <Text style={styles.expressPriceText}>+Rs. 300</Text>
-                  <Badge label="Coming soon" tone="warning" />
+                  <Text style={styles.expressPriceText}>+Rs. {expressFee}</Text>
                 </View>
               </View>
             </Card>

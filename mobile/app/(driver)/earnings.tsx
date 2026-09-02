@@ -81,7 +81,7 @@ export default function EarningsScreen() {
 
   const formatCurrency = (amount: number | undefined | null) => {
     const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
-    return `$${safeAmount.toFixed(2)}`;
+    return `Rs. ${safeAmount.toFixed(2)}`;
   };
 
   const formatDate = (dateString: string) => {
