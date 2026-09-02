@@ -11,6 +11,7 @@ import {
   Sora_800ExtraBold,
 } from '@expo-google-fonts/sora';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleService } from '@/utils/scheduleService';
 import { authAPI } from '@/utils/auth';
@@ -86,6 +87,26 @@ export default function RootLayout() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, isTokenChecked]);
+
+  // app.json sets updates.checkAutomatically to "NEVER", so this is the
+  // only thing that makes an EAS OTA update actually reach an installed
+  // app -- runs once per launch, in the background, and never blocks the
+  // splash screen. Silent no-op in dev / whenever expo-updates isn't
+  // running under a real update-enabled build.
+  useEffect(() => {
+    if (__DEV__ || !Updates.isEnabled) return;
+    (async () => {
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (error) {
+        console.error('OTA update check failed:', error);
+      }
+    })();
+  }, []);
 
   // Wait until both fonts and token check are complete
   if (!fontsLoaded || !isTokenChecked) {
