@@ -10,7 +10,20 @@ const REPORT_TYPES = [
   { value: 'device-status', label: 'Device Status' },
   { value: 'water-consumption', label: 'Water Consumption' },
   { value: 'customer-growth', label: 'Customer Growth' },
-  { value: 'complaints', label: 'Complaints' }
+  { value: 'complaints', label: 'Complaints' },
+  { value: 'on-time-delivery', label: 'On-Time Delivery' },
+  { value: 'average-wait-time', label: 'Average Wait Time' },
+  { value: 'fuel-mileage', label: 'Fuel & Mileage' },
+  { value: 'maintenance-cost', label: 'Maintenance Cost' }
+]
+
+const HORIZONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: '4months', label: 'Next 4 Months' },
+  { value: '6months', label: 'Next 6 Months' },
+  { value: 'year', label: 'This Year' }
 ]
 
 const ForecastReports = () => {
@@ -22,13 +35,14 @@ const ForecastReports = () => {
   const [report, setReport] = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [scanRunning, setScanRunning] = useState(false)
+  const [horizon, setHorizon] = useState('today')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
       const [forecastRes, trendsRes] = await Promise.all([
-        forecastAPI.getFleetForecast(),
+        forecastAPI.getFleetForecast(horizon),
         forecastAPI.getConsumptionTrends()
       ])
       setFleetForecast(forecastRes.data.forecast)
@@ -38,7 +52,7 @@ const ForecastReports = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [horizon])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -124,11 +138,16 @@ const ForecastReports = () => {
         </button>
       </div>
 
-      {/* Tomorrow's forecast */}
+      {/* Demand forecast */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">
-          Forecast for {fleetForecast?.forecastFor ? new Date(fleetForecast.forecastFor).toLocaleDateString() : 'tomorrow'}
-        </h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            Forecast through {fleetForecast?.forecastFor ? new Date(fleetForecast.forecastFor).toLocaleDateString() : '...'}
+          </h3>
+          <select value={horizon} onChange={e => setHorizon(e.target.value)} className="border-gray-300 rounded-md text-sm">
+            {HORIZONS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+          </select>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-500">Expected Orders</p>
@@ -151,12 +170,12 @@ const ForecastReports = () => {
         </div>
         {fleetForecast?.driverShortfall > 0 && (
           <div className="mt-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md text-sm">
-            Short by {fleetForecast.driverShortfall} driver(s) for expected demand tomorrow.
+            Short by {fleetForecast.driverShortfall} driver(s) for the average daily demand implied by this horizon.
           </div>
         )}
         <div className="mt-4">
           <p className="text-sm font-medium text-gray-700 mb-2">
-            {fleetForecast?.devicesDueForReorder?.length || 0} customer(s) likely to run out and order in the next day
+            {fleetForecast?.devicesDueForReorder?.length || 0} customer(s) likely to run out and order within this window
           </p>
           {fleetForecast?.devicesDueForReorder?.length > 0 && (
             <div className="flex flex-wrap gap-2">

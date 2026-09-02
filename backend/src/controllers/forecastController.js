@@ -28,7 +28,7 @@ class ForecastController {
 
   async getFleetForecast(req, res) {
     try {
-      const forecast = await forecastService.getFleetForecast();
+      const forecast = await forecastService.getFleetForecast(req.query.horizon);
       res.status(200).json({ success: true, forecast });
     } catch (error) {
       res.status(error.status || 500).json({

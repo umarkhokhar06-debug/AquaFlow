@@ -131,7 +131,11 @@ class ReportService {
       'device-status': () => this._deviceStatusReport(),
       'water-consumption': () => this._waterConsumptionReport(),
       'customer-growth': () => this._customerGrowthReport(start, end),
-      complaints: () => this._complaintsReport(start, end)
+      complaints: () => this._complaintsReport(start, end),
+      'on-time-delivery': () => this._onTimeDeliveryReport(start, end),
+      'average-wait-time': () => this._averageWaitTimeReport(start, end),
+      'fuel-mileage': () => this._fuelMileageReport(),
+      'maintenance-cost': () => this._maintenanceCostReport(start, end)
     };
 
     if (!builders[type]) {
@@ -243,6 +247,81 @@ class ReportService {
       status: t.status,
       createdAt: t.createdAt.toISOString()
     }));
+  }
+
+  // SRS §8.9 "on-time delivery performance" -- same on-time definition
+  // already used in dispatchService.getMetrics: on time if the order had
+  // no committed deliveryDate, or it was delivered at/before it.
+  async _onTimeDeliveryReport(start, end) {
+    const orders = await Order.find({
+      status: 'delivered', deliveredAt: { $gte: start, $lte: end }
+    }).select('orderNumber deliveredAt deliveryDate');
+    return orders.map(o => {
+      const onTime = !o.deliveryDate || o.deliveredAt <= o.deliveryDate;
+      const delayMinutes = o.deliveryDate && !onTime
+        ? Math.round((o.deliveredAt - o.deliveryDate) / 60000)
+        : 0;
+      return {
+        orderNumber: o.orderNumber,
+        deliveredAt: o.deliveredAt.toISOString(),
+        committedDeliveryDate: o.deliveryDate ? o.deliveryDate.toISOString() : '',
+        onTime: onTime ? 'yes' : 'no',
+        delayMinutes
+      };
+    });
+  }
+
+  // SRS §8.9 "average waiting time" -- allocation time (order placed ->
+  // driver assigned), the same measure dispatchService.getMetrics
+  // aggregates, just broken out per-order here for CSV export.
+  async _averageWaitTimeReport(start, end) {
+    const orders = await Order.find({
+      assignedAt: { $ne: null, $gte: start, $lte: end }
+    }).select('orderNumber orderDate assignedAt');
+    return orders.map(o => ({
+      orderNumber: o.orderNumber,
+      orderDate: o.orderDate.toISOString(),
+      assignedAt: o.assignedAt.toISOString(),
+      waitMinutes: Math.round((o.assignedAt - o.orderDate) / 60000)
+    }));
+  }
+
+  // SRS §8.9 "fuel usage and mileage" -- reshapes
+  // truckService.getFleetMileageSummary() (built for the Fleet screen) into
+  // CSV rows, with the lowest-performing truck called out.
+  async _fuelMileageReport() {
+    const { trucks, lowestPerformingTruckId } = await truckService.getFleetMileageSummary();
+    return trucks.map(t => ({
+      plateNumber: t.plateNumber,
+      entryCount: t.entryCount,
+      totalKm: t.totalKm,
+      totalFuelLiters: t.totalFuel,
+      totalFuelCost: t.totalCost,
+      kmPerLiter: t.kmPerLiter ?? '',
+      costPerKm: t.costPerKm ?? '',
+      lowestPerforming: t.truckId.toString() === lowestPerformingTruckId?.toString() ? 'yes' : 'no'
+    }));
+  }
+
+  // SRS §8.9 "maintenance and repair costs" -- individual maintenanceHistory
+  // entries within range, across every truck, categorized per §8.8.
+  async _maintenanceCostReport(start, end) {
+    const trucks = await Truck.find({ 'maintenanceHistory.0': { $exists: true } }).select('plateNumber maintenanceHistory');
+    const rows = [];
+    for (const truck of trucks) {
+      for (const record of truck.maintenanceHistory) {
+        if (record.performedAt >= start && record.performedAt <= end) {
+          rows.push({
+            plateNumber: truck.plateNumber,
+            category: record.category,
+            description: record.description,
+            cost: record.cost || 0,
+            performedAt: record.performedAt.toISOString()
+          });
+        }
+      }
+    }
+    return rows.sort((a, b) => new Date(b.performedAt) - new Date(a.performedAt));
   }
 }
 

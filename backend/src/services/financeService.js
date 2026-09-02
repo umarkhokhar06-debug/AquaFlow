@@ -1,6 +1,8 @@
 const Order = require('../models/Order');
 const Expense = require('../models/Expense');
 const EarningsRecord = require('../models/EarningsRecord');
+const DriverBonus = require('../models/DriverBonus');
+const Truck = require('../models/Truck');
 const auditLogService = require('./auditLogService');
 
 function dateRange(from, to) {
@@ -139,26 +141,43 @@ class FinanceService {
   // finalized before production." Using that formula directly, as stated.
   async getProfitLoss({ from, to } = {}) {
     const { start, end } = dateRange(from, to);
-    const [revenue, salaries, otherExpensesAgg] = await Promise.all([
+    const [revenue, salaries, otherExpensesAgg, bonusAgg, maintenanceTrucks] = await Promise.all([
       this.getRevenueSummary({ from: start, to: end }),
       this.getSalaryExpenses({ from: start, to: end }),
       Expense.aggregate([
         { $match: { date: { $gte: start, $lte: end } } },
         { $group: { _id: '$category', total: { $sum: '$amount' } } }
-      ])
+      ]),
+      // SRS §8.6 "driver bonuses to be reserved" -- actually awarded
+      // amounts (DriverBonus, from Phase 5), not a projection.
+      DriverBonus.aggregate([
+        { $match: { awardedAt: { $gte: start, $lte: end } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      // SRS §8.6 "repair/maintenance reserve amount" -- actual recorded
+      // maintenance costs (Truck.maintenanceHistory, from Phase 6).
+      Truck.find({ 'maintenanceHistory.0': { $exists: true } }).select('maintenanceHistory')
     ]);
 
     const totalOtherExpenses = otherExpensesAgg.reduce((s, e) => s + e.total, 0);
-    const profit = revenue.grossRevenue - salaries.totalSalaryExpense - totalOtherExpenses;
+    const bonusReserve = bonusAgg[0]?.total || 0;
+    const maintenanceReserve = maintenanceTrucks.reduce((sum, truck) => {
+      return sum + truck.maintenanceHistory
+        .filter(m => m.performedAt >= start && m.performedAt <= end)
+        .reduce((s, m) => s + (m.cost || 0), 0);
+    }, 0);
+    const profit = revenue.grossRevenue - salaries.totalSalaryExpense - totalOtherExpenses - bonusReserve - maintenanceReserve;
 
     return {
       range: { start, end },
       grossRevenue: revenue.grossRevenue,
       salaryExpense: salaries.totalSalaryExpense,
+      bonusReserve,
+      maintenanceReserve,
       otherExpenses: totalOtherExpenses,
       otherExpensesByCategory: otherExpensesAgg.map(e => ({ category: e._id, total: e.total })),
       profit,
-      note: 'Profit = gross revenue - recorded salaries - other recorded expenses, per SRS §16. Exact accounting definition (accrual vs. cash basis, tax treatment, etc.) to be finalized before production.'
+      note: 'Profit = gross revenue - salaries - bonus reserve - maintenance reserve - other recorded expenses, per SRS §16/§8.6. Exact accounting definition (accrual vs. cash basis, tax treatment, etc.) to be finalized before production.'
     };
   }
 

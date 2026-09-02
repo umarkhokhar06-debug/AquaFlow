@@ -8,6 +8,19 @@ const socketService = require('./socketService');
 
 const TREND_WINDOW_DAYS = 14;
 const REORDER_DAYS_REMAINING_THRESHOLD = 1; // "may run out by tomorrow"
+
+// SRS §8.3: "today / current week / current month / next 4 months / next 6
+// months / yearly" demand estimates -- same computation as the existing
+// next-day forecast, just widening which devices count as "due" within the
+// window.
+const FORECAST_HORIZONS = {
+  today: 1,
+  week: 7,
+  month: 30,
+  '4months': 120,
+  '6months': 180,
+  year: 365
+};
 const REORDER_COOLDOWN_HOURS = 24; // don't re-notify the same device more than once a day
 // A level jump this large day-over-day is treated as a refill/delivery,
 // not negative consumption.
@@ -148,14 +161,17 @@ class ForecastService {
     };
   }
 
-  // Next-day operational forecast for admin/dispatcher: expected orders,
-  // volume, revenue, and driver/truck capacity check. Revenue/volume are
+  // Operational forecast for admin/dispatcher: expected orders, volume,
+  // revenue, and driver/truck capacity check, over the given horizon (SRS
+  // §8.3: today/week/month/4-month/6-month/year). Revenue/volume are
   // grounded in real historical order data (avg order value), not invented
   // per-liter pricing -- this app prices fixed tanker sizes, not by the liter.
-  async getFleetForecast() {
+  async getFleetForecast(horizon = 'today') {
+    const horizonDays = FORECAST_HORIZONS[horizon] || FORECAST_HORIZONS.today;
+
     const devices = await Device.find({ status: 'active' });
     const forecasts = await Promise.all(devices.map(d => this.computeDeviceForecast(d.deviceId).catch(() => null)));
-    const dueTomorrow = forecasts.filter(f => f && f.daysRemaining !== null && f.daysRemaining <= REORDER_DAYS_REMAINING_THRESHOLD);
+    const dueWithinHorizon = forecasts.filter(f => f && f.daysRemaining !== null && f.daysRemaining <= horizonDays);
 
     const recentOrders = await Order.find({
       orderDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
@@ -165,20 +181,26 @@ class ForecastService {
       ? recentOrders.reduce((s, o) => s + o.totalAmount, 0) / recentOrders.length
       : 0;
 
-    const expectedOrders = dueTomorrow.length;
+    const expectedOrders = dueWithinHorizon.length;
     const expectedRevenue = Math.round(expectedOrders * avgOrderValue);
     const expectedVolumeLiters = devices
-      .filter(d => dueTomorrow.some(f => f.deviceId === d.deviceId))
+      .filter(d => dueWithinHorizon.some(f => f.deviceId === d.deviceId))
       .reduce((sum, d) => sum + d.tankCapacityLiters, 0);
 
+    // Driver capacity is a snapshot check ("do we have enough staff right
+    // now"), not a total -- so it's sized against the average daily order
+    // rate implied by this horizon, not the horizon's raw order total.
+    const expectedOrdersPerDay = expectedOrders / horizonDays;
     const activeDrivers = await User.find({ userType: 'driver', driverStatus: { $ne: 'offline' } }).select('maxQueueSize');
     const avgQueueCapacity = activeDrivers.length
       ? activeDrivers.reduce((s, d) => s + (d.maxQueueSize || 5), 0) / activeDrivers.length
       : 5;
-    const requiredDrivers = avgQueueCapacity > 0 ? Math.ceil(expectedOrders / avgQueueCapacity) : expectedOrders;
+    const requiredDrivers = avgQueueCapacity > 0 ? Math.ceil(expectedOrdersPerDay / avgQueueCapacity) : Math.ceil(expectedOrdersPerDay);
 
     return {
-      forecastFor: startOfDay(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      horizon,
+      horizonDays,
+      forecastFor: startOfDay(new Date(Date.now() + horizonDays * 24 * 60 * 60 * 1000)),
       expectedOrders,
       expectedVolumeLiters,
       expectedRevenue,
@@ -186,7 +208,7 @@ class ForecastService {
       requiredDrivers,
       availableDrivers: activeDrivers.length,
       driverShortfall: Math.max(0, requiredDrivers - activeDrivers.length),
-      devicesDueForReorder: dueTomorrow
+      devicesDueForReorder: dueWithinHorizon
     };
   }
 

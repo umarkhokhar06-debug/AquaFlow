@@ -12,13 +12,17 @@ const Finance = () => {
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [expenseForm, setExpenseForm] = useState(emptyExpense)
   const [actionLoading, setActionLoading] = useState(false)
+  const [dateRange, setDateRange] = useState({ from: '', to: '' })
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
+      const params = {}
+      if (dateRange.from) params.from = dateRange.from
+      if (dateRange.to) params.to = dateRange.to
       const [dashRes, expRes] = await Promise.all([
-        financeAPI.getDashboard(),
+        financeAPI.getDashboard(params),
         financeAPI.getExpenses({ limit: 20 })
       ])
       setDashboard(dashRes.data)
@@ -28,7 +32,7 @@ const Finance = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [dateRange])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -76,7 +80,16 @@ const Finance = () => {
     <div className="space-y-6">
       {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">{error}</div>}
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div className="flex items-center space-x-2">
+          <label className="text-sm text-gray-500">From</label>
+          <input type="date" value={dateRange.from} onChange={e => setDateRange(p => ({ ...p, from: e.target.value }))} className="border-gray-300 rounded-md text-sm" />
+          <label className="text-sm text-gray-500">To</label>
+          <input type="date" value={dateRange.to} onChange={e => setDateRange(p => ({ ...p, to: e.target.value }))} className="border-gray-300 rounded-md text-sm" />
+          {(dateRange.from || dateRange.to) && (
+            <button onClick={() => setDateRange({ from: '', to: '' })} className="text-sm text-blue-600 hover:text-blue-800">Reset to last 30 days</button>
+          )}
+        </div>
         <button onClick={fetchData} className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
           <FiRefreshCw className="h-4 w-4 mr-2" /> Refresh
         </button>
@@ -99,6 +112,24 @@ const Finance = () => {
             <div className="ml-4">
               <dt className="text-sm font-medium text-gray-500">Salary Expense</dt>
               <dd className="text-xl font-medium text-gray-900">Rs {salaries?.totalSalaryExpense?.toLocaleString() || 0}</dd>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white overflow-hidden shadow rounded-lg p-5">
+          <div className="flex items-center">
+            <FiTrendingDown className="w-8 h-8 text-purple-500" />
+            <div className="ml-4">
+              <dt className="text-sm font-medium text-gray-500">Bonus Reserve</dt>
+              <dd className="text-xl font-medium text-gray-900">Rs {profitLoss?.bonusReserve?.toLocaleString() || 0}</dd>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white overflow-hidden shadow rounded-lg p-5">
+          <div className="flex items-center">
+            <FiTrendingDown className="w-8 h-8 text-orange-500" />
+            <div className="ml-4">
+              <dt className="text-sm font-medium text-gray-500">Maintenance Reserve</dt>
+              <dd className="text-xl font-medium text-gray-900">Rs {profitLoss?.maintenanceReserve?.toLocaleString() || 0}</dd>
             </div>
           </div>
         </div>

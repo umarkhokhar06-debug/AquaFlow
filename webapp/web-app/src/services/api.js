@@ -275,7 +275,7 @@ export const dispatchAPI = {
 export const forecastAPI = {
   getDeviceForecast: (deviceId) => api.get(`/forecast/devices/${deviceId}`),
   getConsumptionTrends: () => api.get('/forecast/trends'),
-  getFleetForecast: () => api.get('/forecast/fleet'),
+  getFleetForecast: (horizon = 'today') => api.get(`/forecast/fleet?horizon=${horizon}`),
   runNightlyScan: () => api.post('/forecast/run-nightly-scan')
 }
 
