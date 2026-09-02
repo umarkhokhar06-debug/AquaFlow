@@ -772,6 +772,7 @@ const UserManagement = () => {
               <option value="dispatcher">Dispatcher</option>
               <option value="call_center_agent">Call Center Agent</option>
               <option value="technician">Technician</option>
+              <option value="installer">Installer</option>
               <option value="admin">Admin</option>
               <option value="super_admin">Super Admin</option>
             </select>

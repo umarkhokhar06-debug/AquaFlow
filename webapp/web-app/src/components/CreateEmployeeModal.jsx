@@ -8,6 +8,7 @@ const ROLE_OPTIONS = [
   { value: 'dispatcher', label: 'Dispatcher' },
   { value: 'call_center_agent', label: 'Call Center Agent' },
   { value: 'technician', label: 'Technician' },
+  { value: 'installer', label: 'Installer' },
   { value: 'admin', label: 'Admin' }
 ]
 

@@ -22,6 +22,7 @@ const paymentRoutes = require('./routes/payments');
 const paymentController = require('./controllers/paymentController');
 const supportRoutes = require('./routes/support');
 const systemConfigRoutes = require('./routes/systemConfig');
+const installationRoutes = require('./routes/installations');
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use('/api/admin/finance', financeRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/config', systemConfigRoutes);
+app.use('/api/installations', installationRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

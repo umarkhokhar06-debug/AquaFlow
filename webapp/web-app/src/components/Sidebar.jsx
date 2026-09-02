@@ -26,6 +26,7 @@ const ADMIN_TABS = [
   { id: 'fleet', label: 'Fleet & Trucks', icon: FiTruck },
   { id: 'dispatch', label: 'Dispatch', icon: FiMap },
   { id: 'devices', label: 'Devices', icon: FiCpu },
+  { id: 'installations', label: 'Installations', icon: FiHome },
   { id: 'promo', label: 'Promo Codes', icon: FiTag },
   { id: 'finance', label: 'Finance', icon: FiDollarSign },
   { id: 'forecast', label: 'Forecast & Reports', icon: FiTrendingUp },
@@ -40,6 +41,7 @@ const DISPATCHER_TABS = [
   { id: 'orders', label: 'Orders', icon: FiPackage },
   { id: 'drivers', label: 'Drivers', icon: FiTruck },
   { id: 'dispatch', label: 'Dispatch', icon: FiMap },
+  { id: 'installations', label: 'Installations', icon: FiHome },
   { id: 'forecast', label: 'Forecast & Reports', icon: FiTrendingUp },
   { id: 'profile', label: 'Profile', icon: FiUser }
 ]

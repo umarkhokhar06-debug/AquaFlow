@@ -15,6 +15,7 @@ import ForecastReports from '../components/ForecastReports'
 import SupportTickets from '../components/SupportTickets'
 import NotificationSystem from '../components/NotificationSystem'
 import SystemSettings from '../components/SystemSettings'
+import InstallationRequests from '../components/InstallationRequests'
 import { userManagementAPI, orderManagementAPI, dispatchAPI, forecastAPI, financeAPI } from '../services/api'
 import { FiUsers, FiPackage, FiDollarSign, FiTruck, FiWifi, FiWifiOff, FiAlertTriangle, FiMapPin } from 'react-icons/fi'
 
@@ -283,6 +284,7 @@ const AdminDashboard = () => {
       case 'orders': return <OrderManagement />
       case 'drivers': return <DriverManagement />
       case 'devices': return <DeviceManagement />
+      case 'installations': return <InstallationRequests />
       case 'fleet': return <FleetManagement />
       case 'dispatch': return <DispatchConsole />
       case 'promo': return <PromoCodes />

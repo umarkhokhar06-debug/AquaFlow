@@ -315,6 +315,13 @@ export const promoAPI = {
   getUsageReport: (id) => api.get(`/promo-codes/${id}/usage`)
 }
 
+// Installation Requests (Admin/Dispatcher)
+export const installationAPI = {
+  getAll: (status) => api.get(`/installations${status ? `?status=${status}` : ''}`),
+  getById: (id) => api.get(`/installations/${id}`),
+  assignInstaller: (id, installerId) => api.put(`/installations/${id}/assign`, { installerId })
+}
+
 // System Configuration (Admin only)
 export const systemConfigAPI = {
   getAllConfig: () => api.get('/config/admin'),

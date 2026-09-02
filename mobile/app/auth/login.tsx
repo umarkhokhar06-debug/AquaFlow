@@ -67,6 +67,8 @@ export default function LoginScreen() {
 
         if (response.user.userType === 'driver') {
           router.replace('/(driver)/(tabs)');
+        } else if (response.user.userType === 'installer') {
+          router.replace('/(installer)');
         } else if (redirectAfterLogin === 'scan-invite') {
           router.replace('/(main)/scan-invite');
         } else {

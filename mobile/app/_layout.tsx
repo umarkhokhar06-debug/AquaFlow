@@ -51,6 +51,8 @@ export default function RootLayout() {
             registerForPushNotificationsAsync(token);
             if (response.user.userType === 'driver') {
               router.replace('/(driver)/(tabs)');
+            } else if (response.user.userType === 'installer') {
+              router.replace('/(installer)');
             } else if (response.user.userType === 'customer') {
               router.replace('/(main)/(tabs)');
             } else {
@@ -98,6 +100,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth" />
         <Stack.Screen name="(main)" />
         <Stack.Screen name="(driver)" />
+        <Stack.Screen name="(installer)" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

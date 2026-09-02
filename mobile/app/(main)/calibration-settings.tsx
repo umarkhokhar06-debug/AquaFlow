@@ -7,18 +7,27 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Gauge, Users, Wifi, WifiOff, ScanLine } from 'lucide-react-native';
+import { ArrowLeft, Gauge, Users, Wifi, WifiOff, ScanLine, Wrench } from 'lucide-react-native';
 import { getMyDevices, Device } from '@/utils/iotAPI';
 import { storage } from '@/utils/auth';
+import { requestInstallation } from '@/utils/installationAPI';
 
 export default function DeviceListScreen() {
   const router = useRouter();
   const [devices, setDevices] = useState<Device[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestAddress, setRequestAddress] = useState('');
+  const [requestPhone, setRequestPhone] = useState('');
+  const [requestNotes, setRequestNotes] = useState('');
+  const [submittingRequest, setSubmittingRequest] = useState(false);
 
   useEffect(() => {
     fetchDevices();
@@ -38,6 +47,26 @@ export default function DeviceListScreen() {
       console.log('Error fetching devices:', error);
     } finally {
       setFetching(false);
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    setSubmittingRequest(true);
+    try {
+      await requestInstallation({
+        address: requestAddress.trim() || undefined,
+        contactPhone: requestPhone.trim() || undefined,
+        notes: requestNotes.trim() || undefined,
+      });
+      setShowRequestModal(false);
+      setRequestAddress('');
+      setRequestPhone('');
+      setRequestNotes('');
+      Alert.alert('Request submitted', "We've received your installation request. Our team will assign a technician to visit soon.");
+    } catch (error) {
+      Alert.alert('Could not submit request', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setSubmittingRequest(false);
     }
   };
 
@@ -91,6 +120,16 @@ export default function DeviceListScreen() {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No devices are linked to your account yet.</Text>
           </View>
+        )}
+
+        {devices.length === 0 && (
+          <TouchableOpacity style={styles.requestInstallCard} onPress={() => setShowRequestModal(true)}>
+            <Wrench size={22} color="#087EA4" />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.scanInviteTitle}>Don't have a device yet?</Text>
+              <Text style={styles.scanInviteText}>Request an installation visit and we'll set one up at your home.</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {devices.map((device) => {
@@ -147,6 +186,48 @@ export default function DeviceListScreen() {
           );
         })}
       </ScrollView>
+
+      <Modal visible={showRequestModal} transparent animationType="fade" onRequestClose={() => setShowRequestModal(false)}>
+        <View style={styles.requestModalOverlay}>
+          <View style={styles.requestModalCard}>
+            <Text style={styles.requestModalTitle}>Request Installation</Text>
+            <Text style={styles.requestModalSubtitle}>
+              Tell us where to send a technician. They'll set up your tank sensor and connect it to your account.
+            </Text>
+            <TextInput
+              style={styles.requestInput}
+              placeholder="Address"
+              placeholderTextColor="#9CA3AF"
+              value={requestAddress}
+              onChangeText={setRequestAddress}
+            />
+            <TextInput
+              style={styles.requestInput}
+              placeholder="Contact phone number"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="phone-pad"
+              value={requestPhone}
+              onChangeText={setRequestPhone}
+            />
+            <TextInput
+              style={[styles.requestInput, styles.requestInputMultiline]}
+              placeholder="Anything else we should know? (optional)"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              value={requestNotes}
+              onChangeText={setRequestNotes}
+            />
+            <View style={styles.requestModalActions}>
+              <TouchableOpacity style={styles.requestCancelButton} onPress={() => setShowRequestModal(false)} disabled={submittingRequest}>
+                <Text style={styles.requestCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.requestSubmitButton} onPress={handleSubmitRequest} disabled={submittingRequest}>
+                <Text style={styles.requestSubmitText}>{submittingRequest ? 'Submitting...' : 'Submit Request'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -247,6 +328,83 @@ const styles = StyleSheet.create({
     fontFamily: 'Sora-Regular',
     color: '#6B7280',
     lineHeight: 17,
+  },
+  requestInstallCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF9',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#CCFBEF',
+  },
+  requestModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  requestModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+  },
+  requestModalTitle: {
+    fontSize: 18,
+    fontFamily: 'Sora-SemiBold',
+    color: '#1F2937',
+    marginBottom: 6,
+  },
+  requestModalSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Sora-Regular',
+    color: '#6B7280',
+    marginBottom: 18,
+    lineHeight: 18,
+  },
+  requestInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: 'Sora-Regular',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  requestInputMultiline: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  requestModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  requestCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  requestCancelText: {
+    fontSize: 14,
+    fontFamily: 'Sora-Medium',
+    color: '#6B7280',
+  },
+  requestSubmitButton: {
+    backgroundColor: '#087EA4',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+  requestSubmitText: {
+    fontSize: 14,
+    fontFamily: 'Sora-SemiBold',
+    color: '#FFFFFF',
   },
   emptyText: {
     fontSize: 14,

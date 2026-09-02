@@ -10,7 +10,7 @@ axios.defaults.timeout = 15000;
 
 export interface User {
   id: string;
-  userType: 'customer' | 'driver' | 'admin';
+  userType: 'customer' | 'driver' | 'admin' | 'installer';
   name: string;
   email: string;
   fullName?: string;
