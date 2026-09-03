@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import {
   FiBarChart2,
@@ -16,7 +17,8 @@ import {
   FiDollarSign,
   FiMap,
   FiHeadphones,
-  FiCheckCircle
+  FiCheckCircle,
+  FiLogOut
 } from 'react-icons/fi'
 
 const ADMIN_TABS = [
@@ -74,9 +76,15 @@ const TABS_BY_ROLE = {
 }
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { user, isPortalUser } = useAuth()
+  const { user, isPortalUser, logout } = useAuth()
+  const navigate = useNavigate()
 
   const tabs = TABS_BY_ROLE[user?.userType] || CUSTOMER_TABS
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
 
   return (
     <div className="w-64 bg-gray-900 text-white min-h-screen">
@@ -116,18 +124,27 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
       {/* User Info */}
       <div className="absolute bottom-0 w-64 p-4 bg-gray-800">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center min-w-0">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              </div>
+            </div>
+            <div className="ml-3 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-gray-400 capitalize truncate">{user?.userType?.replace(/_/g, ' ')}</p>
             </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">{user?.name}</p>
-            <p className="text-xs text-gray-400 capitalize">{user?.userType?.replace(/_/g, ' ')}</p>
-          </div>
+          <button
+            onClick={handleLogout}
+            title="Logout"
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors"
+          >
+            <FiLogOut className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </div>
