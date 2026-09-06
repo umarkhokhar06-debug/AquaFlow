@@ -30,6 +30,9 @@ export default function RootLayout() {
   });
 
   const [isTokenChecked, setIsTokenChecked] = useState(false);
+  const [redirectTo, setRedirectTo] = useState<
+    '/(driver)/(tabs)' | '/(installer)' | '/(main)/(tabs)' | null
+  >(null);
 
   useEffect(() => {
     const checkToken = async () => {
@@ -56,11 +59,11 @@ export default function RootLayout() {
           if (response.success && response.user) {
             registerForPushNotificationsAsync(token);
             if (response.user.userType === 'driver') {
-              router.replace('/(driver)/(tabs)');
+              setRedirectTo('/(driver)/(tabs)');
             } else if (response.user.userType === 'installer') {
-              router.replace('/(installer)');
+              setRedirectTo('/(installer)');
             } else if (response.user.userType === 'customer') {
-              router.replace('/(main)/(tabs)');
+              setRedirectTo('/(main)/(tabs)');
             } else {
               await storage.clearUserData();
             }
@@ -86,6 +89,21 @@ export default function RootLayout() {
 
     return () => clearTimeout(failSafe);
   }, []);
+
+  // Only navigate once isTokenChecked is true -- which is also the exact
+  // condition gating the Stack below from rendering at all. Calling
+  // router.replace() directly inside checkToken() (as this used to) fires
+  // it before the Stack/navigator has ever mounted, racing its own initial-
+  // route resolution: the replace can be silently dropped, then index.tsx's
+  // own splash timer fires 3s later and navigates again, so a returning
+  // logged-in user briefly lands on their dashboard and then gets yanked
+  // back to the onboarding/choice screen. Deferring the actual navigation
+  // to its own effect guarantees the Stack has already mounted first.
+  useEffect(() => {
+    if (isTokenChecked && redirectTo) {
+      router.replace(redirectTo);
+    }
+  }, [isTokenChecked, redirectTo]);
 
   useEffect(() => {
     if (fontsLoaded && isTokenChecked) {
