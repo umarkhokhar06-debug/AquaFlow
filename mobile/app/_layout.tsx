@@ -12,9 +12,8 @@ import {
 } from '@expo-google-fonts/sora';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleService } from '@/utils/scheduleService';
-import { authAPI } from '@/utils/auth';
+import { authAPI, storage } from '@/utils/auth';
 import { registerForPushNotificationsAsync } from '@/utils/pushNotifications';
 import ErrorBoundary from '@/app/components/ErrorBoundary';
 
@@ -39,7 +38,13 @@ export default function RootLayout() {
         await scheduleService.loadSchedules();
         scheduleService.startMonitoring(60); // Check every 60 seconds
 
-        const token = await AsyncStorage.getItem('token');
+        // storage.saveUserData() (used by every login/signup path) writes
+        // the session under the 'userData' key, not a bare 'token' key --
+        // reading AsyncStorage.getItem('token') directly here always
+        // returned null, so a returning user was never auto-logged-in and
+        // had to sign in again on every app relaunch.
+        const stored = await storage.getUserData();
+        const token = stored?.token;
 
         if (token) {
           // There is no /auth/check-token endpoint on the backend -- this
@@ -57,15 +62,15 @@ export default function RootLayout() {
             } else if (response.user.userType === 'customer') {
               router.replace('/(main)/(tabs)');
             } else {
-              await AsyncStorage.removeItem('token');
+              await storage.clearUserData();
             }
           } else {
-            await AsyncStorage.removeItem('token');
+            await storage.clearUserData();
           }
         }
       } catch (error) {
         console.error('Token check failed:', error);
-        await AsyncStorage.removeItem('token');
+        await storage.clearUserData();
       } finally {
         setIsTokenChecked(true);
       }
