@@ -73,7 +73,7 @@ export default function LoginScreen() {
         } else if (redirectAfterLogin === 'scan-invite') {
           router.replace('/(main)/scan-invite');
         } else {
-          router.replace('/(main)/(tabs)');
+          router.replace('/(main)');
         }
       } else {
         showError('Sign in failed', response.message || 'Please check your details and try again.');

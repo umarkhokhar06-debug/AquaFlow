@@ -32,7 +32,7 @@ export default function ScanInviteScreen() {
         Alert.alert(
           'Access Granted',
           `You can now see "${response.device.name}" at ${response.device.houseLabel}.`,
-          [{ text: 'OK', onPress: () => router.replace('/(main)/(tabs)/tank-monitoring') }]
+          [{ text: 'OK', onPress: () => router.replace('/(main)/tank-monitoring') }]
         );
       } else {
         Alert.alert('Error', response.message || 'Failed to redeem invite');

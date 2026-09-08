@@ -13,6 +13,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  Package,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
 import { storage, User as UserType } from '@/utils/auth';
@@ -39,13 +40,13 @@ export default function AccountScreen() {
       const devicesRes = await getMyDevices();
       const firstDevice = devicesRes.success ? devicesRes.devices[0] : null;
       if (!firstDevice) {
-        router.push('/(main)/(tabs)/tank-monitoring');
+        router.push('/(main)/tank-monitoring');
         return;
       }
       router.push({ pathname: '/(main)/manage-device-access', params: { deviceId: firstDevice.deviceId } });
     } catch (error) {
       console.error('Error loading devices for Add Member:', error);
-      router.push('/(main)/(tabs)/tank-monitoring');
+      router.push('/(main)/tank-monitoring');
     }
   };
 
@@ -57,6 +58,7 @@ export default function AccountScreen() {
   };
 
   const menuItems = [
+    { label: 'Order History', icon: Package, onPress: () => router.push('/(main)/order-history') },
     { label: 'Add Member', icon: Users, onPress: handleAddMember },
     { label: 'Payment Methods', icon: CreditCard, onPress: () => router.push('/(main)/payments') },
     { label: 'Saved Addresses', icon: MapPin, onPress: () => router.push('/(main)/addresses') },

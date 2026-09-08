@@ -48,7 +48,7 @@ export default function RootLayout() {
 
   const [isTokenChecked, setIsTokenChecked] = useState(false);
   const [redirectTo, setRedirectTo] = useState<
-    '/(driver)/(tabs)' | '/(installer)' | '/(main)/(tabs)' | null
+    '/(driver)/(tabs)' | '/(installer)' | '/(main)' | null
   >(null);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function RootLayout() {
             } else if (response.user.userType === 'installer') {
               setRedirectTo('/(installer)');
             } else if (response.user.userType === 'customer') {
-              setRedirectTo('/(main)/(tabs)');
+              setRedirectTo('/(main)');
             } else {
               await storage.clearUserData();
             }

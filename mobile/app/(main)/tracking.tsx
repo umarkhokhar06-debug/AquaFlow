@@ -356,7 +356,7 @@ export default function TrackingScreen() {
   };
 
   const openDrawer = () => {
-    router.push('/(main)/(tabs)/account');
+    router.push('/(main)/account');
   };
 
   const openNotifications = () => {

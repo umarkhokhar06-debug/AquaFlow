@@ -87,7 +87,7 @@ export default function TankMonitoringScreen() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/(main)/(tabs)'),
+            onPress: () => router.replace('/(main)'),
           },
         ],
         { cancelable: false }
@@ -269,7 +269,7 @@ export default function TankMonitoringScreen() {
   };
 
   const handleOrderRefill = () => {
-    router.push('/(main)/(tabs)');
+    router.push('/(main)');
   };
 
   const getAlertIcon = (type: string) => {
@@ -299,7 +299,7 @@ export default function TankMonitoringScreen() {
   };
 
   const openDrawer = () => {
-    router.push('/(main)/(tabs)/account');
+    router.push('/(main)/account');
   };
 
   const openNotifications = () => {

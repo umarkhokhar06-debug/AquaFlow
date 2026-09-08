@@ -163,7 +163,7 @@ export default function OrderScreen() {
       setResultAlert({
         title: 'Order placed',
         message: `Your order #${order.orderNumber} has been placed${whenText}. Total: Rs. ${order.totalAmount.toLocaleString()}`,
-        onClose: () => router.replace('/(main)/(tabs)/tracking'),
+        onClose: () => router.replace('/(main)/tracking'),
       });
     } catch (error) {
       console.error('Order error:', error);

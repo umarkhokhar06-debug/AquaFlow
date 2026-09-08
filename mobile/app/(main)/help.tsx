@@ -95,14 +95,14 @@ export default function HelpScreen() {
       title: 'Track My Order',
       subtitle: 'Check order status',
       icon: <MapPin size={20} color="#8B5CF6" />,
-      action: () => router.push('/(main)/(tabs)/tracking'),
+      action: () => router.push('/(main)/tracking'),
     },
     {
       id: '2',
       title: 'Order History',
       subtitle: 'View past orders',
       icon: <Clock size={20} color="#EF4444" />,
-      action: () => router.push('/(main)/(tabs)'),
+      action: () => router.push('/(main)'),
     },
     {
       id: '3',
