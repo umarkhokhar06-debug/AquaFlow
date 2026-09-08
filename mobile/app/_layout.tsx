@@ -134,6 +134,14 @@ export default function RootLayout() {
   // app -- runs once per launch, in the background, and never blocks the
   // splash screen. Silent no-op in dev / whenever expo-updates isn't
   // running under a real update-enabled build.
+  //
+  // Deliberately does NOT call Updates.reloadAsync() after fetching. That
+  // forcibly restarts the whole JS runtime mid-session -- on a real device
+  // this showed up as "the home screen renders for a moment, then the app
+  // goes blank" right after logging in, which read exactly like a crash.
+  // A fetched update is used automatically on the *next* cold start with no
+  // extra step required, so just fetching here is enough to make OTA
+  // updates reach the app without ever interrupting an active session.
   useEffect(() => {
     if (__DEV__ || !Updates.isEnabled) return;
     (async () => {
@@ -141,7 +149,6 @@ export default function RootLayout() {
         const result = await Updates.checkForUpdateAsync();
         if (result.isAvailable) {
           await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
         }
       } catch (error) {
         console.error('OTA update check failed:', error);
