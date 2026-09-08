@@ -17,6 +17,7 @@ interface TankCapsuleProps {
 // down to the capsule's bottom edge. Combining the fill + wave into one
 // path avoids needing two animated SVG nodes.
 function buildWaterPath(waterY: number, phase: number) {
+  'worklet';
   const amplitude = 2.2;
   const points = 11;
   let d = '';
