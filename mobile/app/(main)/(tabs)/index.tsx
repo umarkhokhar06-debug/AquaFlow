@@ -14,7 +14,6 @@ import {
   Droplets,
   Truck,
   Zap,
-  ArrowRight,
   AlertTriangle,
   MapPin,
   Calendar,
@@ -28,7 +27,7 @@ import TankCapsule from '@/app/components/graphics/TankCapsule';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
-import { Order, Product, QueueStatus, parseDate, getOrderId, ORDER_STATUS_LABEL } from '@/types/order';
+import { Order, QueueStatus, parseDate, getOrderId, ORDER_STATUS_LABEL } from '@/types/order';
 import { orderStatusTone } from '@/app/components/ui/Badge';
 import { useSocket } from '@/hooks/useSocket';
 import { notificationService } from '@/utils/notificationService';
@@ -162,7 +161,6 @@ function HistoryOrderCard({ order }: { order: Order }) {
 export default function OrdersScreen() {
   const [tankLevel, setTankLevel] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -205,8 +203,7 @@ export default function OrdersScreen() {
         const userData = await storage.getUserData();
         setUser(userData?.user || null);
 
-        const [productsData] = await Promise.all([orderAPI.getProducts(), fetchOrders()]);
-        setProducts(productsData);
+        await fetchOrders();
         orderAPI.getExpressFee().then(setExpressFee);
 
         try {
@@ -281,37 +278,6 @@ export default function OrdersScreen() {
 
   const openDrawer = () => router.push('/(main)/(tabs)/account');
   const openNotifications = () => router.push('/(main)/notifications');
-
-  const ServiceCard = ({
-    product, time, icon, color,
-  }: { product: Product; time: string; icon: React.ReactNode; color: string }) => {
-    const price = `Rs. ${product.unitPrice.toLocaleString()}`;
-    return (
-      <Card
-        onPress={product.availability ? () => goToOrder(product.type) : undefined}
-        style={[styles.serviceCard, !product.availability && styles.serviceCardDisabled]}
-      >
-        <View style={styles.serviceContent}>
-          <View style={[styles.serviceIcon, { backgroundColor: color + '1A' }]}>{icon}</View>
-          <View style={styles.serviceInfo}>
-            <Text style={styles.serviceTitle}>{product.name}</Text>
-            <Text style={styles.serviceVolume}>{product.size}</Text>
-            <View style={styles.serviceDetails}>
-              <Text style={styles.servicePrice}>{price}</Text>
-              <Text style={styles.serviceTime}>• {time}</Text>
-            </View>
-          </View>
-          <View style={styles.serviceRight}>
-            <Badge
-              label={product.availability ? 'Available' : 'Unavailable'}
-              tone={product.availability ? 'success' : 'danger'}
-            />
-            {product.availability && <ArrowRight size={20} color={colors.neutral[500]} />}
-          </View>
-        </View>
-      </Card>
-    );
-  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -395,27 +361,6 @@ export default function OrdersScreen() {
               </Card>
             )}
 
-            <View style={styles.servicesSection}>
-              <Text style={styles.sectionTitle}>Choose Your Service</Text>
-              {products.map((product) => {
-                let time = '15-30 min';
-                let icon = <Droplets size={20} color={colors.info[500]} />;
-                let color: string = colors.info[500];
-                if (product.type === 'large_tanker') {
-                  time = '45-60 min';
-                  icon = <Truck size={24} color={colors.primary[500]} />;
-                  color = colors.primary[500];
-                } else if (product.type === 'small_tanker') {
-                  time = '30-45 min';
-                  icon = <Truck size={20} color={colors.success[500]} />;
-                  color = colors.success[500];
-                }
-                return (
-                  <ServiceCard key={product.type} product={product} time={time} icon={icon} color={color} />
-                );
-              })}
-            </View>
-
             <Card
               style={styles.expressCard}
               onPress={() => router.push({ pathname: '/(main)/order', params: { timing: 'express' } })}
@@ -494,19 +439,7 @@ const styles = StyleSheet.create({
   alertContent: { flex: 1 },
   alertTitle: { fontFamily: typography.h3.fontFamily, fontSize: 14, color: colors.warning[700], marginBottom: 2 },
   alertText: { fontFamily: typography.body.fontFamily, fontSize: 12, color: colors.warning[700] },
-  servicesSection: { marginBottom: spacing.xxl },
   sectionTitle: { fontFamily: typography.h2.fontFamily, fontSize: typography.h2.fontSize, color: colors.neutral[900], marginBottom: spacing.lg },
-  serviceCard: { marginBottom: spacing.md },
-  serviceCardDisabled: { opacity: 0.6 },
-  serviceContent: { flexDirection: 'row', alignItems: 'center' },
-  serviceIcon: { width: 48, height: 48, borderRadius: radius.xl, justifyContent: 'center', alignItems: 'center', marginRight: spacing.lg },
-  serviceInfo: { flex: 1 },
-  serviceTitle: { fontFamily: typography.h3.fontFamily, fontSize: typography.h3.fontSize, color: colors.neutral[900], marginBottom: 4 },
-  serviceVolume: { fontFamily: typography.body.fontFamily, fontSize: 14, color: colors.neutral[500], marginBottom: spacing.sm },
-  serviceDetails: { flexDirection: 'row', alignItems: 'center' },
-  servicePrice: { fontFamily: typography.numeric.fontFamily, fontSize: 16, color: colors.primary[600] },
-  serviceTime: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500], marginLeft: spacing.sm },
-  serviceRight: { alignItems: 'flex-end', gap: spacing.sm },
   expressCard: { backgroundColor: colors.warning[50], borderColor: colors.warning[100], marginBottom: spacing.xxl },
   expressRow: { flexDirection: 'row', alignItems: 'center' },
   expressIcon: { width: 48, height: 48, borderRadius: radius.xl, backgroundColor: colors.warning[100], justifyContent: 'center', alignItems: 'center', marginRight: spacing.lg },

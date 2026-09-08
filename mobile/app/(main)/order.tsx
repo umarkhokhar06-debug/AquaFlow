@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Calendar, Clock, MapPin, Zap, Check } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Zap, Check, Banknote, CreditCard, Smartphone } from 'lucide-react-native';
 import { ScreenHeader, Card, Button } from '@/app/components/ui';
 import AddressSelectionModal from '@/app/components/AddressSelectionModal';
 import CustomAlert from '@/app/components/CustomAlert';
@@ -99,6 +99,7 @@ export default function OrderScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [resultAlert, setResultAlert] = useState<{ title: string; message: string; onClose?: () => void } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
+  const [orderNotes, setOrderNotes] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -143,7 +144,7 @@ export default function OrderScreen() {
           longitude: selectedAddress.longitude,
         },
         paymentMethod,
-        notes: `Direct order for ${selectedProduct.name}`,
+        notes: orderNotes.trim() || `Direct order for ${selectedProduct.name}`,
         ...(timing === 'schedule' && selectedSlot
           ? { deliveryType: 'scheduled' as const, scheduledFor: selectedSlot.date.toISOString() }
           : timing === 'express'
@@ -304,6 +305,56 @@ export default function OrderScreen() {
                 </Text>
               </View>
             </Card>
+
+            <Text style={styles.sectionLabel}>Payment method</Text>
+            <View style={styles.paymentRow}>
+              <Card
+                onPress={() => setPaymentMethod('cash')}
+                padded={false}
+                style={[styles.paymentCard, paymentMethod === 'cash' && styles.paymentCardSelected]}
+              >
+                <Banknote size={16} color={paymentMethod === 'cash' ? colors.primary[600] : colors.neutral[400]} />
+                <Text style={[styles.paymentTitle, paymentMethod === 'cash' && styles.paymentTitleSelected]}>Cash</Text>
+                <Text style={styles.paymentSub}>On delivery</Text>
+              </Card>
+              <Card
+                onPress={() => setPaymentMethod('card')}
+                padded={false}
+                style={[styles.paymentCard, paymentMethod === 'card' && styles.paymentCardSelected]}
+              >
+                <CreditCard size={16} color={paymentMethod === 'card' ? colors.primary[600] : colors.neutral[400]} />
+                <Text style={[styles.paymentTitle, paymentMethod === 'card' && styles.paymentTitleSelected]}>Card</Text>
+                <Text style={styles.paymentSub}>Coming soon</Text>
+              </Card>
+              <Card
+                onPress={() => setPaymentMethod('online')}
+                padded={false}
+                style={[styles.paymentCard, paymentMethod === 'online' && styles.paymentCardSelected]}
+              >
+                <Smartphone size={16} color={paymentMethod === 'online' ? colors.primary[600] : colors.neutral[400]} />
+                <Text style={[styles.paymentTitle, paymentMethod === 'online' && styles.paymentTitleSelected]}>Wallet</Text>
+                <Text style={styles.paymentSub}>Coming soon</Text>
+              </Card>
+            </View>
+            {paymentMethod !== 'cash' && (
+              <View style={styles.expressNote}>
+                <Text style={styles.expressNoteText}>
+                  Online payments aren't active yet -- your order will still be placed, but pay the driver in cash on delivery for now.
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.sectionLabel}>Order notes (optional)</Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Anything the driver should know -- gate code, preferred time, etc."
+              placeholderTextColor={colors.neutral[400]}
+              value={orderNotes}
+              onChangeText={setOrderNotes}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
           </ScrollView>
 
           <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
@@ -363,9 +414,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
   },
-  sizeRow: { flexDirection: 'row', gap: spacing.sm },
+  sizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   sizeCard: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
     alignItems: 'center',
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xs,
@@ -420,6 +472,31 @@ const styles = StyleSheet.create({
   addressCard: { borderColor: colors.neutral[200] },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   addressText: { flex: 1, fontFamily: typography.bodyMed.fontFamily, fontSize: 14, color: colors.neutral[900] },
+  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  paymentCard: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    borderColor: colors.neutral[200],
+    gap: 4,
+  },
+  paymentCardSelected: { borderColor: colors.primary[300], backgroundColor: colors.primary[100] },
+  paymentTitle: { fontFamily: typography.h3.fontFamily, fontSize: 12.5, color: colors.neutral[900] },
+  paymentTitleSelected: { color: colors.primary[700] },
+  paymentSub: { fontFamily: typography.caption.fontFamily, fontSize: 10.5, color: colors.neutral[500] },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: radius.md,
+    padding: spacing.md,
+    minHeight: 72,
+    fontFamily: typography.body.fontFamily,
+    fontSize: 14,
+    color: colors.neutral[900],
+    marginBottom: spacing.md,
+  },
   bottomBar: {
     backgroundColor: colors.neutral[0],
     borderTopWidth: 1,
