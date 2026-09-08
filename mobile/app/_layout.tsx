@@ -15,9 +15,26 @@ import * as Updates from 'expo-updates';
 import { scheduleService } from '@/utils/scheduleService';
 import { authAPI, storage } from '@/utils/auth';
 import { registerForPushNotificationsAsync } from '@/utils/pushNotifications';
+import { reportCrash } from '@/utils/crashReport';
 import ErrorBoundary from '@/app/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
+
+// Catches JS errors ErrorBoundary structurally cannot: anything thrown
+// outside the React render tree (module-evaluation time, a native-bridge
+// callback, a timer). Without this, that class of error just kills the JS
+// thread in a release build and leaves the screen permanently blank with
+// zero record of what happened -- which is exactly what's been reported
+// and, so far, impossible to diagnose without this in place. Chains to the
+// engine's own default handler afterward so a genuinely fatal error still
+// behaves the way the platform expects (dev redbox, native crash logging).
+if (typeof ErrorUtils !== 'undefined') {
+  const defaultHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    reportCrash(error, { isFatal, screen: 'global' });
+    defaultHandler(error, isFatal);
+  });
+}
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -73,6 +90,7 @@ export default function RootLayout() {
         }
       } catch (error) {
         console.error('Token check failed:', error);
+        reportCrash(error, { isFatal: false, screen: 'checkToken' });
         await storage.clearUserData();
       } finally {
         setIsTokenChecked(true);

@@ -25,6 +25,7 @@ const systemConfigRoutes = require('./routes/systemConfig');
 const installationRoutes = require('./routes/installations');
 const dailyClosingRoutes = require('./routes/dailyClosings');
 const driverBonusRoutes = require('./routes/driverBonuses');
+const clientErrorRoutes = require('./routes/clientErrors');
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use('/api/config', systemConfigRoutes);
 app.use('/api/installations', installationRoutes);
 app.use('/api/daily-closings', dailyClosingRoutes);
 app.use('/api/driver-bonuses', driverBonusRoutes);
+app.use('/api/client-errors', clientErrorRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

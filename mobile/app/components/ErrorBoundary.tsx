@@ -2,6 +2,7 @@ import { Component, ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/app/components/ui';
 import { colors, spacing, typography } from '@/theme';
+import { reportCrash } from '@/utils/crashReport';
 
 interface Props {
   children: ReactNode;
@@ -25,6 +26,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
     console.error('Uncaught render error:', error, info.componentStack);
+    reportCrash(error, { isFatal: false, screen: 'ErrorBoundary' });
   }
 
   render() {
