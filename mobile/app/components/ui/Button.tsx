@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from 
 import { colors, radius, spacing, typography } from '@/theme';
 import Tap from '@/app/components/Tap';
 
-type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'warning';
+type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'warning' | 'accent';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -33,6 +33,10 @@ const VARIANT_STYLES: Record<Variant, { bg: string; text: string; border?: strin
   ghost: { bg: 'transparent', text: colors.neutral[700] },
   danger: { bg: colors.danger[500], text: colors.neutral[0] },
   warning: { bg: colors.warning[500], text: colors.neutral[0] },
+  // The single most prominent call-to-action per screen (book/confirm/get
+  // started) -- amber, deliberately distinct from the teal brand color used
+  // everywhere else, per the updated visual direction.
+  accent: { bg: colors.accent[500], text: colors.primary[700] },
 };
 
 const ON_DARK_VARIANT_STYLES: Partial<Record<Variant, { bg: string; text: string; border?: string }>> = {

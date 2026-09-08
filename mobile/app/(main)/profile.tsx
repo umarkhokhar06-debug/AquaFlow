@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   editButton: {
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#1F2937',
     marginLeft: 12,
   },
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   portionButtonText: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   portionButtonTextActive: {
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   saveButton: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
 });

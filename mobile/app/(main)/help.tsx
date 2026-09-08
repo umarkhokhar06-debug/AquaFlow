@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   placeholder: {
@@ -421,13 +421,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginBottom: 16,
   },
@@ -457,13 +457,13 @@ const styles = StyleSheet.create({
   },
   contactTitle: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   contactSubtitle: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   ticketForm: {
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#374151',
     marginBottom: 8,
   },
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#1F2937',
     backgroundColor: '#FFFFFF',
   },
@@ -517,12 +517,12 @@ const styles = StyleSheet.create({
   },
   pickerOptionText: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   pickerOptionTextSelected: {
     color: '#087EA4',
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
   },
   submitTicketButton: {
     backgroundColor: '#087EA4',
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   submitTicketButtonText: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   quickActionCard: {
@@ -565,13 +565,13 @@ const styles = StyleSheet.create({
   },
   quickActionTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   quickActionSubtitle: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   faqContainer: {
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   faqQuestionText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#1F2937',
     marginLeft: 12,
   },
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   faqAnswerText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     lineHeight: 20,
   },
@@ -636,12 +636,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   infoValue: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   rateSection: {
@@ -664,13 +664,13 @@ const styles = StyleSheet.create({
   },
   rateTitle: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#92400E',
     marginBottom: 4,
   },
   rateSubtitle: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#92400E',
     lineHeight: 16,
   },
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   },
   rateButtonText: {
     fontSize: 12,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
 });

@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   content: {
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   ratingValue: {
     fontSize: 32,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   ratingCount: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     textAlign: 'center',
   },
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 13,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   activeTabText: {
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 8,
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#1F2937',
     marginLeft: 12,
   },
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   settingItem: {
@@ -494,13 +494,13 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   settingDescription: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginTop: 4,
   },
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   errorContainer: {
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#EF4444',
     marginTop: 12,
     marginBottom: 16,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#FFFFFF',
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     fontSize: 14,
   },
 });

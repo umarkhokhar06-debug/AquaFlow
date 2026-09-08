@@ -316,13 +316,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: 'rgba(255, 255, 255, 0.8)',
   },
   searchContainer: {
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#1F2937',
     marginLeft: 12,
   },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   filterTabText: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   activeFilterTabText: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   },
   deliveryId: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginRight: 8,
   },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 8,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#FFFFFF',
   },
   statusBadge: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     marginLeft: 4,
   },
   customerSection: {
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
   customerName: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#1F2937',
     marginLeft: 8,
   },
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginLeft: 8,
     flex: 1,
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   },
   deliveryAmount: {
     fontSize: 16,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#28A745',
   },
   emptyState: {
@@ -506,14 +506,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     textAlign: 'center',
   },

@@ -373,6 +373,7 @@ export default function OrderScreen() {
               onPress={handleConfirm}
               disabled={!canConfirm || submitting}
               loading={submitting}
+              variant="accent"
               size="lg"
               style={styles.confirmButton}
             />

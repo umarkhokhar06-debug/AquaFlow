@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   notificationButton: {
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   notificationBadgeText: {
     fontSize: 10,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#FFFFFF',
   },
   content: {
@@ -472,13 +472,13 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 24,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   statsGrid: {
@@ -514,18 +514,18 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 18,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
     marginBottom: 2,
   },
   statTitle: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   statSubtitle: {
     fontSize: 10,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#9CA3AF',
   },
   quickActions: {
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },
@@ -568,12 +568,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   viewAllText: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#087EA4',
   },
   orderCard: {
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   },
   orderId: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginRight: 8,
   },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 8,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#FFFFFF',
   },
   statusBadge: {
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
   },
   customerInfo: {
     flexDirection: 'row',
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   customerName: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#1F2937',
     marginLeft: 8,
   },
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   },
   orderDetailText: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginLeft: 8,
     flex: 1,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   },
   orderAmount: {
     fontSize: 16,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#28A745',
   },
   statusCard: {
@@ -699,13 +699,13 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 15,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   statusSubtitle: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   breakCardActive: {
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
   },
   breakButtonText: {
     fontSize: 13,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   breakButtonTextActive: {

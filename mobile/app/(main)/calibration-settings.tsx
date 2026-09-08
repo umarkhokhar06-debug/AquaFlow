@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   header: {
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   placeholder: {
@@ -287,14 +287,14 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginTop: 12,
     marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
@@ -319,13 +319,13 @@ const styles = StyleSheet.create({
   },
   scanInviteTitle: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 2,
   },
   scanInviteText: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     lineHeight: 17,
   },
@@ -353,13 +353,13 @@ const styles = StyleSheet.create({
   },
   requestModalTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 6,
   },
   requestModalSubtitle: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginBottom: 18,
     lineHeight: 18,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   requestCancelText: {
     fontSize: 14,
-    fontFamily: 'Sora-Medium',
+    fontFamily: 'Manrope-Medium',
     color: '#6B7280',
   },
   requestSubmitButton: {
@@ -403,12 +403,12 @@ const styles = StyleSheet.create({
   },
   requestSubmitText: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   deviceCard: {
@@ -430,12 +430,12 @@ const styles = StyleSheet.create({
   },
   deviceName: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   deviceHouse: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     marginLeft: 4,
   },
   calibrationRow: {
@@ -465,13 +465,13 @@ const styles = StyleSheet.create({
   },
   calibrationLabel: {
     fontSize: 11,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#9CA3AF',
     marginBottom: 2,
   },
   calibrationValue: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   footerRow: {
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   manageButton: {
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   },
   manageButtonText: {
     fontSize: 13,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#087EA4',
   },
 });

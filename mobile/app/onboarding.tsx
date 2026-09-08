@@ -88,6 +88,7 @@ export default function OnboardingScreen() {
 
         <Button
           label={isLast ? 'Get started' : 'Next'}
+          variant="accent"
           size="lg"
           onPress={isLast ? finish : () => setSlide(slide + 1)}
         />

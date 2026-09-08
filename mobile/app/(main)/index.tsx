@@ -14,12 +14,13 @@ import {
   Truck,
   Zap,
   AlertTriangle,
+  Check,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import HeaderComponent from '@/app/components/Header';
 import CustomAlert from '@/app/components/CustomAlert';
 import { Card, Badge, Button } from '@/app/components/ui';
-import TankCapsule from '@/app/components/graphics/TankCapsule';
+import CircularGauge from '@/app/components/graphics/CircularGauge';
 import { storage, User } from '@/utils/auth';
 import { orderAPI } from '@/utils/orderAPI';
 import { getLatestIoTData, getMyDevices } from '@/utils/iotAPI';
@@ -269,17 +270,28 @@ export default function OrdersScreen() {
         </Card>
 
         {!loading && (
-          <Card onPress={() => router.push('/(main)/tank-monitoring')} style={styles.tankCard}>
-            <TankCapsule level={tankLevel ?? 0} size={64} showLabel={false} />
-            <View style={styles.tankInfo}>
-              <Text style={styles.tankLabel}>Main tank</Text>
-              <Text style={styles.tankHeadline}>
-                {tankLevel === null ? 'No sensor data' : tankLevel > 50 ? 'Comfortable level' : 'Getting low'}
-              </Text>
-              <Text style={styles.tankSub}>
-                {tankLevel !== null ? `${tankLevel}% full` : 'Connect a device to see live level'}
-              </Text>
-            </View>
+          <Card onPress={() => router.push('/(main)/tank-monitoring')} padded={false} style={styles.tankCardWrap}>
+            <LinearGradient colors={[colors.primary[700], colors.primary[600]]} style={styles.tankCard}>
+              <CircularGauge level={tankLevel ?? 0} size={72} strokeWidth={7} />
+              <View style={styles.tankInfo}>
+                <Text style={styles.tankLabel}>Your Tank Level</Text>
+                <Text style={styles.tankSub}>
+                  {tankLevel !== null ? 'Live reading from your sensor' : 'Connect a device to see live level'}
+                </Text>
+                {tankLevel !== null && (
+                  <View style={[styles.tankBadge, tankLevel <= 30 && styles.tankBadgeLow]}>
+                    {tankLevel <= 30 ? (
+                      <AlertTriangle size={11} color={colors.accent[500]} />
+                    ) : (
+                      <Check size={11} color={colors.primary[300]} strokeWidth={3} />
+                    )}
+                    <Text style={[styles.tankBadgeText, tankLevel <= 30 && styles.tankBadgeTextLow]}>
+                      {tankLevel <= 30 ? 'Getting low' : 'Healthy level'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
           </Card>
         )}
 
@@ -373,11 +385,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     marginLeft: spacing.md,
   },
-  tankCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginBottom: spacing.xl },
+  tankCardWrap: { marginBottom: spacing.xl, overflow: 'hidden', borderWidth: 0 },
+  tankCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: spacing.lg },
   tankInfo: { flex: 1 },
-  tankLabel: { fontFamily: typography.label.fontFamily, fontSize: 12, color: colors.neutral[500], marginBottom: 4 },
-  tankHeadline: { fontFamily: typography.h3.fontFamily, fontSize: 15, color: colors.neutral[900], marginBottom: 4 },
-  tankSub: { fontFamily: typography.caption.fontFamily, fontSize: 12, color: colors.neutral[500] },
+  tankLabel: { fontFamily: typography.h3.fontFamily, fontSize: 14, color: colors.neutral[0], marginBottom: 4 },
+  tankSub: { fontFamily: typography.caption.fontFamily, fontSize: 11, color: 'rgba(255,255,255,0.65)', marginBottom: spacing.sm, lineHeight: 15 },
+  tankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(111,214,201,0.16)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  tankBadgeLow: { backgroundColor: 'rgba(240,167,59,0.16)' },
+  tankBadgeText: { fontFamily: typography.label.fontFamily, fontSize: 10, color: colors.primary[300] },
+  tankBadgeTextLow: { color: colors.accent[500] },
   alertCard: { backgroundColor: colors.warning[50], borderColor: colors.warning[100], borderLeftWidth: 4, borderLeftColor: colors.warning[500], marginBottom: spacing.xxl },
   alertRow: { flexDirection: 'row', alignItems: 'center' },
   alertIconCircle: { width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.warning[100], justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },

@@ -281,20 +281,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
     lineHeight: 24,
   },
   emailText: {
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   form: {
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#333333',
   },
   sendButton: {
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#087EA4',
   },
   divider: {
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: 'rgba(255, 255, 255, 0.6)',
     marginHorizontal: 16,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#FFFFFF',
   },
   signupButton: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   signupButtonText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: 'rgba(255, 255, 255, 0.8)',
   },
   instructionsContainer: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   instructionsTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     color: '#087EA4',
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     textAlign: 'center',
     lineHeight: 24,
     marginRight: 12,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   instructionText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: 'rgba(255, 255, 255, 0.9)',
     lineHeight: 20,
   },
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   resendButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
   },
   backButton: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#FFFFFF',
   },
 });

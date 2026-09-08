@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   placeholder: {
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginTop: 12,
   },
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 20,
   },
@@ -539,18 +539,18 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 20,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
     marginBottom: 4,
   },
   orderNumber: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   statusDescription: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     lineHeight: 20,
   },
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 12,
   },
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
   },
   ratingCommentText: {
     fontSize: 13,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     fontStyle: 'italic',
   },
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   ratingSubmitText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
   },
   itemCard: {
     backgroundColor: '#FFFFFF',
@@ -633,18 +633,18 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   itemSize: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginTop: 2,
   },
   itemQuantity: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   itemFooter: {
@@ -654,12 +654,12 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
   },
   itemUnitPrice: {
     fontSize: 12,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   addressCard: {
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginLeft: 12,
     flex: 1,
@@ -702,13 +702,13 @@ const styles = StyleSheet.create({
   },
   driverName: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     marginBottom: 4,
   },
   driverEmail: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   summaryCard: {
@@ -736,22 +736,22 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
   },
   summaryValue: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
   },
   summaryTotalLabel: {
     fontSize: 16,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
   },
   summaryTotalValue: {
     fontSize: 16,
-    fontFamily: 'Sora-Bold',
+    fontFamily: 'Manrope-Bold',
     color: '#1F2937',
   },
   detailsCard: {
@@ -771,14 +771,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    fontFamily: 'Sora-Regular',
+    fontFamily: 'Manrope-Regular',
     color: '#6B7280',
     marginLeft: 12,
     width: 120,
   },
   detailValue: {
     fontSize: 14,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#1F2937',
     flex: 1,
     textAlign: 'right',
@@ -808,13 +808,13 @@ const styles = StyleSheet.create({
   },
   reorderButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },
   cancelButtonText: {
     fontSize: 16,
-    fontFamily: 'Sora-SemiBold',
+    fontFamily: 'Manrope-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
   },

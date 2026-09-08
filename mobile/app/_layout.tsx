@@ -4,12 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import {
-  Sora_400Regular,
-  Sora_500Medium,
-  Sora_600SemiBold,
-  Sora_700Bold,
-  Sora_800ExtraBold,
-} from '@expo-google-fonts/sora';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Updates from 'expo-updates';
 import { scheduleService } from '@/utils/scheduleService';
@@ -39,11 +39,11 @@ if (typeof ErrorUtils !== 'undefined') {
 export default function RootLayout() {
   useFrameworkReady();
   const [fontsLoaded] = useFonts({
-    'Sora-Regular': Sora_400Regular,
-    'Sora-Medium': Sora_500Medium,
-    'Sora-SemiBold': Sora_600SemiBold,
-    'Sora-Bold': Sora_700Bold,
-    'Sora-ExtraBold': Sora_800ExtraBold,
+    'Manrope-Regular': Manrope_400Regular,
+    'Manrope-Medium': Manrope_500Medium,
+    'Manrope-SemiBold': Manrope_600SemiBold,
+    'Manrope-Bold': Manrope_700Bold,
+    'Manrope-ExtraBold': Manrope_800ExtraBold,
   });
 
   const [isTokenChecked, setIsTokenChecked] = useState(false);
