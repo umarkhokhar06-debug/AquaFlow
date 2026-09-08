@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nodeDone: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.success[500],
   },
   nodeActive: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.accent[500],
   },
   nodePending: {
     backgroundColor: colors.neutral[200],
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   lineFill: {
     width: 2,
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.success[500],
   },
   textCol: {
     paddingTop: 2,

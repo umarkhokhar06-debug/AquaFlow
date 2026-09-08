@@ -26,7 +26,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import HeaderComponent from '@/app/components/Header';
-import TankCapsule from '@/app/components/graphics/TankCapsule';
+import CircularGauge from '@/app/components/graphics/CircularGauge';
 import {
   getLatestIoTData,
   getAllIoTData,
@@ -57,6 +57,10 @@ export default function TankMonitoringScreen() {
   const [weeklyData, setWeeklyData] = useState<
     { day: string; level: number }[]
   >([]);
+  // Per-device level, for the house-card list -- fetched once when the
+  // device list loads (separate from the selected device's live/polled
+  // reading above, which stays on the socket + fetchIoTData path).
+  const [deviceLevels, setDeviceLevels] = useState<Record<string, number | null>>({});
 
   // 🔒 ONE-TIME ALERT REF
   const lowWaterAlertShown = useRef(false);
@@ -76,6 +80,9 @@ export default function TankMonitoringScreen() {
     setHumidity(data.humidity);
     setLastUpdate(new Date(data.receivedAt).toLocaleString());
     setIsOnline(true);
+    if (selectedDeviceId) {
+      setDeviceLevels((prev) => ({ ...prev, [selectedDeviceId]: data.tankLevel }));
+    }
 
     // 🚨 LOW WATER ALERT (ONCE ONLY, until level recovers)
     if (data.tankLevel < 20 && !lowWaterAlertShown.current) {
@@ -108,6 +115,18 @@ export default function TankMonitoringScreen() {
         if (response.success && response.devices.length > 0) {
           setDevices(response.devices);
           setSelectedDeviceId(response.devices[0].deviceId);
+
+          const levels = await Promise.all(
+            response.devices.map(async (d) => {
+              try {
+                const f = await getDeviceForecast(d.deviceId);
+                return [d.deviceId, f.success ? f.forecast.currentLevelPercent : null] as const;
+              } catch {
+                return [d.deviceId, null] as const;
+              }
+            })
+          );
+          setDeviceLevels(Object.fromEntries(levels));
         }
       } catch (error) {
         console.error('Error fetching devices:', error);
@@ -318,42 +337,52 @@ export default function TankMonitoringScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Device Switcher */}
+        {/* Device list -- one "house card" per device, tap to view its detail below */}
         {devices.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.deviceSwitcher}
-            contentContainerStyle={styles.deviceSwitcherContent}
-          >
-            {devices.map((device) => (
-              <TouchableOpacity
-                key={device._id}
-                style={[
-                  styles.deviceChip,
-                  selectedDeviceId === device.deviceId && styles.deviceChipActive,
-                ]}
-                onPress={() => setSelectedDeviceId(device.deviceId)}
-              >
-                <Text
-                  style={[
-                    styles.deviceChipTitle,
-                    selectedDeviceId === device.deviceId && styles.deviceChipTitleActive,
-                  ]}
+          <View style={styles.houseList}>
+            {devices.map((device) => {
+              const level = deviceLevels[device.deviceId];
+              const isSelected = selectedDeviceId === device.deviceId;
+              const tag = level === null || level === undefined
+                ? { label: 'Pending', bg: colors.neutral[100], text: colors.neutral[500] }
+                : level >= 50
+                ? { label: 'Healthy', bg: colors.success[100], text: colors.success[700] }
+                : level >= 20
+                ? { label: 'Refill soon', bg: colors.accent[100], text: colors.accent[700] }
+                : { label: 'Low', bg: colors.danger[100], text: colors.danger[700] };
+              return (
+                <TouchableOpacity
+                  key={device._id}
+                  style={[styles.houseCard, isSelected && styles.houseCardActive]}
+                  onPress={() => setSelectedDeviceId(device.deviceId)}
+                  activeOpacity={0.8}
                 >
-                  {device.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.deviceChipSubtitle,
-                    selectedDeviceId === device.deviceId && styles.deviceChipSubtitleActive,
-                  ]}
-                >
-                  {device.houseLabel}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <CircularGauge
+                    level={level ?? 0}
+                    size={46}
+                    strokeWidth={4}
+                    trackColor={colors.neutral[200]}
+                    progressColor={
+                      level === null || level === undefined ? colors.neutral[300]
+                        : level >= 50 ? colors.success[500]
+                        : level >= 20 ? colors.accent[500]
+                        : colors.danger[500]
+                    }
+                    innerColor={colors.neutral[0]}
+                    textColor={colors.neutral[900]}
+                    subTextColor={colors.neutral[400]}
+                  />
+                  <View style={styles.houseInfo}>
+                    <Text style={styles.houseName} numberOfLines={1}>{device.name}</Text>
+                    <Text style={styles.houseSub} numberOfLines={1}>{device.houseLabel}</Text>
+                  </View>
+                  <View style={[styles.houseTag, { backgroundColor: tag.bg }]}>
+                    <Text style={[styles.houseTagText, { color: tag.text }]}>{tag.label}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
 
         {(() => {
@@ -407,7 +436,16 @@ export default function TankMonitoringScreen() {
           </View>
 
           <View style={styles.levelDisplay}>
-            <TankCapsule level={tankLevel} size={120} showLabel />
+            <CircularGauge
+              level={tankLevel}
+              size={120}
+              strokeWidth={10}
+              trackColor={colors.neutral[200]}
+              progressColor={colors.primary[500]}
+              innerColor={colors.neutral[0]}
+              textColor={colors.neutral[900]}
+              subTextColor={colors.neutral[500]}
+            />
             <Text style={styles.levelLiters}>{Math.floor((tankLevel / 100) * 1000)} / 1000 liters</Text>
           </View>
 
@@ -572,42 +610,50 @@ const styles = StyleSheet.create({
     fontFamily: typography.h3.fontFamily,
     color: colors.neutral[900],
   },
-  deviceSwitcher: {
-    marginBottom: 12,
-  },
-  deviceSwitcherContent: {
+  houseList: {
     gap: 10,
-    paddingRight: 4,
+    marginBottom: 16,
   },
-  deviceChip: {
-    backgroundColor: colors.neutral[50],
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minWidth: 140,
+  houseCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.neutral[0],
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  deviceChipActive: {
-    backgroundColor: colors.primary[50],
-    borderColor: colors.primary[500],
+  houseCardActive: {
+    borderColor: colors.primary[300],
   },
-  deviceChipTitle: {
-    fontSize: 14,
+  houseInfo: {
+    flex: 1,
+  },
+  houseName: {
+    fontSize: 13,
     fontFamily: typography.h3.fontFamily,
     color: colors.neutral[900],
+    marginBottom: 2,
   },
-  deviceChipTitleActive: {
-    color: colors.primary[500],
-  },
-  deviceChipSubtitle: {
-    fontSize: 11,
+  houseSub: {
+    fontSize: 10.5,
     fontFamily: typography.body.fontFamily,
-    color: colors.neutral[400],
-    marginTop: 2,
+    color: colors.neutral[500],
   },
-  deviceChipSubtitleActive: {
-    color: colors.primary[500],
+  houseTag: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  houseTagText: {
+    fontSize: 10,
+    fontFamily: typography.label.fontFamily,
   },
   manageAccessButton: {
     flexDirection: 'row',
