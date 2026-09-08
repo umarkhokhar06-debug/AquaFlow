@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock } from 'lucide-react-native';
 import { authAPI, storage } from '../../utils/auth';
 import { registerForPushNotificationsAsync } from '../../utils/pushNotifications';
+import { reportCrash } from '@/utils/crashReport';
 import CustomAlert from '../components/CustomAlert';
 import BrandMark from '@/app/components/graphics/BrandMark';
 import { Button, TextField } from '../components/ui';
@@ -80,6 +81,7 @@ export default function LoginScreen() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred while signing in';
+      reportCrash(error, { isFatal: false, screen: 'login' });
       showError('Sign in failed', message);
       setIsLoading(false);
     }
