@@ -76,8 +76,8 @@ export default function TankMonitoringScreen() {
 
   const applyLatestReading = (data: { tankLevel: number; temperature: number; humidity: number; receivedAt: string }) => {
     setTankLevel(data.tankLevel);
-    setTemperature(data.temperature);
-    setHumidity(data.humidity);
+    setTemperature(data.temperature ?? 0);
+    setHumidity(data.humidity ?? 0);
     setLastUpdate(new Date(data.receivedAt).toLocaleString());
     setIsOnline(true);
     if (selectedDeviceId) {

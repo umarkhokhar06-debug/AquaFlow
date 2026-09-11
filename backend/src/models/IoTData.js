@@ -6,13 +6,16 @@ const iotDataSchema = new mongoose.Schema({
     ref: 'Device',
     required: true
   },
+  // Optional -- not every device has a DHT sensor (e.g. tank-level-only
+  // ultrasonic units), so these are only populated when the reading
+  // includes them.
   humidity: {
     type: Number,
-    required: true
+    required: false
   },
   temperature: {
     type: Number,
-    required: true
+    required: false
   },
   distance: {
     type: Number,
